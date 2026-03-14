@@ -14,7 +14,7 @@
 
 set_dft_config                                     \
     -max_chains 1                                  \
-	-scan_enable_name_pattern pad_scan_en_i/p2c    \
+	-scan_enable_name_pattern i_scan_en_gate/X     \
 	-scan_in_name_pattern     i_scan_in_buf_{}/X   \
 	-scan_out_name_pattern    i_scan_out_mux_{}/A1
 

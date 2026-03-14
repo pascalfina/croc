@@ -124,6 +124,13 @@ utl::report "Stitch Scan Chain"
 execute_dft_plan
 unset_dont_touch $scan_in_buf_cells
 
+utl::report "Repair scan enable fanout..."
+set other_nets [get_nets -filter "name != soc_scan_en_i"]
+set_dont_touch $other_nets
+repair_design -verbose
+unset_dont_touch $other_nets
+detailed_placement
+
 utl::report "Estimate parasitics"
 estimate_parasitics -placement
 
