@@ -39,9 +39,7 @@ AREA_PER_GE = 7.25
 
 if __name__ == "__main__":
     # Usage: python 01a_plot_area_bar.py <area_report_file>
-    parser = argparse.ArgumentParser(
-        description="Extract hierarchical areas from an OpenROAD area report."
-    )
+    parser = argparse.ArgumentParser(description="Extract hierarchical areas from an OpenROAD area report.")
     parser.add_argument("file", type=str, help="Path to the area report file")
     args = parser.parse_args()
 
@@ -68,15 +66,18 @@ if __name__ == "__main__":
 
         print(area_kge)
 
+    # Remap the names of the components for better readability
     names = [
         "SRAM Bank 1",
         "SRAM Bank 2",
+        "Bootrom",
+        "CLINT",
         "Core",
-        "Debug Module",
+        "Debug\nModule",
         "JTAG TAP",
         "GPIO",
-        "SoC Control",
         "Timer",
+        "SoC\nControl",
         "UART",
     ]
 
@@ -133,28 +134,23 @@ if __name__ == "__main__":
     left_positions = [sum(norm_values[:i]) for i in range(len(norm_values))]
 
     # Split components into two groups
-    first_row_names = ["SRAM Bank 1", "SRAM Bank 2", "Core", "UART"]
-    second_row_names = ["Debug Module", "JTAG TAP", "GPIO", "SoC Control", "Timer"]
+    first_row_names = [
+        "SRAM Bank 1",
+        "SRAM Bank 2",
+        "Core",
+        "Debug\nModule",
+    ]
+    second_row_names = ["UART", "JTAG TAP", "GPIO", "SoC\nControl", "Timer", "CLINT"]
 
     # Compute values
     rest_area = sum(areas_kge[names.index(n)] for n in second_row_names)
-    first_row = {
-        n: {"area": areas_kge[names.index(n)], "color": colors[names.index(n)]}
-        for n in first_row_names
-    }
+    first_row = {n: {"area": areas_kge[names.index(n)], "color": colors[names.index(n)]} for n in first_row_names}
     first_row["Rest"] = {"area": rest_area, "color": PULP_COLORS_BASE[-1]}
-    second_row = {
-        n: {"area": areas_kge[names.index(n)], "color": colors[names.index(n)]}
-        for n in second_row_names
-    }
+    second_row = {n: {"area": areas_kge[names.index(n)], "color": colors[names.index(n)]} for n in second_row_names}
 
     # Sort rows by area
-    first_row = dict(
-        sorted(first_row.items(), key=lambda x: x[1]["area"], reverse=True)
-    )
-    second_row = dict(
-        sorted(second_row.items(), key=lambda x: x[1]["area"], reverse=True)
-    )
+    first_row = dict(sorted(first_row.items(), key=lambda x: x[1]["area"], reverse=True))
+    second_row = dict(sorted(second_row.items(), key=lambda x: x[1]["area"], reverse=True))
 
     # Plot setup
     fig, ax = plt.subplots(figsize=(10, 4))
@@ -164,8 +160,8 @@ if __name__ == "__main__":
 
     BAR_HEIGHT = 0.3
     Y_OFFSET = 0.7
-    POS1 = 0.6
-    POS2 = 0.8
+    POS1 = 0.65
+    POS2 = 0.85
 
     # Helper to plot a row
     def plot_row(y, row_dict, total_area):
@@ -184,18 +180,14 @@ if __name__ == "__main__":
                 - norm_row (list[float]): Normalized area values for the row (sum to 1).
                 - left (list[float]): Left positions for each bar segment in the row.
         """
-        labels, areas, colors = zip(
-            *[(k, v["area"], v["color"]) for k, v in row_dict.items()]
-        )
+        labels, areas, colors = zip(*[(k, v["area"], v["color"]) for k, v in row_dict.items()])
         row_total = sum(areas)
         norm_row = [a / row_total for a in areas]
         norm_total = [a / total_area for a in areas]
         left = [sum(norm_row[:i]) for i in range(len(norm_row))]
 
         x = 0
-        for label, val, frac_row, color, frac_total in zip(
-            labels, areas, norm_row, colors, norm_total
-        ):
+        for label, val, frac_row, color, frac_total in zip(labels, areas, norm_row, colors, norm_total):
             ax.barh(
                 y,
                 frac_row,

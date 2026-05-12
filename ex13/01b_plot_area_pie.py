@@ -32,9 +32,7 @@ import os
 
 if __name__ == "__main__":
     # Usage: python 01b_plot_area_pie_sol.py <area_report_file>
-    parser = argparse.ArgumentParser(
-        description="Extract hierarchical areas from an OpenROAD area report."
-    )
+    parser = argparse.ArgumentParser(description="Extract hierarchical areas from an OpenROAD area report.")
     parser.add_argument("file", type=str, help="Path to the area report file")
     args = parser.parse_args()
 

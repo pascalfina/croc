@@ -33,9 +33,7 @@ import os
 
 if __name__ == "__main__":
     # Usage: python 01b_plot_area_pie_sol.py <area_report_file>
-    parser = argparse.ArgumentParser(
-        description="Extract hierarchical areas from an OpenROAD area report."
-    )
+    parser = argparse.ArgumentParser(description="Extract hierarchical areas from an OpenROAD area report.")
     parser.add_argument("file", type=str, help="Path to the area report file")
     args = parser.parse_args()
 
@@ -102,6 +100,9 @@ if __name__ == "__main__":
     #       - Optional: Use `autopct='%1.1f%%'` to show percentages on the chart
     # --------------------------------------------------------------------------
 
+    # Set the figure size
+    plt.figure(figsize=(8, 6))
+
     # Generate a color map for the components
     cmap = plt.get_cmap("tab10")
     colors = [cmap(i) for i in range(len(names))]
@@ -110,12 +111,14 @@ if __name__ == "__main__":
     names = [
         "SRAM Bank 1",
         "SRAM Bank 2",
+        "Bootrom",
+        "CLINT",
         "Core",
         "Debug Module",
         "JTAG TAP",
         "GPIO",
-        "SoC Control",
         "Timer",
+        "SoC Control",
         "UART",
     ]
 
@@ -127,28 +130,25 @@ if __name__ == "__main__":
     wedges, texts = plt.pie(
         areas,
         labels=names,
-        startangle=90,
+        startangle=45,
         colors=colors,
-        labeldistance=1.1,
+        labeldistance=1.2,
         wedgeprops=dict(width=0.4, edgecolor="w"),
     )
 
     # Make labels bold
     for text in texts:
         text.set_fontweight("bold")
+        text.set_fontsize(10)
 
     # Add percentage text below each label
-    LABEL_OFFSET = 0.04
+    LABEL_OFFSET = 0.03
     for i, text in enumerate(texts):
         x, y = text.get_position()
-        if x < 0.5:
-            plt.text(
-                x, y - LABEL_OFFSET, percentages[i], ha="right", va="top", fontsize=10
-            )
+        if x < 0:
+            plt.text(x, y - LABEL_OFFSET, percentages[i], ha="right", va="top", fontsize=8)
         else:
-            plt.text(
-                x, y - LABEL_OFFSET, percentages[i], ha="left", va="top", fontsize=10
-            )
+            plt.text(x, y - LABEL_OFFSET, percentages[i], ha="left", va="top", fontsize=8)
 
     # Title
     plt.title("Area Breakdown: i_croc", fontsize=12, fontweight="bold")

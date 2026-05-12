@@ -38,9 +38,7 @@ AREA_PER_GE = 7.25
 
 if __name__ == "__main__":
     # Usage: python 01a_plot_area_bar.py <area_report_file>
-    parser = argparse.ArgumentParser(
-        description="Extract hierarchical areas from an OpenROAD area report."
-    )
+    parser = argparse.ArgumentParser(description="Extract hierarchical areas from an OpenROAD area report.")
     parser.add_argument("file", type=str, help="Path to the area report file")
     args = parser.parse_args()
 
@@ -67,15 +65,18 @@ if __name__ == "__main__":
 
         print(area_kge)
 
+    # Remap the names of the components for better readability
     names = [
-        "SRAM Bank 1",
-        "SRAM Bank 2",
+        "SRAM\nBank 1",
+        "SRAM\nBank 2",
+        "Bootrom",
+        "CLINT",
         "Core",
-        "Debug Module",
-        "JTAG TAP",
+        "Debug\nModule",
+        "JTAG \nTAP",
         "GPIO",
-        "SoC Control",
         "Timer",
+        "SoC\nControl",
         "UART",
     ]
 

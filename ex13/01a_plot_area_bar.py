@@ -38,9 +38,7 @@ AREA_PER_GE = 7.25
 
 if __name__ == "__main__":
     # Usage: python 01a_plot_area_bar.py <area_report_file>
-    parser = argparse.ArgumentParser(
-        description="Extract hierarchical areas from an OpenROAD area report."
-    )
+    parser = argparse.ArgumentParser(description="Extract hierarchical areas from an OpenROAD area report.")
     parser.add_argument("file", type=str, help="Path to the area report file")
     args = parser.parse_args()
 

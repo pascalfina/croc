@@ -38,9 +38,7 @@ AREA_PER_GE = 7.25
 
 if __name__ == "__main__":
     # Usage: python 01a_plot_area_bar.py <area_report_file>
-    parser = argparse.ArgumentParser(
-        description="Extract hierarchical areas from an OpenROAD area report."
-    )
+    parser = argparse.ArgumentParser(description="Extract hierarchical areas from an OpenROAD area report.")
     parser.add_argument("file", type=str, help="Path to the area report file")
     args = parser.parse_args()
 
@@ -67,15 +65,18 @@ if __name__ == "__main__":
 
         print(area_kge)
 
+    # Remap the names of the components for better readability
     names = [
-        "SRAM Bank 1",
-        "SRAM Bank 2",
+        "SRAM\nBank 1",
+        "SRAM\nBank 2",
+        "Bootrom",
+        "CLINT",
         "Core",
-        "Debug Module",
-        "JTAG TAP",
+        "Debug\nModule",
+        "JTAG \nTAP",
         "GPIO",
-        "SoC Control",
         "Timer",
+        "SoC\nControl",
         "UART",
     ]
 
@@ -109,18 +110,16 @@ if __name__ == "__main__":
     left_positions = [sum(norm_values[:i]) for i in range(len(norm_values))]
 
     # Plot setup
-    fig, ax = plt.subplots(figsize=(7, 2))
+    fig, ax = plt.subplots(figsize=(10, 2))
     ax.xaxis.set_visible(False)
     ax.set_xlim(0, 1)
 
     BAR_HEIGHT = 0.3
-    POS1 = 0.7
+    POS1 = 0.75
     POS2 = 1.0
 
     # Plot bars and labels
-    for label, value, norm_value, left, color in zip(
-        names, areas_kge, norm_values, left_positions, colors
-    ):
+    for label, value, norm_value, left, color in zip(names, areas_kge, norm_values, left_positions, colors):
         print(label, value, norm_value, left, color)
 
         ax.barh(0, norm_value, color=color, left=left, height=BAR_HEIGHT)

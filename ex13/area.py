@@ -84,9 +84,7 @@ def extract_areas(area_report_path: str) -> Node:
             number_list = [float(n) for n in numbers.split()]
 
             area = float(number_list[0])
-            level = (
-                len(indent) // 2
-            )  # Each indentation level corresponds to a depth in the hierarchy
+            level = len(indent) // 2  # Each indentation level corresponds to a depth in the hierarchy
 
             node = Node(name, area)
             logging.debug(f"Extracted node: {node} at level {level}")
@@ -106,9 +104,7 @@ def extract_areas(area_report_path: str) -> Node:
                     stack.append(node)
                     logging.debug(f"Added {node.name} as child to {parent.name}")
                 else:
-                    logging.error(
-                        f"No valid parent found for {name} at level {level}. Skipping."
-                    )
+                    logging.error(f"No valid parent found for {name} at level {level}. Skipping.")
 
     return root
 
@@ -140,9 +136,7 @@ def get_path(node, path):
 
 if __name__ == "__main__":
     # Use argparse for command-line arguments
-    parser = argparse.ArgumentParser(
-        description="Extract hierarchical areas from an OpenROAD area report."
-    )
+    parser = argparse.ArgumentParser(description="Extract hierarchical areas from an OpenROAD area report.")
     parser.add_argument("file", type=str, help="Path to the area report file")
     parser.add_argument(
         "-v",
