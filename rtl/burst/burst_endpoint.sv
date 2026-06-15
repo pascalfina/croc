@@ -21,7 +21,9 @@ logic [BurstLenWidth-1:0] blen_d, blen_q;
 
 typedef enum logic [1:0] {
     IDLE,
-    WRITE
+    WRITE,
+    READ_ADDR,
+    READ_DATA
 } state_t;
 
 state_t state_d, state_q;
@@ -37,16 +39,19 @@ always_comb begin
     sram_be_o = 4'd0;
     burst_rsp_o = '0;
 
-
     case (state_q)
+
         IDLE: begin
-            if(burst_req_i.hdr_valid && burst_req_i.hdr.we)begin
+            if(burst_req_i.hdr_valid)begin
                 addr_d = burst_req_i.hdr.start_addr;
                 blen_d = burst_req_i.hdr.blen;
                 burst_rsp_o.hdr_gnt = 1;
-                state_d = WRITE;
-            end
-            else begin
+                if (burst_req_i.hdr.we) begin
+                    state_d = WRITE;
+                end else begin
+                    state_d = READ_ADDR;
+                end
+            end else begin
                 state_d = IDLE; // useless only for clarity 
             end
         end
@@ -59,7 +64,6 @@ always_comb begin
                 sram_wdata_o = burst_req_i.wdata; 
                 sram_be_o = 4'b1111;
             end
-
             if(sram_gnt_i && burst_req_i.wvalid)begin
                 addr_d = addr_q + 4;
                 burst_rsp_o.wready = 1;
@@ -70,7 +74,30 @@ always_comb begin
                 end   
             end 
         end
-        
+
+        READ_ADDR: begin
+            sram_req_o = 1;
+            sram_we_o = 0; 
+            sram_addr_o = addr_q;
+            if (sram_gnt_i) begin
+                state_d = READ_DATA;
+            end 
+        end
+
+        READ_DATA: begin
+            burst_rsp_o.rvalid = 1;
+            burst_rsp_o.rdata = sram_rdata_i;
+            if (burst_req_i.rready) begin
+                if(blen_q == 0) begin
+                    state_d = IDLE;
+                end else begin
+                    addr_d = addr_q + 4;
+                    blen_d = blen_q - 1;
+                    state_d = READ_ADDR;
+                    end
+                end
+            end
+
         default: begin
             state_d = IDLE;
         end
