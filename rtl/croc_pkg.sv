@@ -42,6 +42,7 @@ package croc_pkg;
   /// 3'b000=CVE2, 3'b001=Ibex, 3'b111=custom, others are reserved
   localparam int unsigned CoreId        = 0;
 
+  localparam int unsigned BurstLenWidth = 32'd8;
 
   ////////////////////////
   // SRAM Configuration //
@@ -68,6 +69,12 @@ package croc_pkg;
       logic [31:0] end_addr;
   } addr_map_rule_t;
 
+
+typedef struct packed {
+  logic [BurstLenWidth-1:0] blen;
+  logic                     bfirst;
+  logic                     blast;
+} obi_a_optional_t;
 
   ////////////////////////////////
   // Main Crossbar Address Map ///
@@ -199,7 +206,7 @@ package croc_pkg;
     logic [MgrObiCfg.DataWidth/8-1:0] be;
     logic [  MgrObiCfg.DataWidth-1:0] wdata;
     logic [    MgrObiCfg.IdWidth-1:0] aid;
-    logic                             a_optional; // dummy signal; not used
+    obi_a_optional_t                  a_optional; // dummy signal; not used
   } mgr_obi_a_chan_t;
   /// OBI Manager -> Xbar request
   typedef struct packed {
@@ -239,7 +246,7 @@ package croc_pkg;
     logic [SbrObiCfg.DataWidth/8-1:0] be;
     logic [  SbrObiCfg.DataWidth-1:0] wdata;
     logic [    SbrObiCfg.IdWidth-1:0] aid;
-    logic                             a_optional; // dummy signal; not used
+    obi_a_optional_t                  a_optional; // dummy signal; not used
   } sbr_obi_a_chan_t;
   /// OBI Xbar -> Subordinate request
   typedef struct packed {
