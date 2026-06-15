@@ -31,7 +31,7 @@ module obi_mux #(
   /// Use the extended ID field (aid & rid) to route the response
   parameter bit                UseIdForRouting    = 1'b0,
   /// The burst extension mode.
-  parameter obi_pkg::obi_burst_mode_e BurstMode   = obi_pkg::OBI_BURST_NONE,
+  parameter obi_pkg::obi_burst_mode_e BurstMode   = obi_pkg::OBI_BURST_BEAT_FRAMED,
   /// The width of the beat-framed burst length field.
   parameter int unsigned       BurstLenWidth      = 32'd8
 ) (

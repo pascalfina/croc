@@ -18,7 +18,7 @@ module obi_demux #(
   /// The type of the port select signal.
   parameter type               select_t    = logic [cf_math_pkg::idx_width(NumMgrPorts)-1:0],
   /// The burst extension mode.
-  parameter obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE,
+  parameter obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_BEAT_FRAMED,
   /// The width of the beat-framed burst length field.
   parameter int unsigned       BurstLenWidth = 32'd8
 ) (

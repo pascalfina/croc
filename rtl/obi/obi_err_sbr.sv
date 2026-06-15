@@ -16,7 +16,7 @@ module obi_err_sbr #(
   /// Data to respond with from error subordinate
   parameter logic [ObiCfg.DataWidth-1:0] RspData     = 32'hBADCAB1E,
   /// The burst extension mode.
-  parameter obi_pkg::obi_burst_mode_e    BurstMode   = obi_pkg::OBI_BURST_NONE,
+  parameter obi_pkg::obi_burst_mode_e    BurstMode   = obi_pkg::OBI_BURST_BEAT_FRAMED,
   /// The width of the beat-framed burst length field.
   parameter int unsigned                 BurstLenWidth = 32'd8
 ) (
@@ -65,7 +65,7 @@ module obi_err_sbr #(
       .full_o    ( fifo_full                                               ),
       .empty_o   ( fifo_empty                                              ),
       .usage_o   (),
-      .data_i    ( '{rid: obi_req_i.a.aid}                              ),
+      .data_i    ( obi_req_i.a.aid                              ),
       .push_i    ( obi_req_i.req && obi_rsp_o.gnt                          ),
       .data_o    ( rsp_meta                                                ),
       .pop_i     ( fifo_pop                                                )

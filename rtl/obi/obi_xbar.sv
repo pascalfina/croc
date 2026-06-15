@@ -37,7 +37,7 @@ module obi_xbar #(
   /// Connectivity matrix to disable certain paths.
   parameter bit [NumSbrPorts-1:0][NumMgrPorts-1:0] Connectivity = '1,
   /// The burst extension mode.
-  parameter obi_pkg::obi_burst_mode_e BurstMode   = obi_pkg::OBI_BURST_NONE,
+  parameter obi_pkg::obi_burst_mode_e BurstMode   = obi_pkg::OBI_BURST_BEAT_FRAMED,
   /// The width of the beat-framed burst length field.
   parameter int unsigned       BurstLenWidth      = 32'd8
 ) (
