@@ -29,6 +29,7 @@ module burst_endpoint import burst_pkg::*; (
 logic [AddrWidth-1:0] addr_d, addr_q;
 logic [BurstLenWidth-1:0] blen_d, blen_q; 
 logic cpu_rvalid_d, cpu_rvalid_q;
+logic rvalid_d, rvalid_q;
 
 typedef enum logic [1:0] {
     IDLE,
@@ -54,6 +55,8 @@ always_comb begin
     burst_rsp_o = '0;
     cpu_gnt_o = 0;
     cpu_rvalid_d = 0;
+    rvalid_d = 0;
+    burst_rsp_o.rvalid = rvalid_q;
 
     case (state_q)
 
@@ -91,6 +94,7 @@ always_comb begin
             if(sram_gnt_i && burst_req_i.wvalid)begin
                 addr_d = addr_q + 4;
                 burst_rsp_o.wready = 1;
+                rvalid_d = 1;  
                 if(blen_q == 0)begin
                     state_d = IDLE;
                 end else begin 
@@ -104,12 +108,12 @@ always_comb begin
             sram_we_o = 0; 
             sram_addr_o = addr_q;
             if (sram_gnt_i) begin
+                rvalid_d=1;
                 state_d = READ_DATA;
             end 
         end
 
         READ_DATA: begin
-            burst_rsp_o.rvalid = 1;
             burst_rsp_o.rdata = sram_rdata_i;
             if (burst_req_i.rready) begin
                 if(blen_q == 0) begin
@@ -134,11 +138,13 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
         addr_q <= 32'h0;
         blen_q <= 8'd0;
         cpu_rvalid_q <= 0;
+        rvalid_q <= 0;
     end else begin
         state_q <= state_d;
         addr_q <= addr_d;
         blen_q <= blen_d;
         cpu_rvalid_q <= cpu_rvalid_d;
+        rvalid_q <= rvalid_d;
     end 
 end
 

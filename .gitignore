@@ -7,3 +7,9 @@ project_desciption/OBI Beat-Framed Burst Support in Croc-iDMA.pdf
 project_desciption/OBI-v1.6.0.pdf
 rtl/burst/sim_burst
 rtl/burst/tb_burst_endpoint.vcd
+rtl/burst/sim_cont
+rtl/burst/tb_burst_contention.vcd
+rtl/burst/sim_c
+rtl/burst/sim_e
+rtl/burst/tb_burst_compressor.vcd
+rtl/burst/tb_burst_e2e.vcd
