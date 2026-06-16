@@ -13,3 +13,4 @@ rtl/burst/sim_c
 rtl/burst/sim_e
 rtl/burst/tb_burst_compressor.vcd
 rtl/burst/tb_burst_e2e.vcd
+rtl/burst/compressor_state.txt
