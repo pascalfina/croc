@@ -34,8 +34,8 @@ logic rvalid_d, rvalid_q;
 typedef enum logic [1:0] {
     IDLE,
     WRITE,
-    READ_ADDR,
-    READ_DATA
+    READ,
+    READ_DRAIN
 } state_t;
 
 state_t state_d, state_q;
@@ -57,6 +57,7 @@ always_comb begin
     cpu_rvalid_d = 0;
     rvalid_d = 0;
     burst_rsp_o.rvalid = rvalid_q;
+    burst_rsp_o.rdata  = sram_rdata_i; 
 
     case (state_q)
 
@@ -68,7 +69,7 @@ always_comb begin
                 if (burst_req_i.hdr.we) begin
                     state_d = WRITE;
                 end else begin
-                    state_d = READ_ADDR;
+                    state_d = READ;
                 end
             end else if (cpu_req_i) begin // burst is idle cpu can directly write to sram
                 sram_req_o = cpu_req_i;
@@ -103,27 +104,23 @@ always_comb begin
             end 
         end
 
-        READ_ADDR: begin
+        READ: begin
             sram_req_o = 1;
             sram_we_o = 0; 
             sram_addr_o = addr_q;
             if (sram_gnt_i) begin
-                rvalid_d=1;
-                state_d = READ_DATA;
+                rvalid_d= 1;
+                addr_d = addr_q + 4;
+                if (blen_q == 0) begin
+                    state_d = READ_DRAIN;
+                end else begin
+                    blen_d = blen_q - 1;
+                end
             end 
         end
 
-        READ_DATA: begin
-            burst_rsp_o.rdata = sram_rdata_i;
-            if (burst_req_i.rready) begin
-                if(blen_q == 0) begin
-                    state_d = IDLE;
-                end else begin
-                    addr_d = addr_q + 4;
-                    blen_d = blen_q - 1;
-                    state_d = READ_ADDR;
-                    end
-                end
+        READ_DRAIN: begin
+            state_d = IDLE; 
             end
 
         default: begin

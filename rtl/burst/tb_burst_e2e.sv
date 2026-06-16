@@ -131,6 +131,22 @@ module tb_burst_e2e import burst_pkg::*; ();
     end
   end
 
+  // ── Pipeline-Durchsatz: Takte zwischen erster und letzter Read-rvalid ──
+  int   cyc;
+  always @(posedge clk) cyc <= (rst_ni ? cyc + 1 : 0);
+
+  logic pipe_arm = 1'b0;                    // Stimulus armt vor dem Pipeline-Test
+  int   pipe_first, pipe_last, pipe_n;
+  always @(posedge clk) begin
+    if (!pipe_arm)
+      pipe_n <= 0;
+    else if (beat_rvalid && i_comp.state_q == COMP_READ_STREAM) begin
+      if (pipe_n == 0) pipe_first <= cyc;   // erste Read-rvalid
+      pipe_last <= cyc;                      // immer die letzte
+      pipe_n    <= pipe_n + 1;
+    end
+  end
+
   // LOCK-Monitor
   always @(posedge clk) begin
     if (rst_ni && (i_ep.state_q !== EP_IDLE) && cpu_gnt) begin
@@ -398,6 +414,23 @@ module tb_burst_e2e import burst_pkg::*; ();
     chk(gnt_cnt - gbase == 2 &&
         rvalid_cnt - rbase == 2,
         "T5 1 write + 1 read #gnt==#rvalid==2");
+
+    // Test 6: Read-Pipeline lueckenlos? Spanne erste->letzte rvalid == blen
+    $display("[E2E] Test 6: read-pipeline throughput");
+
+    pipe_arm = 1'b0;
+    @(posedge clk); #1;           // capture-reset (pipe_n -> 0)
+    pipe_arm = 1'b1;
+
+    idma_read(32'h100, 8'd3);     // 4-Wort-Read durch die ganze Kette
+    repeat (10) @(posedge clk);
+
+    chk(pipe_n == 4, $sformatf("T6 4 rvalid erfasst (war %0d)", pipe_n));
+    chk(pipe_last - pipe_first == 3,
+        $sformatf("T6 pipeline lueckenlos: Spanne=%0d Takte (erwartet 3=blen, alte 2-Takt-Version waere 6)",
+                  pipe_last - pipe_first));
+
+    pipe_arm = 1'b0;
 
     if (errors == 0) begin
       $display("[E2E] ============ END-TO-END TB PASSED ============");
