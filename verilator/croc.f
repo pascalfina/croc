@@ -182,4 +182,5 @@
 ../rtl/test/tb_croc_pkg.sv
 ../rtl/test/croc_vip.sv
 ../rtl/test/tb_croc_soc.sv
+../rtl/burst/obi_burst_check.sv
 

@@ -316,7 +316,11 @@ module idma_legalizer_rw_obi #(
             we: 1'b0,
             wdata: '0,
             aid: opt_tf_q.axi_id,
-            a_optional: '0
+            a_optional: '{
+                blen:   (r_tf_q.length >> OffsetWidth) - 1,
+                bfirst: (r_tf_q.addr == r_tf_q.base_addr),
+                blast:  r_done
+            }
         };
     end
 
@@ -338,7 +342,11 @@ module idma_legalizer_rw_obi #(
             we: 1,
             wdata: '0,
             aid: opt_tf_q.axi_id,
-            a_optional: '0
+            a_optional: '{
+                blen:   (w_tf_q.length >> OffsetWidth) - 1,
+                bfirst: (w_tf_q.addr == w_tf_q.base_addr),
+                blast:  w_done
+                }
         };
         w_req_o.w_dp_req = '{
             dst_protocol: opt_tf_q.dst_protocol,
