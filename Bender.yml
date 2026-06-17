@@ -28,6 +28,7 @@ sources:
       - ihp13/tc_sram_impl.sv
 
   - rtl/croc_pkg.sv
+  - rtl/burst/burst_pkg.sv #burst addition
   - rtl/user_pkg.sv
   - rtl/soc_ctrl/soc_ctrl_regs_pkg.sv
   - rtl/gpio/gpio_reg_pkg.sv
@@ -46,6 +47,10 @@ sources:
       - rtl/gpio/gpio.sv
       - rtl/clint/clint.sv
       - rtl/obi_timer/obi_timer.sv
+      # Level 1.5: Method-2-Burst-Path
+      - rtl/burst/burst_compressor.sv     # burst
+      - rtl/burst/burst_endpoint_rw.sv    # burst
+      - rtl/burst/croc_burst_dma.sv       # burst
       # Level 2
       - rtl/croc_domain.sv
       - rtl/user_domain.sv

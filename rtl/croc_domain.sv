@@ -281,11 +281,13 @@ module croc_domain import croc_pkg::*; #(
     );
 
     // IDMA managers going into crossbar
-    assign xbar_mgr_obi_req[4] = idma_obi_write_req;
-    assign idma_obi_write_rsp  = xbar_mgr_obi_rsp[4];
+    //assign xbar_mgr_obi_req[4] = idma_obi_write_req;
+    assign xbar_mgr_obi_req[4] = '0;
+    //assign idma_obi_write_rsp  = xbar_mgr_obi_rsp[4]; burst endpoint instead of crossbar 
 
-    assign xbar_mgr_obi_req[5] = idma_obi_read_req;
-    assign idma_obi_read_rsp   = xbar_mgr_obi_rsp[5];
+    //assign xbar_mgr_obi_req[5] = idma_obi_read_req; burst endpoint instead of crossbar
+    assign xbar_mgr_obi_req[5] = '0;
+    //assign idma_obi_read_rsp   = xbar_mgr_obi_rsp[5];
 
   end else begin : gen_no_dma
 
@@ -442,59 +444,125 @@ module croc_domain import croc_pkg::*; #(
   // -----------------
   localparam int unsigned SramBankAddrWidth = cf_math_pkg::idx_width(SramBankNumWords);
 
-  for (genvar i = 0; i < NumSramBanks; i++) begin : gen_sram_bank
-    logic bank_req, bank_we, bank_gnt, bank_single_err;
-    logic [SbrObiCfg.AddrWidth-1:0] bank_byte_addr;
-    logic [SramBankAddrWidth-1:0] bank_word_addr;
-    logic [SbrObiCfg.DataWidth-1:0] bank_wdata, bank_rdata;
-    logic [SbrObiCfg.DataWidth/8-1:0] bank_be;
+  // for (genvar i = 0; i < NumSramBanks; i++) begin : gen_sram_bank
+  //   logic bank_req, bank_we, bank_gnt, bank_single_err;
+  //   logic [SbrObiCfg.AddrWidth-1:0] bank_byte_addr;
+  //   logic [SramBankAddrWidth-1:0] bank_word_addr;
+  //   logic [SbrObiCfg.DataWidth-1:0] bank_wdata, bank_rdata;
+  //   logic [SbrObiCfg.DataWidth/8-1:0] bank_be;
 
-    obi_sram_shim #(
-      .ObiCfg    ( SbrObiCfg     ),
-      .obi_req_t ( sbr_obi_req_t ),
-      .obi_rsp_t ( sbr_obi_rsp_t )
-    ) i_sram_shim (
-      .clk_i,
-      .rst_ni,
+  //   obi_sram_shim #(
+  //     .ObiCfg    ( SbrObiCfg     ),
+  //     .obi_req_t ( sbr_obi_req_t ),
+  //     .obi_rsp_t ( sbr_obi_rsp_t )
+  //   ) i_sram_shim (
+  //     .clk_i,
+  //     .rst_ni,
 
-      .obi_req_i ( xbar_mem_bank_obi_req[i] ),
-      .obi_rsp_o ( xbar_mem_bank_obi_rsp[i] ),
+  //     .obi_req_i ( xbar_mem_bank_obi_req[i] ),
+  //     .obi_rsp_o ( xbar_mem_bank_obi_rsp[i] ),
 
-      .req_o   ( bank_req       ),
-      .we_o    ( bank_we        ),
-      .addr_o  ( bank_byte_addr ),
-      .wdata_o ( bank_wdata     ),
-      .be_o    ( bank_be        ),
+  //     .req_o   ( bank_req       ),
+  //     .we_o    ( bank_we        ),
+  //     .addr_o  ( bank_byte_addr ),
+  //     .wdata_o ( bank_wdata     ),
+  //     .be_o    ( bank_be        ),
 
-      .gnt_i   ( bank_gnt   ),
-      .rdata_i ( bank_rdata )
-    );
+  //     .gnt_i   ( bank_gnt   ),
+  //     .rdata_i ( bank_rdata )
+  //   );
 
-    assign bank_word_addr = bank_byte_addr[SbrObiCfg.AddrWidth-1:2];
+  //   assign bank_word_addr = bank_byte_addr[SbrObiCfg.AddrWidth-1:2];
 
-    tc_sram_impl #(
-      .NumWords  ( SramBankNumWords ),
-      .DataWidth ( 32 ),
-      .NumPorts  (  1 ),
-      .Latency   (  1 )
-    ) i_sram (
-      .clk_i,
-      .rst_ni,
+  //   tc_sram_impl #(
+  //     .NumWords  ( SramBankNumWords ),
+  //     .DataWidth ( 32 ),
+  //     .NumPorts  (  1 ),
+  //     .Latency   (  1 )
+  //   ) i_sram (
+  //     .clk_i,
+  //     .rst_ni,
 
-      .impl_i  ( sram_impl      ),
-      .impl_o  (),
+  //     .impl_i  ( sram_impl      ),
+  //     .impl_o  (),
 
-      .req_i   ( bank_req       ),
-      .we_i    ( bank_we        ),
-      .addr_i  ( bank_word_addr ),
+  //     .req_i   ( bank_req       ),
+  //     .we_i    ( bank_we        ),
+  //     .addr_i  ( bank_word_addr ),
 
-      .wdata_i ( bank_wdata ),
-      .be_i    ( bank_be    ),
-      .rdata_o ( bank_rdata )
-    );
+  //     .wdata_i ( bank_wdata ),
+  //     .be_i    ( bank_be    ),
+  //     .rdata_o ( bank_rdata )
+  //   );
 
-    assign bank_gnt = 1'b1; // always ready for request
-  end
+  //   assign bank_gnt = 1'b1; // always ready for request
+  // end
+
+
+    // SRAM-Bank-Signale (Byte-Adresse vom Endpoint)
+  logic        b0_req, b0_we, b1_req, b1_we;
+  logic [31:0] b0_addr, b0_wdata, b0_rdata, b1_addr, b1_wdata, b1_rdata;
+  logic [3:0]  b0_be, b1_be;
+
+  croc_burst_dma i_burst_dma (
+    .clk_i, .rst_ni,
+    .idma_read_req_i (idma_obi_read_req),        
+    .idma_read_rsp_o (idma_obi_read_rsp),
+    .idma_write_req_i(idma_obi_write_req),       
+    .idma_write_rsp_o(idma_obi_write_rsp),
+    .cpu_bank0_req_i (xbar_mem_bank_obi_req[0]), 
+    .cpu_bank0_rsp_o (xbar_mem_bank_obi_rsp[0]),
+    .cpu_bank1_req_i (xbar_mem_bank_obi_req[1]), 
+    .cpu_bank1_rsp_o (xbar_mem_bank_obi_rsp[1]),
+    .bank0_req_o(b0_req), 
+    .bank0_we_o(b0_we), 
+    .bank0_addr_o(b0_addr),
+    .bank0_wdata_o(b0_wdata), 
+    .bank0_be_o(b0_be), 
+    .bank0_rdata_i(b0_rdata),
+    .bank1_req_o(b1_req), 
+    .bank1_we_o(b1_we), 
+    .bank1_addr_o(b1_addr),
+    .bank1_wdata_o(b1_wdata), 
+    .bank1_be_o(b1_be), 
+    .bank1_rdata_i(b1_rdata)
+  );
+
+  tc_sram_impl #(
+    .NumWords(SramBankNumWords), 
+    .DataWidth(32), 
+    .NumPorts(1), 
+    .Latency(1)
+    ) i_sram0 (
+    .clk_i, 
+    .rst_ni, 
+    .impl_i(sram_impl), 
+    .impl_o(),
+    .req_i(b0_req), 
+    .we_i(b0_we),
+    .addr_i(b0_addr[SramBankAddrWidth+1:2]),   
+    .wdata_i(b0_wdata), 
+    .be_i(b0_be), 
+    .rdata_o(b0_rdata)
+  );
+
+  tc_sram_impl #(
+    .NumWords(SramBankNumWords), 
+    .DataWidth(32), 
+    .NumPorts(1), 
+    .Latency(1)
+  ) i_sram1 (
+    .clk_i, 
+    .rst_ni, 
+    .impl_i(sram_impl), 
+    .impl_o(),
+    .req_i(b1_req), 
+    .we_i(b1_we),
+    .addr_i(b1_addr[SramBankAddrWidth+1:2]),
+    .wdata_i(b1_wdata), 
+    .be_i(b1_be), 
+    .rdata_o(b1_rdata)
+  );
 
 
   // Xbar space error subordinate

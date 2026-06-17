@@ -266,7 +266,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
 end
 
 assign cpu_gnt_o    = cpu_grant ? sram_gnt_i : 0;
-assign cpu_rvalid_d = cpu_grant && !cpu_we_i && sram_gnt_i;                                          
+assign cpu_rvalid_d = cpu_grant && sram_gnt_i;   // !cpu_we_i out                                         
 assign cpu_rvalid_o = cpu_rvalid_q;  
 assign cpu_rdata_o = sram_rdata_i;
 

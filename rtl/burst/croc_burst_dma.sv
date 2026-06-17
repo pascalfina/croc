@@ -1,4 +1,9 @@
-module croc_burst_dma import croc_pkg::*; (
+module croc_burst_dma 
+import croc_pkg::*; 
+import burst_pkg::burst_req_t;
+import burst_pkg::burst_rsp_t;
+
+(
     input  logic clk_i, 
     input  logic rst_ni,
 
