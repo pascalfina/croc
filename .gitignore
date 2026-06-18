@@ -16,3 +16,6 @@ rtl/burst/tb_burst_e2e.vcd
 rtl/burst/compressor_state.txt
 rtl/burst/tb_burst_endpoint_rw.vcd
 rtl/burst/sim_rw
+rtl/burst/log.txt
+verilator/croc.f
+

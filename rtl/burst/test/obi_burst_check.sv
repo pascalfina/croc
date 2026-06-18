@@ -61,10 +61,6 @@ module obi_burst_check import croc_pkg::*; #(
 
 endmodule
 
-// ──────────────────────────────────────────────────────────────────────────
-// An beide iDMA-Ports in croc_domain binden (kein Eingriff in croc_domain.sv).
-// Greift auf die internen Signale idma_obi_read_req/_rsp + idma_obi_write_req/_rsp zu.
-// ──────────────────────────────────────────────────────────────────────────
 bind croc_domain obi_burst_check #(.NAME("iDMA-RD")) i_burst_check_rd (
   .clk_i  (clk_i),
   .rst_ni (rst_ni),
