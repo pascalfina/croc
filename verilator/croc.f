@@ -163,6 +163,7 @@
 ../rtl/riscv-dbg/dm_obi_top.sv
 ../rtl/riscv-dbg/tb/jtag_test_simple.sv
 ../rtl/croc_pkg.sv
+../rtl/burst/burst_pkg.sv
 ../rtl/user_pkg.sv
 ../rtl/soc_ctrl/soc_ctrl_regs_pkg.sv
 ../rtl/gpio/gpio_reg_pkg.sv
@@ -175,6 +176,9 @@
 ../rtl/gpio/gpio.sv
 ../rtl/clint/clint.sv
 ../rtl/obi_timer/obi_timer.sv
+../rtl/burst/burst_compressor.sv
+../rtl/burst/burst_endpoint_rw.sv
+../rtl/burst/croc_burst_dma.sv
 ../rtl/croc_domain.sv
 ../rtl/user_domain.sv
 ../rtl/croc_soc.sv
@@ -182,5 +186,6 @@
 ../rtl/test/tb_croc_pkg.sv
 ../rtl/test/croc_vip.sv
 ../rtl/test/tb_croc_soc.sv
-../rtl/burst/obi_burst_check.sv
+../rtl/burst/test/obi_burst_check.sv
+../rtl/burst/test/burst_contention_check.sv
 
