@@ -25,11 +25,9 @@ set SRAM            $CROC/gen_sram_bank
 set JTAG            $CROC/i_dmi_jtag
 set SRAM_512x32     gen_512x32xBx1.i_cut
 
-# memory banks
-set sram {\[0\].i_sram/}
-set bank0_sram0 $SRAM$sram$SRAM_512x32
-set sram {\[1\].i_sram/}
-set bank1_sram0 $SRAM$sram$SRAM_512x32
+# memory banks (croc_domain: gen_sram_bank[i].i_sram -> i_sram0/i_sram1)
+set bank0_sram0 $CROC/i_sram0/$SRAM_512x32
+set bank1_sram0 $CROC/i_sram1/$SRAM_512x32
 
 # JTAG request and response CDCs
 # Goal: Find the async nets and their source and destination cells

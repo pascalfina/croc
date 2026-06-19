@@ -181,8 +181,6 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
 end
 
 
-
-
 // bank 0
 assign cpu_bank0_rsp_o.r.err        = 1'b0;
 assign cpu_bank0_rsp_o.r.r_optional = '0;
