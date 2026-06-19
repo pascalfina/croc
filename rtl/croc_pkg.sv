@@ -71,6 +71,7 @@ package croc_pkg;
 
 
 typedef struct packed {
+  logic [31:0]              start_addr;
   logic [BurstLenWidth-1:0] blen;
   logic                     bfirst;
   logic                     blast;
@@ -88,15 +89,19 @@ typedef struct packed {
     XbarError  = 0,
     XbarPeriph = 1,
     XbarUser   = 2,
-    XbarBank0  = 3
+    XbarBank0  = 3,
+    XbarReadEp  = 5,
+    XbarWriteEp = 6
   } croc_xbar_outputs_e;
 
   /// Address map given to the main crossbar
-  localparam addr_map_rule_t [3:0] CrocAddrMap = '{
+  localparam addr_map_rule_t [5:0] CrocAddrMap = '{
     '{ idx: XbarPeriph,  start_addr: 32'h0000_0000, end_addr: 32'h1000_0000 },
     '{ idx: XbarUser,    start_addr: 32'h2000_0000, end_addr: 32'h8000_0000 },
     '{ idx: XbarBank0,   start_addr: 32'h1000_0000, end_addr: 32'h1000_0800 },
-    '{ idx: XbarBank0+1, start_addr: 32'h1000_0800, end_addr: 32'h1000_1000 }
+    '{ idx: XbarBank0+1, start_addr: 32'h1000_0800, end_addr: 32'h1000_1000 },
+    '{ idx: XbarReadEp,  start_addr: 32'h1100_0000, end_addr: 32'h1100_1000 },
+    '{ idx: XbarWriteEp, start_addr: 32'h1100_1000, end_addr: 32'h1100_2000 }
   };
 
   // +1 for additional OBI error

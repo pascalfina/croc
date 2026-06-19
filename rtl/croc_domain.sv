@@ -149,6 +149,9 @@ module croc_domain import croc_pkg::*; #(
   assign user_sbr_obi_req_o          = all_sbr_obi_req[XbarUser];
   assign all_sbr_obi_rsp[XbarUser]   = user_sbr_obi_rsp_i;
 
+  //assign all_sbr_obi_rsp[XbarReadEp]  = '0;
+  //assign all_sbr_obi_rsp[XbarWriteEp] = '0;
+
 
   // -----------------
   // Peripheral buses
@@ -280,14 +283,29 @@ module croc_domain import croc_pkg::*; #(
       .busy_o           ()
     );
 
+  localparam logic [31:0] ReadEpAddr  = get_croc_start_addr(XbarReadEp);   // 0x1100_0000
+  localparam logic [31:0] WriteEpAddr = get_croc_start_addr(XbarWriteEp);  // 0x1100_1000
+
+  // READ-Kompressor: am iDMA-Read-Port, raus auf Crossbar-Manager 5
+  always_comb begin
+    xbar_mgr_obi_req[5]        = idma_obi_read_req;   // alles vom iDMA durch ...
+    xbar_mgr_obi_req[5].a.addr = ReadEpAddr;          // ... AUSSER: Adresse konstant = die Kompression
+  end
+
+  // WRITE-Kompressor: am iDMA-Write-Port, raus auf Crossbar-Manager 4
+  always_comb begin
+    xbar_mgr_obi_req[4]        = idma_obi_write_req;
+    xbar_mgr_obi_req[4].a.addr = WriteEpAddr;
+  end
+
     // IDMA managers going into crossbar
     //assign xbar_mgr_obi_req[4] = idma_obi_write_req;
-    assign xbar_mgr_obi_req[4] = '0;
-    //assign idma_obi_write_rsp  = xbar_mgr_obi_rsp[4]; burst endpoint instead of crossbar 
+    //assign xbar_mgr_obi_req[4] = '0;
+    assign idma_obi_write_rsp  = xbar_mgr_obi_rsp[4]; 
 
     //assign xbar_mgr_obi_req[5] = idma_obi_read_req; burst endpoint instead of crossbar
-    assign xbar_mgr_obi_req[5] = '0;
-    //assign idma_obi_read_rsp   = xbar_mgr_obi_rsp[5];
+    //assign xbar_mgr_obi_req[5] = '0;
+    assign idma_obi_read_rsp   = xbar_mgr_obi_rsp[5];
 
   end else begin : gen_no_dma
 
@@ -506,10 +524,10 @@ module croc_domain import croc_pkg::*; #(
 
   croc_burst_dma i_burst_dma (
     .clk_i, .rst_ni,
-    .idma_read_req_i (idma_obi_read_req),        
-    .idma_read_rsp_o (idma_obi_read_rsp),
-    .idma_write_req_i(idma_obi_write_req),       
-    .idma_write_rsp_o(idma_obi_write_rsp),
+    .idma_read_req_i (all_sbr_obi_req[XbarReadEp]),        
+    .idma_read_rsp_o (all_sbr_obi_rsp[XbarReadEp]),
+    .idma_write_req_i(all_sbr_obi_req[XbarWriteEp]),       
+    .idma_write_rsp_o(all_sbr_obi_rsp[XbarWriteEp]),
     .cpu_bank0_req_i (xbar_mem_bank_obi_req[0]), 
     .cpu_bank0_rsp_o (xbar_mem_bank_obi_rsp[0]),
     .cpu_bank1_req_i (xbar_mem_bank_obi_req[1]), 

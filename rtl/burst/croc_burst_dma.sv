@@ -8,10 +8,10 @@ import burst_pkg::burst_rsp_t;
     input  logic rst_ni,
 
     // iDMA-read and write ports
-    input  mgr_obi_req_t idma_read_req_i,   
-    output mgr_obi_rsp_t idma_read_rsp_o,
-    input  mgr_obi_req_t idma_write_req_i,  
-    output mgr_obi_rsp_t idma_write_rsp_o,
+    input  sbr_obi_req_t idma_read_req_i,   
+    output sbr_obi_rsp_t idma_read_rsp_o,
+    input  sbr_obi_req_t idma_write_req_i,  
+    output sbr_obi_rsp_t idma_write_rsp_o,
 
     // CPU streams
     input  sbr_obi_req_t cpu_bank0_req_i,   
@@ -54,7 +54,7 @@ burst_rsp_t wr_rsp; //to compressor
 
 // adapter obi - read
 assign rd_beat_valid  = idma_read_req_i.req;
-assign rd_beat_addr   = idma_read_req_i.a.addr;
+assign rd_beat_addr = idma_read_req_i.a.a_optional.start_addr;
 assign rd_beat_wdata  = idma_read_req_i.a.wdata;
 assign rd_beat_we     = idma_read_req_i.a.we;
 assign rd_beat_bfirst = idma_read_req_i.a.a_optional.bfirst;
@@ -64,7 +64,6 @@ assign idma_read_rsp_o.gnt     = rd_beat_gnt;
 assign idma_read_rsp_o.rvalid  = rd_beat_rvalid;
 assign idma_read_rsp_o.r.rdata = rd_beat_rdata;
 assign idma_read_rsp_o.r.err   = 1'b0;
-assign idma_read_rsp_o.r.rid   = '0;
 assign idma_read_rsp_o.r.r_optional = '0;
 
 burst_compressor read_burst (
@@ -86,7 +85,7 @@ burst_compressor read_burst (
 
 // adapter obi - write
 assign wr_beat_valid  = idma_write_req_i.req;
-assign wr_beat_addr   = idma_write_req_i.a.addr;
+assign wr_beat_addr = idma_write_req_i.a.a_optional.start_addr;
 assign wr_beat_wdata  = idma_write_req_i.a.wdata;
 assign wr_beat_we     = idma_write_req_i.a.we;
 assign wr_beat_bfirst = idma_write_req_i.a.a_optional.bfirst;
@@ -96,7 +95,6 @@ assign idma_write_rsp_o.gnt     = wr_beat_gnt;
 assign idma_write_rsp_o.rvalid  = wr_beat_rvalid;
 assign idma_write_rsp_o.r.rdata = wr_beat_rdata;
 assign idma_write_rsp_o.r.err   = 1'b0;
-assign idma_write_rsp_o.r.rid   = '0;
 assign idma_write_rsp_o.r.r_optional = '0;
 
 
@@ -183,6 +181,8 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
 end
 
 
+
+
 // bank 0
 assign cpu_bank0_rsp_o.r.err        = 1'b0;
 assign cpu_bank0_rsp_o.r.r_optional = '0;
@@ -190,12 +190,51 @@ assign cpu_bank0_rsp_o.r.r_optional = '0;
 assign cpu_bank1_rsp_o.r.err        = 1'b0;
 assign cpu_bank1_rsp_o.r.r_optional = '0;
 
-logic [SbrObiCfg.IdWidth-1:0] b0_rid_q, b1_rid_q;
+localparam int unsigned RidFifoDepth = 8;   // >= max outstanding (NumAxInFlight + Pipeline)
 
-always_ff @(posedge clk_i) begin
-if (cpu_bank0_req_i.req && cpu_bank0_rsp_o.gnt) b0_rid_q <= cpu_bank0_req_i.a.aid;
-if (cpu_bank1_req_i.req && cpu_bank1_rsp_o.gnt) b1_rid_q <= cpu_bank1_req_i.a.aid;
+logic [SbrObiCfg.IdWidth-1:0] rd_rid, wr_rid;
+
+fifo_v3 #(
+    .FALL_THROUGH (1'b0),
+    .DATA_WIDTH   (SbrObiCfg.IdWidth),
+    .DEPTH        (RidFifoDepth)
+) i_rd_rid_fifo (
+    .clk_i (clk_i), .rst_ni (rst_ni),
+    .flush_i (1'b0), .testmode_i (1'b0),
+    .full_o (), .empty_o (), .usage_o (),
+    .data_i (idma_read_req_i.a.aid),
+    .push_i (idma_read_req_i.req && idma_read_rsp_o.gnt),   
+    .data_o (rd_rid),
+    .pop_i  (idma_read_rsp_o.rvalid)                        
+);
+assign idma_read_rsp_o.r.rid = rd_rid;
+
+fifo_v3 #(
+    .FALL_THROUGH (1'b0),
+    .DATA_WIDTH   (SbrObiCfg.IdWidth),
+    .DEPTH        (RidFifoDepth)
+) i_wr_rid_fifo (
+    .clk_i (clk_i), .rst_ni (rst_ni),
+    .flush_i (1'b0), .testmode_i (1'b0),
+    .full_o (), .empty_o (), .usage_o (),
+    .data_i (idma_write_req_i.a.aid),
+    .push_i (idma_write_req_i.req && idma_write_rsp_o.gnt),
+    .data_o (wr_rid),
+    .pop_i  (idma_write_rsp_o.rvalid)
+);
+assign idma_write_rsp_o.r.rid = wr_rid;
+
+
+logic [SbrObiCfg.IdWidth-1:0] b0_rid_q, b1_rid_q;
+always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+        b0_rid_q <= '0; b1_rid_q <= '0;
+    end else begin
+        if (cpu_bank0_req_i.req && cpu_bank0_rsp_o.gnt) b0_rid_q <= cpu_bank0_req_i.a.aid;
+        if (cpu_bank1_req_i.req && cpu_bank1_rsp_o.gnt) b1_rid_q <= cpu_bank1_req_i.a.aid;
+    end
 end
+
 
 
 assign cpu_bank0_rsp_o.r.rid = b0_rid_q;

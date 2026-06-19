@@ -188,4 +188,5 @@
 ../rtl/test/tb_croc_soc.sv
 ../rtl/burst/test/obi_burst_check.sv
 ../rtl/burst/test/burst_contention_check.sv
+../rtl/burst/test/burst_addr_monitor.sv
 

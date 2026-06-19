@@ -317,6 +317,7 @@ module idma_legalizer_rw_obi #(
             wdata: '0,
             aid: opt_tf_q.axi_id,
             a_optional: '{
+                start_addr: { r_tf_q.base_addr[AddrWidth-1:OffsetWidth], {{OffsetWidth}{1'b0}} },
                 blen:   (r_tf_q.length >> OffsetWidth) - 1,
                 bfirst: (r_tf_q.addr == r_tf_q.base_addr),
                 blast:  r_done
@@ -343,6 +344,7 @@ module idma_legalizer_rw_obi #(
             wdata: '0,
             aid: opt_tf_q.axi_id,
             a_optional: '{
+                start_addr: { w_tf_q.base_addr[AddrWidth-1:OffsetWidth], {{OffsetWidth}{1'b0}} },
                 blen:   (w_tf_q.length >> OffsetWidth) - 1,
                 bfirst: (w_tf_q.addr == w_tf_q.base_addr),
                 blast:  w_done

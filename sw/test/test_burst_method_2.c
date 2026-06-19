@@ -111,7 +111,7 @@ static int test_contention(void) {
     for (uint32_t i = 0; i < 16; i++){
         dma_dst[1 + i] = 0;
     }
-    
+
     idma_set_nd_enable(0);
     idma_set_src_addr((uint32_t)dma_src);
     idma_set_dst_addr((uint32_t)&dma_dst[1]);
@@ -143,5 +143,6 @@ int main(void) {
     CHECK_CALL(test_bank0_read());
     CHECK_CALL(test_2d());
     CHECK_CALL(test_contention());
+    
     return 0;
 }
