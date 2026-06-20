@@ -73,6 +73,10 @@ sources:
       - rtl/test/tb_croc_pkg.sv
       - rtl/test/croc_vip.sv
       - rtl/test/tb_croc_soc.sv
+
+  # RTL-only monitors: bind to internal RTL signals -> exclude from gate-netlist sim
+  - target: all(not(netlist_yosys), any(simulation, verilator))
+    files:
       - rtl/burst/test/obi_burst_check.sv
       - rtl/burst/test/burst_contention_check.sv
       - rtl/burst/test/burst_addr_monitor.sv

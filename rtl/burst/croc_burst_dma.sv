@@ -1,5 +1,6 @@
 module croc_burst_dma 
 import croc_pkg::*; 
+import burst_pkg::burst_hdr_t;
 import burst_pkg::burst_req_t;
 import burst_pkg::burst_rsp_t;
 
@@ -122,61 +123,119 @@ burst_rsp_t b0_rd_rsp, b1_rd_rsp, b0_wr_rsp, b1_wr_rsp;   // von den Endpoints
 
 /// bank routing from read compressor ///
 
-logic rd_sel, rd_sel_q;
+burst_hdr_t rd_pending_hdr_q;
+logic       rd_pending_q;
+logic       rd_pending_bank_q;
+logic       rd_active_bank_q;
 
 always_comb begin
-    rd_sel = rd_sel_q;
     b0_rd_req = '0;
     b1_rd_req = '0;
+    rd_rsp = '0;
 
-    if(rd_req.hdr_valid)begin
-        rd_sel = rd_req.hdr.start_addr[BANK_BIT];
+    // Route an active burst only through the bank selected at header acceptance.
+    if (rd_active_bank_q == 1'b0) begin
+        b0_rd_req.rready = rd_req.rready;
+        rd_rsp.rdata     = b0_rd_rsp.rdata;
+        rd_rsp.rvalid    = b0_rd_rsp.rvalid;
+    end else begin
+        b1_rd_req.rready = rd_req.rready;
+        rd_rsp.rdata     = b1_rd_rsp.rdata;
+        rd_rsp.rvalid    = b1_rd_rsp.rvalid;
     end
 
-    if (rd_sel == 1'b0) begin   //bank0 //we need to use bank numer in same cycle but also need to save if for the response feels not clean maybe better way
-        b0_rd_req = rd_req;
-        rd_rsp = b0_rd_rsp;
-    end else begin              //bank1  
-        b1_rd_req = rd_req;
-        rd_rsp = b1_rd_rsp;
+    // A new header crosses a register boundary before reaching an endpoint.
+    if (rd_pending_q) begin
+        if (rd_pending_bank_q == 1'b0) begin
+            b0_rd_req.hdr       = rd_pending_hdr_q;
+            b0_rd_req.hdr_valid = 1'b1;
+            rd_rsp.hdr_gnt      = b0_rd_rsp.hdr_gnt;
+        end else begin
+            b1_rd_req.hdr       = rd_pending_hdr_q;
+            b1_rd_req.hdr_valid = 1'b1;
+            rd_rsp.hdr_gnt      = b1_rd_rsp.hdr_gnt;
+        end
     end
 end
 
 always_ff @(posedge clk_i or negedge rst_ni) begin
-    if(!rst_ni)begin
-        rd_sel_q <= 0;
+    if (!rst_ni) begin
+        rd_pending_hdr_q  <= '0;
+        rd_pending_q      <= 1'b0;
+        rd_pending_bank_q <= 1'b0;
+        rd_active_bank_q  <= 1'b0;
     end else begin
-        rd_sel_q <= rd_sel;
+        if (!rd_pending_q && rd_req.hdr_valid) begin
+            rd_pending_hdr_q  <= rd_req.hdr;
+            rd_pending_bank_q <= rd_req.hdr.start_addr[BANK_BIT];
+            rd_pending_q      <= 1'b1;
+        end else if (rd_pending_q &&
+                     ((!rd_pending_bank_q && b0_rd_rsp.hdr_gnt) ||
+                      ( rd_pending_bank_q && b1_rd_rsp.hdr_gnt))) begin
+            rd_active_bank_q <= rd_pending_bank_q;
+            rd_pending_q     <= 1'b0;
+        end
     end 
 end
 
 /// bank routing from write compressor ///
 
-logic wr_sel, wr_sel_q;
+burst_hdr_t wr_pending_hdr_q;
+logic       wr_pending_q;
+logic       wr_pending_bank_q;
+logic       wr_active_bank_q;
 
 always_comb begin
-    wr_sel = wr_sel_q;
     b0_wr_req = '0;
     b1_wr_req = '0;
+    wr_rsp = '0;
 
-    if(wr_req.hdr_valid)begin
-        wr_sel = wr_req.hdr.start_addr[BANK_BIT];
+    // Route write data and acknowledgements through the accepted burst bank.
+    if (wr_active_bank_q == 1'b0) begin
+        b0_wr_req.wdata  = wr_req.wdata;
+        b0_wr_req.wvalid = wr_req.wvalid;
+        wr_rsp.wready    = b0_wr_rsp.wready;
+        wr_rsp.rdata     = b0_wr_rsp.rdata;
+        wr_rsp.rvalid    = b0_wr_rsp.rvalid;
+    end else begin
+        b1_wr_req.wdata  = wr_req.wdata;
+        b1_wr_req.wvalid = wr_req.wvalid;
+        wr_rsp.wready    = b1_wr_rsp.wready;
+        wr_rsp.rdata     = b1_wr_rsp.rdata;
+        wr_rsp.rvalid    = b1_wr_rsp.rvalid;
     end
 
-    if (wr_sel == 1'b0) begin   //bank0 //we need to use bank numer in same cycle but also need to save if for the response feels not clean maybe better way
-        b0_wr_req = wr_req;
-        wr_rsp = b0_wr_rsp;
-    end else begin              //bank1  
-        b1_wr_req = wr_req;
-        wr_rsp = b1_wr_rsp;
+    // A new header crosses a register boundary before reaching an endpoint.
+    if (wr_pending_q) begin
+        if (wr_pending_bank_q == 1'b0) begin
+            b0_wr_req.hdr       = wr_pending_hdr_q;
+            b0_wr_req.hdr_valid = 1'b1;
+            wr_rsp.hdr_gnt      = b0_wr_rsp.hdr_gnt;
+        end else begin
+            b1_wr_req.hdr       = wr_pending_hdr_q;
+            b1_wr_req.hdr_valid = 1'b1;
+            wr_rsp.hdr_gnt      = b1_wr_rsp.hdr_gnt;
+        end
     end
 end
 
 always_ff @(posedge clk_i or negedge rst_ni) begin
-    if(!rst_ni)begin
-        wr_sel_q <= 0;
+    if (!rst_ni) begin
+        wr_pending_hdr_q  <= '0;
+        wr_pending_q      <= 1'b0;
+        wr_pending_bank_q <= 1'b0;
+        wr_active_bank_q  <= 1'b0;
     end else begin
-        wr_sel_q <= wr_sel;
+        if (!wr_pending_q && wr_req.hdr_valid) begin
+            wr_pending_hdr_q  <= wr_req.hdr;
+            wr_pending_bank_q <= wr_req.hdr.start_addr[BANK_BIT];
+            wr_pending_q      <= 1'b1;
+        end else if (wr_pending_q &&
+                     ((!wr_pending_bank_q && b0_wr_rsp.hdr_gnt) ||
+                      ( wr_pending_bank_q && b1_wr_rsp.hdr_gnt))) begin
+            wr_active_bank_q <= wr_pending_bank_q;
+            wr_pending_q     <= 1'b0;
+        end
     end 
 end
 

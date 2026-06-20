@@ -150,6 +150,29 @@ set X [expr $X]
 set Y [expr $floor_bottomY]
 placeInstance $bank1_sram0 $X $Y MX
 
+# --- Anker: Endpoint-Zellen an ihre SRAM-Bank fixieren ---
+# WICHTIG: replace/global_placement honoriert nur dbGroup-MIT-Region als Fence,
+# NICHT eine bare dbRegion+addInst (die wird stumm ignoriert).
+proc anchor_endpoint {block sram_inst ep_pat name side} {
+    set bb [[$block findInst $sram_inst] getBBox]
+    set strip [expr {int(150 * [$block getDbUnitsPerMicron])}]   ;# 150um Streifen
+    if {$side eq "above"} { set ylo [$bb yMax]; set yhi [expr {[$bb yMax]+$strip}] } \
+    else                  { set yhi [$bb yMin]; set ylo [expr {[$bb yMin]-$strip}] }
+    set r [odb::dbRegion_create $block $name]
+    odb::dbBox_create $r [$bb xMin] $ylo [$bb xMax] $yhi
+    set g [odb::dbGroup_create $block ${name}_g]
+    $r addGroup $g
+    set n 0
+    foreach i [$block getInsts] {
+        if {[string match $ep_pat [$i getName]]} { $g addInst $i; incr n }
+    }
+    utl::report "  Anker $name: $n Zellen -> Region an $sram_inst ($side)"
+}
+set block [ord::get_db_block]
+# Bank1 sitzt unten -> Streifen DARUEBER ; Bank0 oben -> Streifen DARUNTER
+anchor_endpoint $block $bank1_sram0 "*endpoint_sram_bank_1*" ep1_fence above
+anchor_endpoint $block $bank0_sram0 "*endpoint_sram_bank_0*" ep0_fence below
+
 # defined in init_tech.tcl
 insertTapCells
 
