@@ -75,7 +75,7 @@ set_thread_count 8
 
 # Rough placement to get parasitics from steiner-tree estimate so we can run repair_timing
 utl::report "Global Placement (1)"
-global_placement -density 0.60
+global_placement -density 0.60 -init_density_penalty 0.0001 -max_phi_coef 1.02
 report_metrics "02-02_${proj_name}.gpl1"
 report_image "02-02_${proj_name}.gpl1" true true
 save_checkpoint 02-02_${proj_name}.gpl1
@@ -93,6 +93,8 @@ save_checkpoint 02-02_${proj_name}.gpl1_repaired
 # Actual global placement with routability and timing driven
 utl::report "Global Placement (2)"
 global_placement -density 0.60 \
+                 -init_density_penalty 0.0001 \
+                 -max_phi_coef 1.02 \
                  -routability_driven \
                  -routability_check_overflow 0.30 \
                  -timing_driven

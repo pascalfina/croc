@@ -173,6 +173,24 @@ set block [ord::get_db_block]
 anchor_endpoint $block $bank1_sram0 "*endpoint_sram_bank_1*" ep1_fence above
 anchor_endpoint $block $bank0_sram0 "*endpoint_sram_bank_0*" ep0_fence below
 
+# --- Anker: Compressoren ganz rechts (weg von den linken SRAMs) ---
+# -> langes KONSTANTES Adress-Netz Compressor->Endpoint (das ist das (A)-Saving).
+# Beide in EINE Region (Overlap vermeiden). global_placement braucht dafuer
+# -init_density_penalty 0.0001 -max_phi_coef 1.02 (siehe 02_placement.tcl), sonst Divergenz.
+proc anchor_box {block pats name xlo ylo xhi yhi} {
+    set u [$block getDbUnitsPerMicron]
+    set r [odb::dbRegion_create $block $name]
+    odb::dbBox_create $r [expr {int($xlo*$u)}] [expr {int($ylo*$u)}] [expr {int($xhi*$u)}] [expr {int($yhi*$u)}]
+    set g [odb::dbGroup_create $block ${name}_g]
+    $r addGroup $g
+    set n 0
+    foreach i [$block getInsts] {
+        foreach p $pats { if {[string match $p [$i getName]]} { $g addInst $i; incr n; break } }
+    }
+    utl::report "  Anker $name: $n Zellen -> Box ($xlo,$ylo)-($xhi,$yhi)"
+}
+anchor_box $block {*read_burst* *write_burst*} comp_fence 1450 700 1580 1300
+
 # defined in init_tech.tcl
 insertTapCells
 
