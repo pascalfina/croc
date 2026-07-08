@@ -36,7 +36,7 @@ sources:
   # add your design files containing anything but modules (packages) here
 
     # RTL
-  - target: not(netlist_yosys)
+  - target: not(any(netlist_yosys, netlist_openroad))
     files:
       # Level 1
       - rtl/core_wrap.sv
@@ -64,6 +64,10 @@ sources:
   - target: netlist_yosys
     files:
       - yosys/out/netlist_debug.v
+
+  - target: netlist_openroad
+    files:
+      - openroad/out/croc.v
 
   - target: any(simulation, verilator)
     files:
