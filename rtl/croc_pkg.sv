@@ -31,7 +31,7 @@ package croc_pkg;
   // iDMA Configuration //
   ////////////////////////
   localparam bit iDMAEnable = 1'b1;
-
+  localparam bit ContentionEnable = 1'b1;
 
   //////////////////////////
   // Core Configuration   //
@@ -45,17 +45,33 @@ package croc_pkg;
   localparam int unsigned BurstLenWidth = 32'd8;
   localparam obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_BEAT_FRAMED;
   // localparam obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE;
-  /// Burst lock group IDs for the main xbar manager ports.
-  /// Ports 4 (iDMA write) and 5 (iDMA read) share group 1 so they can interleave
-  /// during a burst lock, preventing pipeline deadlock on long read bursts.
-  localparam int unsigned BurstSbrGroup[NumXbarManagers-1:0] = '{
-      0: 0, // user domain
-      1: 0, // debug module
-      2: 0, // core data
-      3: 0, // core instr
-      4: 1, // iDMA write
-      5: 1  // iDMA read
-  };
+
+  // Burst lock group IDs for the main xbar manager ports.
+  // All ports default to group 0. Ports 4 (iDMA write) and 5 (iDMA read)
+  // share group 1 so they can interleave during a burst lock, preventing
+  // pipeline deadlock on long read bursts.
+  //
+  // Manager port index → peripheral:
+  //   0: user domain
+  //   1: debug module
+  //   2: core data
+  //   3: core instr
+  //   4: iDMA write          (only present when iDMAEnable)
+  //   5: iDMA read           (only present when iDMAEnable)
+  //   6: contention bank 0   (only present when ContentionEnable; index 4 if iDMA disabled)
+  //   7: contention bank 1   (only present when ContentionEnable; index 5 if iDMA disabled)
+  typedef int unsigned int_arr_t [NumXbarManagers];
+
+  function automatic int_arr_t get_burst_sbr_group();
+    int_arr_t groups;
+    groups = '{default: 0};
+    if (iDMAEnable) begin
+      groups[4] = 1; // iDMA write
+      groups[5] = 1; // iDMA read
+    end
+    return groups;
+  endfunction
+  localparam int unsigned BurstSbrGroup[NumXbarManagers-1:0] = get_burst_sbr_group();
   /// When set, the burst lock waits for all ports in the group to finish
   /// before releasing. When cleared, the lock releases on any port's blast.
   localparam bit BurstGroupWaitAll = 1'b1;
@@ -96,8 +112,8 @@ typedef struct packed {
   // Main Crossbar Address Map ///
   ////////////////////////////////
   /// Number of manager ports into crossbar
-  /// User Domain, Debug module, Core Data, Core Instr; optionally iDMA Write and iDMA Read
-  localparam int unsigned NumXbarManagers = 4 + (iDMAEnable ? 2 : 0);
+  /// User Domain, Debug module, Core Data, Core Instr; optionally iDMA Write and iDMA Read; optionally Contention Bank 0 and Bank 1
+  localparam int unsigned NumXbarManagers = 4 + (iDMAEnable ? 2 : 0) + (ContentionEnable ? 2 : 0);
 
   /// Enum with crossbar subordinate idxs
   typedef enum bit [3:0] {
@@ -160,11 +176,12 @@ typedef struct packed {
     PeriphUart     = 5,
     PeriphGpio     = 6,
     PeriphTimer    = 7,
-    PeriphiDMA     = 8
+    PeriphiDMA     = 8,
+    PeriphContention = 9
   } periph_outputs_e;
 
   /// Address map given to the peripheral mux
-  localparam addr_map_rule_t [7:0] PeriphAddrMap = '{
+  localparam addr_map_rule_t [8:0] PeriphAddrMap = '{
     '{ idx: PeriphDebug,   start_addr: 32'h0000_0000, end_addr: 32'h0004_0000 },
     '{ idx: PeriphBootrom, start_addr: 32'h0200_0000, end_addr: 32'h0200_4000 },
     '{ idx: PeriphClint,   start_addr: 32'h0204_0000, end_addr: 32'h0208_0000 },
@@ -172,7 +189,8 @@ typedef struct packed {
     '{ idx: PeriphUart,    start_addr: 32'h0300_2000, end_addr: 32'h0300_3000 },
     '{ idx: PeriphGpio,    start_addr: 32'h0300_5000, end_addr: 32'h0300_6000 },
     '{ idx: PeriphTimer,   start_addr: 32'h0300_A000, end_addr: 32'h0300_B000 },
-    '{ idx: PeriphiDMA,    start_addr: 32'h0300_B000, end_addr: 32'h0300_C000 }
+    '{ idx: PeriphiDMA,    start_addr: 32'h0300_B000, end_addr: 32'h0300_C000 },
+    '{ idx: PeriphContention, start_addr: 32'h0300_C000, end_addr: 32'h0300_D000 }
   };
 
   // +1 for additional OBI error

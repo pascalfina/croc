@@ -49,6 +49,8 @@ sources:
       # Level 2
       - rtl/croc_domain.sv
       - rtl/user_domain.sv
+      - rtl/obi_contention_generator.sv
+      - rtl/obi_contention_system.sv
       # add your design files with modules here
       # Level 3
       - rtl/croc_soc.sv

@@ -193,6 +193,10 @@ module croc_domain import croc_pkg::*; #(
   sbr_obi_req_t bootrom_obi_req;
   sbr_obi_rsp_t bootrom_obi_rsp;
 
+  // Contention config bus
+  sbr_obi_req_t contention_cfg_req;
+  sbr_obi_rsp_t contention_cfg_rsp;
+
   // Fanout to individual peripherals
   assign error_obi_req                     = all_periph_obi_req[PeriphError];
   assign all_periph_obi_rsp[PeriphError]   = error_obi_rsp;
@@ -212,6 +216,8 @@ module croc_domain import croc_pkg::*; #(
   assign all_periph_obi_rsp[PeriphClint]   = clint_obi_rsp;
   assign bootrom_obi_req                   = all_periph_obi_req[PeriphBootrom];
   assign all_periph_obi_rsp[PeriphBootrom] = bootrom_obi_rsp;
+  assign contention_cfg_req                = all_periph_obi_req[PeriphContention];
+  assign all_periph_obi_rsp[PeriphContention] = contention_cfg_rsp;
 
 
   // -----------------
@@ -307,6 +313,42 @@ module croc_domain import croc_pkg::*; #(
       .testmode_i,
       .obi_req_i  ( idma_obi_cfg_req ),
       .obi_rsp_o  ( idma_obi_cfg_rsp )
+    );
+  end
+
+  if (ContentionEnable) begin : gen_contention
+    obi_contention_system #(
+      .SbrObiCfg     ( SbrObiCfg     ),
+      .MgrObiCfg     ( MgrObiCfg     ),
+      .sbr_obi_req_t ( sbr_obi_req_t ),
+      .sbr_obi_rsp_t ( sbr_obi_rsp_t ),
+      .mgr_obi_req_t ( mgr_obi_req_t ),
+      .mgr_obi_rsp_t ( mgr_obi_rsp_t )
+    ) i_contention_system (
+      .clk_i,
+      .rst_ni,
+      .sbr_req_i           ( contention_cfg_req ),
+      .sbr_rsp_o           ( contention_cfg_rsp ),
+      .cont_bank0_req_o    ( xbar_mgr_obi_req[4 + (iDMAEnable ? 2 : 0) + 0] ),
+      .cont_bank0_rsp_i    ( xbar_mgr_obi_rsp[4 + (iDMAEnable ? 2 : 0) + 0] ),
+      .cont_bank1_req_o    ( xbar_mgr_obi_req[4 + (iDMAEnable ? 2 : 0) + 1] ),
+      .cont_bank1_rsp_i    ( xbar_mgr_obi_rsp[4 + (iDMAEnable ? 2 : 0) + 1] )
+    );
+  end else begin : gen_no_contention
+    // error for config when contention subsystem is disabled
+    obi_err_sbr #(
+      .ObiCfg      ( SbrObiCfg     ),
+      .obi_req_t   ( sbr_obi_req_t ),
+      .obi_rsp_t   ( sbr_obi_rsp_t ),
+      .BurstMode   ( BurstMode     ),
+      .NumMaxTrans ( 1             ),
+      .RspData     ( 32'hBADCAB1E  )
+    ) i_obi_err_sbr_contention_cfg (
+      .clk_i,
+      .rst_ni,
+      .testmode_i,
+      .obi_req_i  ( contention_cfg_req ),
+      .obi_rsp_o  ( contention_cfg_rsp )
     );
   end
 
