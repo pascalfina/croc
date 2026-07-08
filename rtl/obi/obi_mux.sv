@@ -91,11 +91,6 @@ module obi_mux #(
             sbr_ports_req_arb[i] = sbr_ports_req[i];
           end
         end
-        for (int i = 0; i < NumSbrPorts; i++) begin
-          if (burst_active_mask_q[i]) begin
-            sbr_ports_req_arb[i] = sbr_ports_req[i];
-          end
-        end
       end else begin
         sbr_ports_req_arb = sbr_ports_req;
       end
