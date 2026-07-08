@@ -42,9 +42,11 @@ Options:
     --verbose, -v       Print commands while executing
     --flist             Regenerate compile script reading sources (compile_rtl.tcl, compile_netlist.tcl)
     --build             Compile Croc RTL in VSIM
-    --build-netlist     Compile Croc post-synthesis netlist in VSIM
+    --build-yosys       Compile Croc post-synthesis netlist in VSIM
+    --build-openroad    Compile Croc post-P&R netlist in VSIM
     --run BINARY        Run binary in VSIM
     --run-gui BINARY    Prepare running binary in VSIM, open GUI
+    --sdf               Enable SDF annotation (if available)
 
 Example:
     # Build and run RTL simulation with given binary (CLI mode)
@@ -68,6 +70,7 @@ generate_rtl_flist() {
     run_cmd "echo [INFO][Bender] Generate compile_rtl.tcl"
     run_cmd "bender \
         script vsim \
+        ${BENDER_FLAGS:-}\
         -t rtl \
         -t vsim \
         -t simulation \
@@ -84,10 +87,11 @@ generate_rtl_flist() {
 }
 
 
-generate_netlist_flist() {
-    run_cmd "echo [INFO][Bender] Generate compile_netlist.tcl"
+generate_yosys_flist() {
+    run_cmd "echo [INFO][Bender] Generate compile_yosys.tcl"
     run_cmd "bender \
         script vsim \
+        ${BENDER_FLAGS:-}\
         -t ihp13 \
         -t vsim \
         -t simulation \
@@ -96,14 +100,33 @@ generate_netlist_flist() {
         -DSYNTHESIS \
         -DSIMULATION \
         --vlog-arg="-svinputport=compat"
-        > compile_netlist.tcl"
+        > compile_yosys.tcl"
 
     run_cmd "echo [INFO][Bender] Remove absolute paths"
-    run_cmd "sed -i 's|${CROC_ROOT}|..|g' compile_netlist.tcl"
+    run_cmd "sed -i 's|${CROC_ROOT}|..|g' compile_yosys.tcl"
 
-    run_cmd "echo [INFO][Bender] File list generated: compile_netlist.tcl"
+    run_cmd "echo [INFO][Bender] File list generated: compile_yosys.tcl"
 }
 
+generate_openroad_flist() {
+    run_cmd "echo [INFO][Bender] Generate compile_openroad.tcl"
+    run_cmd "bender \
+        script vsim \
+        ${BENDER_FLAGS:-}\
+        -t ihp13 \
+        -t vsim \
+        -t simulation \
+        -t verilator \
+        -t netlist_openroad \
+        -DSIMULATION \
+        --vlog-arg="-svinputport=compat"
+        > compile_openroad.tcl"
+
+    run_cmd "echo [INFO][Bender] Remove absolute paths"
+    run_cmd "sed -i 's|${CROC_ROOT}|..|g' compile_openroad.tcl"
+
+    run_cmd "echo [INFO][Bender] File list generated: compile_openroad.tcl"
+}
 
 compile_rtl() {
     run_cmd "echo [INFO][VSIM] Compile"
@@ -133,40 +156,73 @@ compile_rtl() {
 }
 
 
-compile_netlist() {
-    run_cmd "echo [INFO][VSIM] Compile post-synthesis netlist"
+compile_yosys() {
+    run_cmd "echo [INFO][VSIM] Compile post-synthesis yosys"
     run_cmd "${VSIM} \
         -c \
-        -do \"source compile_netlist.tcl; source compile_tech.tcl; exit\" \
-        > reports/compile_netlist.log"
+        -do \"source compile_yosys.tcl; source compile_tech.tcl; exit\" \
+        > reports/compile_yosys.log"
 
     # Collect errors and warnings from compilation log and print summary
-    run_cmd "echo [INFO][VSIM] Check reports/compile_netlist.log"
-    run_cmd "echo --- QuestaSim compilation report ---  > reports/compile_netlist.rpt"
-    run_cmd "echo Errors:                              >> reports/compile_netlist.rpt"
-    run_cmd "grep Error: reports/compile_netlist.log       >> reports/compile_netlist.rpt || true"
-    run_cmd "echo                                      >> reports/compile_netlist.rpt"
-    run_cmd "echo Warnings:                            >> reports/compile_netlist.rpt"
-    run_cmd "grep Warning: reports/compile_netlist.log     >> reports/compile_netlist.rpt || true"
+    run_cmd "echo [INFO][VSIM] Check reports/compile_yosys.log"
+    run_cmd "echo --- QuestaSim compilation report ---  > reports/compile_yosys.rpt"
+    run_cmd "echo Errors:                              >> reports/compile_yosys.rpt"
+    run_cmd "grep Error: reports/compile_yosys.log       >> reports/compile_yosys.rpt || true"
+    run_cmd "echo                                      >> reports/compile_yosys.rpt"
+    run_cmd "echo Warnings:                            >> reports/compile_yosys.rpt"
+    run_cmd "grep Warning: reports/compile_yosys.log     >> reports/compile_yosys.rpt || true"
 
-    run_cmd "NUM_ERRORS=$(cat reports/compile_netlist.rpt | grep Error: | wc -l)"
-    run_cmd "NUM_WARNINGS=$(cat reports/compile_netlist.rpt | grep Warning: | wc -l)"
+    run_cmd "NUM_ERRORS=$(cat reports/compile_yosys.rpt | grep Error: | wc -l)"
+    run_cmd "NUM_WARNINGS=$(cat reports/compile_yosys.rpt | grep Warning: | wc -l)"
     run_cmd "echo \"#######################################################\""
     run_cmd "echo \"############### Compilation report ####################\""
     run_cmd "echo \"#######################################################\""
     run_cmd "echo  Errors   : ${NUM_ERRORS}"
     run_cmd "echo  Warnings : ${NUM_WARNINGS}"
-    run_cmd "echo See 'reports/compile_netlist.rpt' for more info"
+    run_cmd "echo See 'reports/compile_yosys.rpt' for more info"
     run_cmd "echo \"#######################################################\""
 }
 
+compile_openroad() {
+    run_cmd "echo [INFO][VSIM] Compile post-synthesis openroad"
+    run_cmd "${VSIM} \
+        -c \
+        -do \"source compile_openroad.tcl; source compile_tech.tcl; exit\" \
+        > reports/compile_openroad.log"
+
+    # Collect errors and warnings from compilation log and print summary
+    run_cmd "echo [INFO][VSIM] Check reports/compile_openroad.log"
+    run_cmd "echo --- QuestaSim compilation report ---  > reports/compile_openroad.rpt"
+    run_cmd "echo Errors:                              >> reports/compile_openroad.rpt"
+    run_cmd "grep Error: reports/compile_openroad.log       >> reports/compile_openroad.rpt || true"
+    run_cmd "echo                                      >> reports/compile_openroad.rpt"
+    run_cmd "echo Warnings:                            >> reports/compile_openroad.rpt"
+    run_cmd "grep Warning: reports/compile_openroad.log     >> reports/compile_openroad.rpt || true"
+
+    run_cmd "NUM_ERRORS=$(cat reports/compile_openroad.rpt | grep Error: | wc -l)"
+    run_cmd "NUM_WARNINGS=$(cat reports/compile_openroad.rpt | grep Warning: | wc -l)"
+    run_cmd "echo \"#######################################################\""
+    run_cmd "echo \"############### Compilation report ####################\""
+    run_cmd "echo \"#######################################################\""
+    run_cmd "echo  Errors   : ${NUM_ERRORS}"
+    run_cmd "echo  Warnings : ${NUM_WARNINGS}"
+    run_cmd "echo See 'reports/compile_openroad.rpt' for more info"
+    run_cmd "echo \"#######################################################\""
+}
 
 run_vsim() {
+    local SDF_ARGS=""
+    if [ "$SDF_EN" = 1 ]; then
+        SDF_ARGS="-sdftyp tb_croc_soc/i_croc_soc=../openroad/out/${PROJ_NAME}.sdf +sdf_verbose -sdfnoerror"
+        run_cmd "echo [INFO][VSIM] Loading SDF: ../openroad/out/${PROJ_NAME}.sdf"
+    fi
     run_cmd "${VSIM} \
         +binary=$1 \
         -c \
         tb_croc_soc \
         -t 1ns \
+        -voptargs=+acc \
+        ${SDF_ARGS} \
         -suppress vsim-3009 \
         -suppress vsim-8683 \
         -suppress vsim-8386 \
@@ -175,12 +231,18 @@ run_vsim() {
 
 
 run_vsim_gui() {
+    local SDF_ARGS=""
+    if [ "$SDF_EN" = 1 ]; then
+        SDF_ARGS="-sdftyp tb_croc_soc/i_croc_soc=../openroad/out/${PROJ_NAME}.sdf +sdf_verbose -sdfnoerror"
+        run_cmd "echo [INFO][VSIM] Loading SDF: ../openroad/out/${PROJ_NAME}.sdf"
+    fi
     run_cmd "${VSIM} \
         +binary=$1 \
         -gui \
         tb_croc_soc \
         -t 1ns \
         -voptargs=+acc \
+        ${SDF_ARGS} \
         -suppress vsim-3009 \
         -suppress vsim-8683 \
         -suppress vsim-8386"
@@ -192,6 +254,7 @@ run_vsim_gui() {
 ####################
 
 DRYRUN=0
+SDF_EN=0
 
 # default action if no argument is given
 if [ $# -eq 0 ]; then
@@ -220,15 +283,24 @@ while [[ $# -gt 0 ]]; do
         # script-specific commands
         --flist)
             generate_rtl_flist
-            generate_netlist_flist
+            generate_yosys_flist
+            generate_openroad_flist
             shift
             ;;
         --build)
             compile_rtl
             shift
             ;;
-        --build-netlist)
-            compile_netlist
+        --build-yosys)
+            compile_yosys
+            shift
+            ;;
+        --build-openroad)
+            compile_openroad
+            shift
+            ;;
+        --sdf)
+            SDF_EN=1
             shift
             ;;
         --run)

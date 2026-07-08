@@ -88,6 +88,68 @@ module tb_croc_soc #(
   //  DUT   //
   ////////////
 
+`ifdef TARGET_NETLIST_OPENROAD
+    wire  [GpioCount-1:0] gpio_io_tb;
+    logic [GpioCount-1:0] gpio_en_tb;
+
+    // Set port 0-3 to output mode
+    // You may need to adjust it for your own tests
+    assign gpio_en_tb = 32'h0000_000F;
+
+    for (genvar i = 0; i < GpioCount; i++) begin
+        // drive the io pad based on the gpio mode
+        assign gpio_io_tb[i] = gpio_en_tb[i] ? 1'bz : gpio_in[i];
+    end
+
+    assign gpio_out = gpio_io_tb;
+
+    croc_chip i_croc_soc (
+        .clk_i      (sys_clk),
+        .testmode_i (1'b0),
+        .gpio0_io(gpio_io_tb[0]),
+        .gpio1_io(gpio_io_tb[1]),
+        .gpio2_io(gpio_io_tb[2]),
+        .gpio3_io(gpio_io_tb[3]),
+        .gpio4_io(gpio_io_tb[4]),
+        .gpio5_io(gpio_io_tb[5]),
+        .gpio6_io(gpio_io_tb[6]),
+        .gpio7_io(gpio_io_tb[7]),
+        .gpio8_io(gpio_io_tb[8]),
+        .gpio9_io(gpio_io_tb[9]),
+        .gpio10_io(gpio_io_tb[10]),
+        .gpio11_io(gpio_io_tb[11]),
+        .gpio12_io(gpio_io_tb[12]),
+        .gpio13_io(gpio_io_tb[13]),
+        .gpio14_io(gpio_io_tb[14]),
+        .gpio15_io(gpio_io_tb[15]),
+        .gpio16_io(gpio_io_tb[16]),
+        .gpio17_io(gpio_io_tb[17]),
+        .gpio18_io(gpio_io_tb[18]),
+        .gpio19_io(gpio_io_tb[19]),
+        .gpio20_io(gpio_io_tb[20]),
+        .gpio21_io(gpio_io_tb[21]),
+        .gpio22_io(gpio_io_tb[22]),
+        .gpio23_io(gpio_io_tb[23]),
+        .gpio24_io(gpio_io_tb[24]),
+        .gpio25_io(gpio_io_tb[25]),
+        .gpio26_io(gpio_io_tb[26]),
+        .gpio27_io(gpio_io_tb[27]),
+        .gpio28_io(gpio_io_tb[28]),
+        .gpio29_io(gpio_io_tb[29]),
+        .gpio30_io(gpio_io_tb[30]),
+        .gpio31_io(gpio_io_tb[31]),
+        .jtag_tck_i (jtag_tck  ),
+        .jtag_tdi_i (jtag_tdi  ),
+        .jtag_tdo_o (jtag_tdo  ),
+        .jtag_tms_i (jtag_tms  ),
+        .jtag_trst_ni (jtag_trst_n),
+        .ref_clk_i (ref_clk),
+        .rst_ni (rst_n),
+        .status_o  (         ),
+        .uart_rx_i (uart_rx  ),
+        .uart_tx_o (uart_tx  )
+    );
+`else
   `ifdef TARGET_NETLIST_YOSYS
   \croc_soc$croc_chip.i_croc_soc i_croc_soc (
   `else
@@ -111,6 +173,7 @@ module tb_croc_soc #(
     .gpio_o        ( gpio_out    ),
     .gpio_out_en_o ( gpio_out_en )
   );
+`endif
 
   /////////////////
   //  Testbench  //
@@ -167,6 +230,12 @@ module tb_croc_soc #(
       `endif
     `endif
   end
+
+  initial begin
+      #(25000000ns);
+      $info(1, "Simulation timeout");
+      $finish();
+    end
 
   // flush waveform dump when simulation ends
   final begin
