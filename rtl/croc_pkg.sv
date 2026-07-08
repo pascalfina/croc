@@ -44,6 +44,21 @@ package croc_pkg;
 
   localparam int unsigned BurstLenWidth = 32'd8;
   localparam obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_BEAT_FRAMED;
+  // localparam obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE;
+  /// Burst lock group IDs for the main xbar manager ports.
+  /// Ports 4 (iDMA write) and 5 (iDMA read) share group 1 so they can interleave
+  /// during a burst lock, preventing pipeline deadlock on long read bursts.
+  localparam int unsigned BurstSbrGroup[NumXbarManagers-1:0] = '{
+      0: 0, // user domain
+      1: 0, // debug module
+      2: 0, // core data
+      3: 0, // core instr
+      4: 1, // iDMA write
+      5: 1  // iDMA read
+  };
+  /// When set, the burst lock waits for all ports in the group to finish
+  /// before releasing. When cleared, the lock releases on any port's blast.
+  localparam bit BurstGroupWaitAll = 1'b1;
 
   ////////////////////////
   // SRAM Configuration //

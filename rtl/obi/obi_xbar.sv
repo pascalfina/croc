@@ -39,7 +39,12 @@ module obi_xbar #(
   /// The burst extension mode.
   parameter obi_pkg::obi_burst_mode_e BurstMode   = obi_pkg::OBI_BURST_BEAT_FRAMED,
   /// The width of the beat-framed burst length field.
-  parameter int unsigned       BurstLenWidth      = 32'd8
+  parameter int unsigned       BurstLenWidth      = 32'd8,
+  /// Port group IDs for burst lock. Ports sharing a nonzero group ID can interleave.
+  parameter int unsigned       BurstSbrGroup [NumSbrPorts-1:0] = '{default: 0},
+  /// When set, burst lock waits for all group ports to finish. When cleared,
+  /// lock releases on any port's blast.
+  parameter bit                BurstGroupWaitAll = 1'b1
 ) (
   input  logic clk_i,
   input  logic rst_ni,
@@ -149,7 +154,9 @@ module obi_xbar #(
       .NumMaxTrans        ( NumMaxTrans        ),
       .UseIdForRouting    ( UseIdForRouting    ),
       .BurstMode          ( BurstMode          ),
-      .BurstLenWidth      ( BurstLenWidth      )
+      .BurstLenWidth      ( BurstLenWidth      ),
+      .BurstSbrGroup      ( BurstSbrGroup      ),
+      .BurstGroupWaitAll  ( BurstGroupWaitAll  )
     ) i_mux (
       .clk_i,
       .rst_ni,
@@ -188,7 +195,12 @@ module obi_xbar_intf #(
   /// The burst extension mode.
   parameter obi_pkg::obi_burst_mode_e BurstMode   = obi_pkg::OBI_BURST_NONE,
   /// The width of the beat-framed burst length field.
-  parameter int unsigned       BurstLenWidth      = 32'd8
+  parameter int unsigned       BurstLenWidth      = 32'd8,
+  /// Port group IDs for burst lock. Ports sharing a nonzero group ID can interleave.
+  parameter int unsigned       BurstSbrGroup [NumSbrPorts-1:0] = '{default: 0},
+  /// When set, burst lock waits for all group ports to finish. When cleared,
+  /// lock releases on any port's blast.
+  parameter bit                BurstGroupWaitAll = 1'b1
 ) (
   input logic         clk_i,
   input logic         rst_ni,
@@ -240,7 +252,9 @@ module obi_xbar_intf #(
       .UseIdForRouting    ( UseIdForRouting       ),
       .Connectivity       ( Connectivity          ),
       .BurstMode          ( BurstMode             ),
-      .BurstLenWidth      ( BurstLenWidth         )
+      .BurstLenWidth      ( BurstLenWidth         ),
+      .BurstSbrGroup      ( BurstSbrGroup         ),
+      .BurstGroupWaitAll  ( BurstGroupWaitAll     )
     ) i_obi_xbar (
       .clk_i,
       .rst_ni,

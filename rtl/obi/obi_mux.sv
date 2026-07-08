@@ -33,7 +33,13 @@ module obi_mux #(
   /// The burst extension mode.
   parameter obi_pkg::obi_burst_mode_e BurstMode   = obi_pkg::OBI_BURST_BEAT_FRAMED,
   /// The width of the beat-framed burst length field.
-  parameter int unsigned       BurstLenWidth      = 32'd8
+  parameter int unsigned       BurstLenWidth      = 32'd8,
+  /// Port group IDs for burst lock. Ports sharing a nonzero group ID can interleave
+  /// during a burst lock. Ports with group ID 0 get exclusive lock.
+  parameter int unsigned       BurstSbrGroup [NumSbrPorts-1:0] = '{default: 0},
+  /// When set, burst lock waits for all group ports to finish. When cleared,
+  /// lock releases on any port's blast.
+  parameter bit                BurstGroupWaitAll = 1'b1
 ) (
   input  logic clk_i,
   input  logic rst_ni,
@@ -71,7 +77,8 @@ module obi_mux #(
 
   if (BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED) begin : gen_burst_lock
     logic burst_locked_d, burst_locked_q;
-    logic [RequiredExtraIdWidth-1:0] burst_locked_id_d, burst_locked_id_q;
+    logic [RequiredExtraIdWidth-1:0] burst_locked_group_d, burst_locked_group_q;
+    logic [NumSbrPorts-1:0] burst_active_mask_d, burst_active_mask_q;
     logic req_accepted;
 
     assign req_accepted = mgr_port_req_o.req && mgr_port_rsp_i.gnt;
@@ -79,7 +86,16 @@ module obi_mux #(
     always_comb begin
       sbr_ports_req_arb = '0;
       if (burst_locked_q) begin
-        sbr_ports_req_arb[burst_locked_id_q] = sbr_ports_req[burst_locked_id_q];
+        for (int i = 0; i < NumSbrPorts; i++) begin
+          if (BurstSbrGroup[i] == burst_locked_group_q && BurstSbrGroup[i] != 0) begin
+            sbr_ports_req_arb[i] = sbr_ports_req[i];
+          end
+        end
+        for (int i = 0; i < NumSbrPorts; i++) begin
+          if (burst_active_mask_q[i]) begin
+            sbr_ports_req_arb[i] = sbr_ports_req[i];
+          end
+        end
       end else begin
         sbr_ports_req_arb = sbr_ports_req;
       end
@@ -87,26 +103,43 @@ module obi_mux #(
 
     always_comb begin
       burst_locked_d    = burst_locked_q;
-      burst_locked_id_d = burst_locked_id_q;
+      burst_locked_group_d = burst_locked_group_q;
+      burst_active_mask_d  = burst_active_mask_q;
 
       if (req_accepted) begin
         if (!burst_locked_q && mgr_port_a_in_sbr.a_optional.bfirst &&
             !mgr_port_a_in_sbr.a_optional.blast) begin
           burst_locked_d    = 1'b1;
-          burst_locked_id_d = selected_id;
-        end else if (burst_locked_q && mgr_port_a_in_sbr.a_optional.blast) begin
-          burst_locked_d = 1'b0;
+          burst_locked_group_d = BurstSbrGroup[selected_id];
+          burst_active_mask_d[selected_id] = 1'b1;
+        end else if (burst_locked_q && mgr_port_a_in_sbr.a_optional.bfirst &&
+                     !mgr_port_a_in_sbr.a_optional.blast) begin
+          burst_active_mask_d[selected_id] = 1'b1;
+        end
+
+        if (burst_locked_q && mgr_port_a_in_sbr.a_optional.blast) begin
+          if (BurstGroupWaitAll) begin
+            burst_active_mask_d[selected_id] = 1'b0;
+            if (burst_active_mask_d == '0) begin
+              burst_locked_d = 1'b0;
+            end
+          end else begin
+            burst_active_mask_d = '0;
+            burst_locked_d = 1'b0;
+          end
         end
       end
     end
 
     always_ff @(posedge clk_i or negedge rst_ni) begin : proc_burst_lock
       if (!rst_ni) begin
-        burst_locked_q    <= 1'b0;
-        burst_locked_id_q <= '0;
+        burst_locked_q       <= 1'b0;
+        burst_locked_group_q <= '0;
+        burst_active_mask_q  <= '0;
       end else begin
-        burst_locked_q    <= burst_locked_d;
-        burst_locked_id_q <= burst_locked_id_d;
+        burst_locked_q       <= burst_locked_d;
+        burst_locked_group_q <= burst_locked_group_d;
+        burst_active_mask_q  <= burst_active_mask_d;
       end
     end
   end else begin : gen_no_burst_lock
@@ -239,7 +272,12 @@ module obi_mux_intf #(
   /// The burst extension mode.
   parameter obi_pkg::obi_burst_mode_e BurstMode   = obi_pkg::OBI_BURST_NONE,
   /// The width of the beat-framed burst length field.
-  parameter int unsigned       BurstLenWidth      = 32'd8
+  parameter int unsigned       BurstLenWidth      = 32'd8,
+  /// Port group IDs for burst lock. Ports sharing a nonzero group ID can interleave.
+  parameter int unsigned       BurstSbrGroup [NumSbrPorts-1:0] = '{default: 0},
+  /// When set, burst lock waits for all group ports to finish. When cleared,
+  /// lock releases on any port's blast.
+  parameter bit                BurstGroupWaitAll = 1'b1
 ) (
   input logic         clk_i,
   input logic         rst_ni,
@@ -281,7 +319,9 @@ module obi_mux_intf #(
       .NumMaxTrans        ( NumMaxTrans           ),
       .UseIdForRouting    ( UseIdForRouting       ),
       .BurstMode          ( BurstMode             ),
-      .BurstLenWidth      ( BurstLenWidth         )
+      .BurstLenWidth      ( BurstLenWidth         ),
+      .BurstSbrGroup      ( BurstSbrGroup         ),
+      .BurstGroupWaitAll  ( BurstGroupWaitAll     )
     ) i_obi_mux (
       .clk_i,
       .rst_ni,
