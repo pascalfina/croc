@@ -9,6 +9,8 @@
 module idma_legalizer_page_splitter #(
     parameter int unsigned OffsetWidth   = 32'd2,
     parameter int unsigned PageAddrWidth = 32'd5,
+    /// Choose OBI burst mode 
+    parameter obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE,
     parameter type         addr_t        = logic,
     parameter type         page_len_t    = logic,
     parameter type         page_addr_t   = logic
@@ -32,9 +34,14 @@ module idma_legalizer_page_splitter #(
         if (not_bursting_i) begin
             page_addr_width = OffsetWidth;
         end else begin
-            // should the "virtual" page be reduced? e.g. the transfers split into
-            // smaller chunks than the AXI page size?
-            page_addr_width = OffsetWidth + (reduce_len_i ? max_llen_i : 'd8);
+            if (BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED) begin
+                // NOTE: reduce_len_i and max_llen_i is currently not configurable
+                page_addr_width = PageAddrWidth;
+            end else begin
+                // should the "virtual" page be reduced? e.g. the transfers split into
+                // smaller chunks than the AXI page size?
+                page_addr_width = OffsetWidth + (reduce_len_i ? max_llen_i : 'd8);
+            end
             // a page can be a maximum of 4kB (12 bit)
             page_addr_width = page_addr_width > 'd12 ? 'd12 : page_addr_width;
         end

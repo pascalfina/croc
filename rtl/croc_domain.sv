@@ -265,6 +265,7 @@ module croc_domain import croc_pkg::*; #(
     // iDMA
     croc_idma #(
       .BurstMode        ( BurstMode           ),
+      .BurstLenWidth    ( BurstLenWidth       ),
       .ObiMrgCfg        ( MgrObiCfg           ),
       .ObiSbrCfg        ( SbrObiCfg           ),
       .TFLenWidth       ( MgrObiCfg.AddrWidth ),

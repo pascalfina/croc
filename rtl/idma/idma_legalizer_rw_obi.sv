@@ -17,8 +17,10 @@ module idma_legalizer_rw_obi #(
     /// If this is enabled, then the data inserted into the dataflow element
     /// will no longer be word aligned, but only a single shifter is needed
     parameter bit          CombinedShifter = 1'b0,
-    /// Enable OBI beat-framed burst metadata (blen, bfirst, blast) on a_optional
+    /// Choose OBI burst mode
     parameter obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE,
+    /// OBI burst length bit-width
+    parameter int unsigned BurstLenWidth    = 'd8,
     /// Data width
     parameter int unsigned DataWidth       = 32'd16,
     /// Address width
@@ -78,7 +80,7 @@ module idma_legalizer_rw_obi #(
     /// Offset width
     localparam int unsigned OffsetWidth   = $clog2(StrbWidth);
     /// The size of a page in byte
-    localparam int unsigned PageSize      = StrbWidth;
+    localparam int unsigned PageSize      = 'd2048; // WARNING: need to match smallest address range, currently 2kB = SRAM
     /// The width of page offset byte addresses
     localparam int unsigned PageAddrWidth = $clog2(PageSize);
 
@@ -120,6 +122,10 @@ module idma_legalizer_rw_obi #(
     offset_t   w_addr_offset;
     logic      w_done;
 
+    // latched burst lengths
+    logic [BurstLenWidth-1:0] r_blen_d, r_blen_q;
+    logic [BurstLenWidth-1:0] w_blen_d, w_blen_q;
+
 
     //--------------------------------------
     // read boundary check
@@ -127,11 +133,12 @@ module idma_legalizer_rw_obi #(
     idma_legalizer_page_splitter #(
         .OffsetWidth   ( OffsetWidth   ),
         .PageAddrWidth ( PageAddrWidth ),
+        .BurstMode     ( BurstMode     ),
         .addr_t        ( addr_t        ),
         .page_len_t    ( page_len_t    ),
         .page_addr_t   ( page_addr_t   )
     ) i_read_page_splitter (
-        .not_bursting_i    ( 1'b1 ),
+        .not_bursting_i    ( BurstMode == obi_pkg::OBI_BURST_NONE ),
 
         .reduce_len_i      ( opt_tf_q.src_reduce_len ),
         .max_llen_i        ( opt_tf_q.src_max_llen   ),
@@ -140,7 +147,9 @@ module idma_legalizer_rw_obi #(
         .num_bytes_to_pb_o ( r_page_num_bytes_to_pb  )
     );
 
-    assign r_num_bytes_to_pb = r_page_num_bytes_to_pb;
+    // For OBI BEAT_FRAMED burst mode, step 4 bytes (StrbWidth) per cycle; otherwise step page size
+    assign r_num_bytes_to_pb = (BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED) ?
+                               StrbWidth : r_page_num_bytes_to_pb;
 
     //--------------------------------------
     // write boundary check
@@ -148,11 +157,12 @@ module idma_legalizer_rw_obi #(
     idma_legalizer_page_splitter #(
         .OffsetWidth   ( OffsetWidth   ),
         .PageAddrWidth ( PageAddrWidth ),
+        .BurstMode     ( BurstMode     ),
         .addr_t        ( addr_t        ),
         .page_len_t    ( page_len_t    ),
         .page_addr_t   ( page_addr_t   )
     ) i_write_page_splitter (
-        .not_bursting_i    ( 1'b1 ),
+        .not_bursting_i    ( BurstMode == obi_pkg::OBI_BURST_NONE ),
 
         .reduce_len_i      ( opt_tf_q.dst_reduce_len ),
         .max_llen_i        ( opt_tf_q.dst_max_llen   ),
@@ -161,7 +171,9 @@ module idma_legalizer_rw_obi #(
         .num_bytes_to_pb_o ( w_page_num_bytes_to_pb  )
     );
 
-    assign w_num_bytes_to_pb = w_page_num_bytes_to_pb;
+    // For OBI BEAT_FRAMED burst mode, step 4 bytes (StrbWidth) per cycle; otherwise step page size
+    assign w_num_bytes_to_pb = (BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED) ?
+                               StrbWidth : w_page_num_bytes_to_pb;
 
     //--------------------------------------
     // page boundary check
@@ -265,7 +277,6 @@ module idma_legalizer_rw_obi #(
                 addr:   req_i.src_addr,
                 valid:   1'b1,
                 base_addr: req_i.src_addr,
-                total_length: req_i.length + req_i.src_addr[OffsetWidth-1:0],
                 default: '0
             };
             // destination or write
@@ -275,7 +286,6 @@ module idma_legalizer_rw_obi #(
                 valid:   1'b1,
                 base_addr: req_i.dst_addr,
                 user: req_i.user,
-                total_length: req_i.length + req_i.dst_addr[OffsetWidth-1:0],
                 default: '0
             };
             // options
@@ -328,10 +338,23 @@ module idma_legalizer_rw_obi #(
             // } : '0
             a_optional : '0
         };
+        r_blen_d = r_blen_q;
         if (BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED) begin
-            r_req_o.ar_req.obi.a_chan.a_optional.blen   = (r_tf_q.total_length - 1) >> OffsetWidth;
-            r_req_o.ar_req.obi.a_chan.a_optional.bfirst = (r_tf_q.addr == r_tf_q.base_addr);
-            r_req_o.ar_req.obi.a_chan.a_optional.blast  = r_done;
+            logic [AddrWidth-1:0] r_burst_bytes;
+            logic r_bfirst;
+
+            r_burst_bytes = (r_page_num_bytes_to_pb < r_tf_q.length) ? r_page_num_bytes_to_pb : r_tf_q.length;
+            r_bfirst      = (r_tf_q.addr == r_tf_q.base_addr) || (r_page_num_bytes_to_pb == PageSize);
+
+            if (r_bfirst) begin
+                r_blen_d = (r_burst_bytes - 1) >> OffsetWidth;
+            end
+
+            r_req_o.ar_req.obi.a_chan.a_optional.blen   = r_bfirst ? ((r_burst_bytes - 1) >> OffsetWidth) : r_blen_q;
+            r_req_o.ar_req.obi.a_chan.a_optional.bfirst = r_bfirst;
+            r_req_o.ar_req.obi.a_chan.a_optional.blast  = r_done || (r_page_num_bytes_to_pb <= StrbWidth);
+        end else begin
+            r_blen_d = '0;
         end
     end
 
@@ -353,18 +376,31 @@ module idma_legalizer_rw_obi #(
             we: 1,
             wdata: '0,
             aid: opt_tf_q.axi_id,
-            //NOTE: this syntax does not work in vsim
-            //a_optional: BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED ? '{
+            // NOTE: this syntax does not work in vsim
+            // a_optional: BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED ? '{
             //    blen:   (w_tf_q.total_length - 1) >> OffsetWidth,
             //    bfirst: (w_tf_q.addr == w_tf_q.base_addr),
             //    blast:  w_done
             //} : '0
             a_optional: '0
         };
+        w_blen_d = w_blen_q;
         if (BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED) begin
-            w_req_o.aw_req.obi.a_chan.a_optional.blen   = (w_tf_q.total_length - 1) >> OffsetWidth;
-            w_req_o.aw_req.obi.a_chan.a_optional.bfirst = (w_tf_q.addr == w_tf_q.base_addr);
-            w_req_o.aw_req.obi.a_chan.a_optional.blast  = w_done;
+            logic [AddrWidth-1:0] w_burst_bytes;
+            logic w_bfirst;
+
+            w_burst_bytes = (w_page_num_bytes_to_pb < w_tf_q.length) ? w_page_num_bytes_to_pb : w_tf_q.length;
+            w_bfirst      = (w_tf_q.addr == w_tf_q.base_addr) || (w_page_num_bytes_to_pb == PageSize);
+
+            if (w_bfirst) begin
+                w_blen_d = (w_burst_bytes - 1) >> OffsetWidth;
+            end
+
+            w_req_o.aw_req.obi.a_chan.a_optional.blen   = w_bfirst ? ((w_burst_bytes - 1) >> OffsetWidth) : w_blen_q;
+            w_req_o.aw_req.obi.a_chan.a_optional.bfirst = w_bfirst;
+            w_req_o.aw_req.obi.a_chan.a_optional.blast  = w_done || (w_page_num_bytes_to_pb <= StrbWidth);
+        end else begin
+            w_blen_d = '0;
         end
         w_req_o.w_dp_req = '{
             dst_protocol: opt_tf_q.dst_protocol,
@@ -425,6 +461,14 @@ module idma_legalizer_rw_obi #(
     `FF (opt_tf_q, opt_tf_d,           '0, clk_i, rst_ni)
     `FFL(r_tf_q,   r_tf_d,   r_tf_ena, '0, clk_i, rst_ni)
     `FFL(w_tf_q,   w_tf_d,   w_tf_ena, '0, clk_i, rst_ni)
+
+    if (BurstMode != obi_pkg::OBI_BURST_NONE) begin : gen_burst_blen_reg
+        `FFL(r_blen_q, r_blen_d, r_tf_ena, '0, clk_i, rst_ni)
+        `FFL(w_blen_q, w_blen_d, w_tf_ena, '0, clk_i, rst_ni)
+    end else begin : gen_no_burst_blen_reg
+        assign r_blen_q = '0;
+        assign w_blen_q = '0;
+    end
 
 endmodule
 

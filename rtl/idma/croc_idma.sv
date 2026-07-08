@@ -15,6 +15,8 @@ module croc_idma #(
     parameter obi_pkg::obi_cfg_t ObiSbrCfg  = obi_pkg::ObiDefaultConfig,
     /// Enable OBI beat-framed burst metadata (blen, bfirst, blast) on a_optional
     parameter obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE,
+    /// OBI burst length bit-width
+    parameter int unsigned BurstLenWidth    = croc_pkg::BurstLenWidth,
     /// With of a transfer: max transfer size is `2**TFLenWidth` bytes
     parameter int unsigned TFLenWidth       = ObiMrgCfg.AddrWidth,
     /// OBI A manager channel type
@@ -396,6 +398,7 @@ module croc_idma #(
     idma_backend_rw_obi #(
         .CombinedShifter      ( 1'b0                        ),
         .BurstMode            ( BurstMode                   ),
+        .BurstLenWidth        ( BurstLenWidth               ),
         .DataWidth            ( ObiMrgCfg.DataWidth         ),
         .AddrWidth            ( ObiMrgCfg.AddrWidth         ),
         .AxiIdWidth           ( ObiMrgCfg.IdWidth           ),

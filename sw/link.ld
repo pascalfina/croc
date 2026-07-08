@@ -53,6 +53,12 @@ SECTIONS
 	*(.data_bank0)
 	} > SRAM :data
 
+    /* DMA source buffer placed across the Bank0/Bank1 boundary (0x1000_0800) */
+	.data_cross 0x10000700 : ALIGN(4)
+	{
+	*(.data_cross)
+	} > SRAM :data
+
     /* Main code (text) and read-only data (rodata) */
 	.text : ALIGN(4)
 	{
