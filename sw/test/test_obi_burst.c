@@ -1,5 +1,5 @@
 // OBI burst-compliant DMA test.
-// Verifies iDMA memcpy across 1/4/16 word transfers with canary checks.
+// Verifies burst advantage when there is contention
 
 #include "util.h"
 #include "idma.h"
@@ -7,32 +7,55 @@
 #include "uart.h"
 #include "print.h"
 
-static volatile uint32_t dma_src[16] __attribute__((section(".data_bank0")));
-static volatile uint32_t dma_dst[16] __attribute__((section(".data_bank0")));
+#define TRANSFER_WORDS 128
+
+static volatile uint32_t dma_src[TRANSFER_WORDS] __attribute__((section(".data_bank0")));
+static volatile uint32_t dma_dst[TRANSFER_WORDS] __attribute__((section(".data_bank0")));
+
+#define CONTENTION_REG ((volatile uint32_t *)0x0300C000)
+#define CONTENTION_ENABLE 1
 
 int main(void) {
     uint64_t t0, t1;
+    uint32_t idma_cycles_no_cont, idma_cycles_cont;
+
     uart_init();
-    // Length sweep: 1 word, 4 words, 16 words
-    static const uint32_t lens[3] = {1, 4, 16};
-    
-    printf("test_obi_burst: start\n");
+    printf("  Transfer size: %d words (%d bytes)\n", TRANSFER_WORDS, TRANSFER_WORDS * 4);
 
-    for (int k = 0; k < 3; k++) {
-        uint32_t len = lens[k];
-
-        for (uint32_t i = 0; i < len; i++)
-            dma_src[i] = 0xB0000000u | (len << 16) | i;
-
-        t0 = get_mcycle();
-        idma_memcpy((uint32_t)dma_dst, (uint32_t)dma_src, len * 4);
-        // fence();
-        t1 = get_mcycle();
-        printf("  len %d: %d cycles\n", (int)len, (uint32_t)(t1 - t0));
-
-        for (uint32_t i = 0; i < len; i++)
-            CHECK_ASSERT(10 + k, dma_dst[i] == (0xB0000000u | (len << 16) | i));
+    // Initialize source buffer and clear destination buffer
+    for (uint32_t i = 0; i < TRANSFER_WORDS; i++) {
+        dma_src[i] = 0xABCDE000u | i;
+        dma_dst[i] = 0;
     }
+
+    // 1. Measure iDMA Memcpy WITHOUT contention
+    t0 = get_mcycle();
+    idma_memcpy((uint32_t)dma_dst, (uint32_t)dma_src, TRANSFER_WORDS * 4);
+    t1 = get_mcycle();
+    idma_cycles_no_cont = (uint32_t)(t1 - t0);
+    // Verify
+    for (uint32_t i = 0; i < TRANSFER_WORDS; i++) {
+        CHECK_ASSERT(1, dma_dst[i] == (0xABCDE000u | i));
+        dma_dst[i] = 0; // Clear for next run
+    }
+    printf("  iDMA memcpy (no contention): %d cycles\n", idma_cycles_no_cont);
+    #if defined(CONTENTION_ENABLE)
+    // Enable bus contention
+    *CONTENTION_REG = 1;
+
+    // 2. Measure iDMA Memcpy WITH contention
+    t0 = get_mcycle();
+    idma_memcpy((uint32_t)dma_dst, (uint32_t)dma_src, TRANSFER_WORDS * 4);
+    t1 = get_mcycle();
+    // Disable bus contention
+    *CONTENTION_REG = 0;
+    idma_cycles_cont = (uint32_t)(t1 - t0);
+    // Verify
+    for (uint32_t i = 0; i < TRANSFER_WORDS; i++) {
+        CHECK_ASSERT(2, dma_dst[i] == (0xABCDE000u | i));
+    }
+    printf("  iDMA memcpy (WITH contention): %d cycles\n", idma_cycles_cont);
+    #endif
 
     uart_write_flush();
     return 0;

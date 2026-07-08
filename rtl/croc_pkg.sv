@@ -33,6 +33,7 @@ package croc_pkg;
   localparam bit iDMAEnable = 1'b1;
   localparam bit ContentionEnable = 1'b1;
 
+
   //////////////////////////
   // Core Configuration   //
   //////////////////////////
@@ -42,9 +43,64 @@ package croc_pkg;
   /// 3'b000=CVE2, 3'b001=Ibex, 3'b111=custom, others are reserved
   localparam int unsigned CoreId        = 0;
 
+  ////////////////////////
+  // SRAM Configuration //
+  ////////////////////////
+  // Check in your target technology which SRAMs are available
+  // and then make sure it is implemented as an option in tc_sram_impl.sv
+
+  /// Number of SRAM banks, each bank has its own OBI port (accessible in parallel)
+  localparam int unsigned NumSramBanks      = 32'd2;
+  /// Number of 32-bit words per SRAM bank, determines the depth of each SRAM bank
+  localparam int unsigned SramBankNumWords  = 512;
+
+
+  //////////////////////
+  // Address Map Type //
+  //////////////////////
+  // ideally compatible with:
+  // https://pulp-platform.github.io/cheshire/um/arch/#memory-map
+
+  /// Address map data type
+  typedef struct packed {
+      logic [ 3:0] idx;
+      logic [31:0] start_addr;
+      logic [31:0] end_addr;
+  } addr_map_rule_t;
+
+
   localparam int unsigned BurstLenWidth = 32'd8;
-  localparam obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_BEAT_FRAMED;
-  // localparam obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE;
+  // localparam obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_BEAT_FRAMED;
+  localparam obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE;
+
+  typedef struct packed {
+    logic [BurstLenWidth-1:0] blen;
+    logic                     bfirst;
+    logic                     blast;
+  } obi_a_optional_t;
+
+  ////////////////////////////////
+  // Main Crossbar Address Map ///
+  ////////////////////////////////
+  /// Number of manager ports into crossbar
+  /// User Domain, Debug module, Core Data, Core Instr; optionally iDMA Write and iDMA Read; optionally Contention Bank 0 and Bank 1
+  localparam int unsigned NumXbarManagers = 4 + (iDMAEnable ? 2 : 0) + (ContentionEnable ? 2 : 0);
+
+  /// Enum with crossbar subordinate idxs
+  typedef enum bit [3:0] {
+    XbarError  = 0,
+    XbarPeriph = 1,
+    XbarUser   = 2,
+    XbarBank0  = 3
+  } croc_xbar_outputs_e;
+
+  /// Address map given to the main crossbar
+  localparam addr_map_rule_t [3:0] CrocAddrMap = '{
+    '{ idx: XbarPeriph,  start_addr: 32'h0000_0000, end_addr: 32'h1000_0000 },
+    '{ idx: XbarUser,    start_addr: 32'h2000_0000, end_addr: 32'h8000_0000 },
+    '{ idx: XbarBank0,   start_addr: 32'h1000_0000, end_addr: 32'h1000_0800 },
+    '{ idx: XbarBank0+1, start_addr: 32'h1000_0800, end_addr: 32'h1000_1000 }
+  };
 
   // Burst lock group IDs for the main xbar manager ports.
   // All ports default to group 0. Ports 4 (iDMA write) and 5 (iDMA read)
@@ -75,61 +131,6 @@ package croc_pkg;
   /// When set, the burst lock waits for all ports in the group to finish
   /// before releasing. When cleared, the lock releases on any port's blast.
   localparam bit BurstGroupWaitAll = 1'b1;
-
-  ////////////////////////
-  // SRAM Configuration //
-  ////////////////////////
-  // Check in your target technology which SRAMs are available
-  // and then make sure it is implemented as an option in tc_sram_impl.sv
-
-  /// Number of SRAM banks, each bank has its own OBI port (accessible in parallel)
-  localparam int unsigned NumSramBanks      = 32'd2;
-  /// Number of 32-bit words per SRAM bank, determines the depth of each SRAM bank
-  localparam int unsigned SramBankNumWords  = 512;
-
-
-  //////////////////////
-  // Address Map Type //
-  //////////////////////
-  // ideally compatible with:
-  // https://pulp-platform.github.io/cheshire/um/arch/#memory-map
-
-  /// Address map data type
-  typedef struct packed {
-      logic [ 3:0] idx;
-      logic [31:0] start_addr;
-      logic [31:0] end_addr;
-  } addr_map_rule_t;
-
-
-typedef struct packed {
-  logic [BurstLenWidth-1:0] blen;
-  logic                     bfirst;
-  logic                     blast;
-} obi_a_optional_t;
-
-  ////////////////////////////////
-  // Main Crossbar Address Map ///
-  ////////////////////////////////
-  /// Number of manager ports into crossbar
-  /// User Domain, Debug module, Core Data, Core Instr; optionally iDMA Write and iDMA Read; optionally Contention Bank 0 and Bank 1
-  localparam int unsigned NumXbarManagers = 4 + (iDMAEnable ? 2 : 0) + (ContentionEnable ? 2 : 0);
-
-  /// Enum with crossbar subordinate idxs
-  typedef enum bit [3:0] {
-    XbarError  = 0,
-    XbarPeriph = 1,
-    XbarUser   = 2,
-    XbarBank0  = 3
-  } croc_xbar_outputs_e;
-
-  /// Address map given to the main crossbar
-  localparam addr_map_rule_t [3:0] CrocAddrMap = '{
-    '{ idx: XbarPeriph,  start_addr: 32'h0000_0000, end_addr: 32'h1000_0000 },
-    '{ idx: XbarUser,    start_addr: 32'h2000_0000, end_addr: 32'h8000_0000 },
-    '{ idx: XbarBank0,   start_addr: 32'h1000_0000, end_addr: 32'h1000_0800 },
-    '{ idx: XbarBank0+1, start_addr: 32'h1000_0800, end_addr: 32'h1000_1000 }
-  };
 
   // +1 for additional OBI error
   localparam int unsigned NumXbarSubordinates = $size(CrocAddrMap) + 1;
