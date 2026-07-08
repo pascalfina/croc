@@ -47,6 +47,12 @@ SECTIONS
 	*(.text._start)
 	} > SRAM :text
 
+    /* Force DMA buffers into Bank 0 */
+	.data_bank0 : ALIGN(4)
+	{
+	*(.data_bank0)
+	} > SRAM :data
+
     /* Main code (text) and read-only data (rodata) */
 	.text : ALIGN(4)
 	{

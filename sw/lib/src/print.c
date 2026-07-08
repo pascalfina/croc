@@ -26,6 +26,34 @@ uint8_t format_hex32(char *buffer, uint32_t num) {
     return idx;
 }
 
+uint8_t format_dec32(char *buffer, int32_t num) {
+    uint8_t idx = 0;
+    if (num == 0) {
+        buffer[0] = '0';
+        return 1;
+    }
+
+    int is_negative = 0;
+    uint32_t unum;
+    if (num < 0) {
+        is_negative = 1;
+        unum        = (uint32_t)-num;
+    } else {
+        unum = (uint32_t)num;
+    }
+
+    while (unum > 0) {
+        buffer[idx++] = '0' + (unum % 10);
+        unum /= 10;
+    }
+
+    if (is_negative) {
+        buffer[idx++] = '-';
+    }
+
+    return idx;
+}
+
 void printf(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
@@ -37,6 +65,20 @@ void printf(const char *fmt, ...) {
             fmt++;
             if (*fmt == 'x') { // hex
                 idx = format_hex32(buffer, va_arg(args, unsigned int));
+                // print from buffer
+                for (int j = idx - 1; j >= 0; j--) {
+                    putchar(buffer[j]);
+                }
+            } else if (*fmt == 'c') { // char
+                char chr = (char)va_arg(args, int);
+                putchar(chr);
+            } else if (*fmt == 's') { // string
+                char *str = va_arg(args, char *);
+                while (*str) {
+                    putchar(*str++);
+                }
+            } else if (*fmt == 'd') { // dec
+                idx = format_dec32(buffer, va_arg(args, int));
                 // print from buffer
                 for (int j = idx - 1; j >= 0; j--) {
                     putchar(buffer[j]);
