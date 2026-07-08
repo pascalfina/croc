@@ -80,6 +80,7 @@ module idma_legalizer_rw_obi #(
     /// Offset width
     localparam int unsigned OffsetWidth   = $clog2(StrbWidth);
     /// The size of a page in byte
+    // localparam int unsigned PageSize      = StrbWidth; // 1-beat burst only
     localparam int unsigned PageSize      = 'd2048; // WARNING: need to match smallest address range, currently 2kB = SRAM
     /// The width of page offset byte addresses
     localparam int unsigned PageAddrWidth = $clog2(PageSize);

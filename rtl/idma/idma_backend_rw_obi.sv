@@ -42,6 +42,8 @@ module idma_backend_rw_obi #(
     parameter bit HardwareLegalizer          = 1'b1,
     /// Enable OBI beat-framed burst metadata (blen, bfirst, blast) on a_optional
     parameter obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE,
+    /// OBI burst length bit-width
+    parameter int unsigned BurstLenWidth     = croc_pkg::BurstLenWidth,
     /// Reject zero-length transfers
     parameter bit RejectZeroTransfers        = 1'b1,
     /// Should the error handler be present?
@@ -228,7 +230,6 @@ module idma_backend_rw_obi #(
         logic    valid;
         addr_t   base_addr;
         user_t   user;
-        tf_len_t total_length;
     } idma_mut_tf_t;
 
 
@@ -338,6 +339,7 @@ module idma_backend_rw_obi #(
         idma_legalizer_rw_obi #(
             .CombinedShifter   ( CombinedShifter   ),
             .BurstMode         ( BurstMode         ),
+            .BurstLenWidth     ( BurstLenWidth     ),
             .DataWidth         ( DataWidth         ),
             .AddrWidth         ( AddrWidth         ),
             .idma_req_t        ( idma_req_t        ),
