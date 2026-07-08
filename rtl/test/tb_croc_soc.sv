@@ -207,6 +207,10 @@ module tb_croc_soc #(
     // i_vip.jtag_resume();
 
     // wait for non-zero return value (written into core status register)
+    `ifdef TRACE_WAVE
+      $info("Start trace");
+      $dumpvars(0, i_croc_soc);
+    `endif
     $display("@%t | [CORE] Wait for end of code...", $time);
     i_vip.jtag_wait_for_eoc(tb_data);
 
@@ -223,10 +227,8 @@ module tb_croc_soc #(
     `ifdef TRACE_WAVE
       `ifdef VERILATOR
         $dumpfile("croc.fst");
-        $dumpvars(1, i_croc_soc);
       `else
         $dumpfile("croc.vcd");
-        $dumpvars(1, i_croc_soc);
       `endif
     `endif
   end
