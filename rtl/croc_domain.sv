@@ -258,6 +258,7 @@ module croc_domain import croc_pkg::*; #(
 
     // iDMA
     croc_idma #(
+      .BurstMode        ( BurstMode           ),
       .ObiMrgCfg        ( MgrObiCfg           ),
       .ObiSbrCfg        ( SbrObiCfg           ),
       .TFLenWidth       ( MgrObiCfg.AddrWidth ),
@@ -297,6 +298,7 @@ module croc_domain import croc_pkg::*; #(
       .ObiCfg      ( SbrObiCfg     ),
       .obi_req_t   ( sbr_obi_req_t ),
       .obi_rsp_t   ( sbr_obi_rsp_t ),
+      .BurstMode   ( BurstMode     ),
       .NumMaxTrans ( 1             ),
       .RspData     ( 32'hBADCAB1E  )
     ) i_obi_err_sbr_idma_cfg (
@@ -413,13 +415,17 @@ module croc_domain import croc_pkg::*; #(
     .sbr_port_r_chan_t  ( mgr_obi_r_chan_t     ),
     .mgr_port_obi_req_t ( sbr_obi_req_t        ),
     .mgr_port_obi_rsp_t ( sbr_obi_rsp_t        ),
+    .BurstMode          ( BurstMode            ),
     .NumSbrPorts        ( NumXbarManagers      ),
     .NumMgrPorts        ( NumXbarSubordinates  ),
     .NumMaxTrans        ( 2                    ),
     .NumAddrRules       ( $size(CrocAddrMap)   ),
     .addr_map_rule_t    ( addr_map_rule_t      ),
     .UseIdForRouting    ( 1'b0                 ),
-    .Connectivity       ( XbarConnectivity     )
+    .Connectivity       ( XbarConnectivity     ),
+    .BurstLenWidth      ( BurstLenWidth        ),
+    .BurstSbrGroup      ( BurstSbrGroup        ),
+    .BurstGroupWaitAll  ( BurstGroupWaitAll    )
   ) i_main_xbar (
     .clk_i,
     .rst_ni,
@@ -450,9 +456,11 @@ module croc_domain import croc_pkg::*; #(
     logic [SbrObiCfg.DataWidth/8-1:0] bank_be;
 
     obi_sram_shim #(
-      .ObiCfg    ( SbrObiCfg     ),
-      .obi_req_t ( sbr_obi_req_t ),
-      .obi_rsp_t ( sbr_obi_rsp_t )
+      .ObiCfg       ( SbrObiCfg     ),
+      .obi_req_t    ( sbr_obi_req_t ),
+      .obi_rsp_t    ( sbr_obi_rsp_t ),
+      .BurstMode    ( BurstMode     ),
+      .BurstLenWidth( BurstLenWidth )
     ) i_sram_shim (
       .clk_i,
       .rst_ni,
@@ -502,6 +510,7 @@ module croc_domain import croc_pkg::*; #(
     .ObiCfg      ( SbrObiCfg     ),
     .obi_req_t   ( sbr_obi_req_t ),
     .obi_rsp_t   ( sbr_obi_rsp_t ),
+    .BurstMode   ( BurstMode     ),
     .NumMaxTrans ( 1             ),
     .RspData     ( 32'hBADCAB1E  )
   ) i_xbar_err (
@@ -540,6 +549,7 @@ module croc_domain import croc_pkg::*; #(
     .ObiCfg      ( SbrObiCfg     ),
     .obi_req_t   ( sbr_obi_req_t ),
     .obi_rsp_t   ( sbr_obi_rsp_t ),
+    .BurstMode   ( BurstMode     ),
     .NumMgrPorts ( NumPeriphs    ),
     .NumMaxTrans ( 2             )
   ) i_obi_demux (
@@ -658,6 +668,7 @@ module croc_domain import croc_pkg::*; #(
     .ObiCfg      ( SbrObiCfg     ),
     .obi_req_t   ( sbr_obi_req_t ),
     .obi_rsp_t   ( sbr_obi_rsp_t ),
+    .BurstMode   ( BurstMode     ),
     .NumMaxTrans ( 1             ),
     .RspData     ( 32'hBADCAB1E  )
   ) i_periph_err (

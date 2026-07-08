@@ -40,6 +40,8 @@ module idma_backend_rw_obi #(
     /// If not, software legalization is required to ensure the transfers are
     /// AXI4-conformal
     parameter bit HardwareLegalizer          = 1'b1,
+    /// Enable OBI beat-framed burst metadata (blen, bfirst, blast) on a_optional
+    parameter obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE,
     /// Reject zero-length transfers
     parameter bit RejectZeroTransfers        = 1'b1,
     /// Should the error handler be present?
@@ -334,6 +336,7 @@ module idma_backend_rw_obi #(
         // hardware legalizer is present
         idma_legalizer_rw_obi #(
             .CombinedShifter   ( CombinedShifter   ),
+            .BurstMode         ( BurstMode         ),
             .DataWidth         ( DataWidth         ),
             .AddrWidth         ( AddrWidth         ),
             .idma_req_t        ( idma_req_t        ),

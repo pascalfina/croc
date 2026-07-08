@@ -13,6 +13,8 @@ module croc_idma #(
     parameter obi_pkg::obi_cfg_t ObiMrgCfg  = obi_pkg::ObiDefaultConfig,
     /// The OBI Mrg configuration.
     parameter obi_pkg::obi_cfg_t ObiSbrCfg  = obi_pkg::ObiDefaultConfig,
+    /// Enable OBI beat-framed burst metadata (blen, bfirst, blast) on a_optional
+    parameter obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE,
     /// With of a transfer: max transfer size is `2**TFLenWidth` bytes
     parameter int unsigned TFLenWidth       = ObiMrgCfg.AddrWidth,
     /// OBI A manager channel type
@@ -393,6 +395,7 @@ module croc_idma #(
     // DMA
     idma_backend_rw_obi #(
         .CombinedShifter      ( 1'b0                        ),
+        .BurstMode            ( BurstMode                   ),
         .DataWidth            ( ObiMrgCfg.DataWidth         ),
         .AddrWidth            ( ObiMrgCfg.AddrWidth         ),
         .AxiIdWidth           ( ObiMrgCfg.IdWidth           ),
@@ -439,6 +442,7 @@ module croc_idma #(
     obi_rready_converter #(
         .obi_a_chan_t ( obi_mrg_a_chan_t ),
         .obi_r_chan_t ( obi_mrg_r_chan_t ),
+        .Depth        ( 32'd2            ),
         .CombRspReq   ( 1'b0            )
     ) i_obi_rready_converter_read (
         .clk_i,
@@ -462,7 +466,8 @@ module croc_idma #(
     // write converter
     obi_rready_converter #(
         .obi_a_chan_t ( obi_mrg_a_chan_t ),
-        .obi_r_chan_t ( obi_mrg_r_chan_t )
+        .obi_r_chan_t ( obi_mrg_r_chan_t ),
+        .Depth        ( 32'd2            )
     ) i_obi_rready_converter_write (
         .clk_i,
         .rst_ni,

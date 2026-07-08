@@ -17,6 +17,8 @@ module idma_legalizer_rw_obi #(
     /// If this is enabled, then the data inserted into the dataflow element
     /// will no longer be word aligned, but only a single shifter is needed
     parameter bit          CombinedShifter = 1'b0,
+    /// Enable OBI beat-framed burst metadata (blen, bfirst, blast) on a_optional
+    parameter obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE,
     /// Data width
     parameter int unsigned DataWidth       = 32'd16,
     /// Address width
@@ -316,7 +318,13 @@ module idma_legalizer_rw_obi #(
             we: 1'b0,
             wdata: '0,
             aid: opt_tf_q.axi_id,
-            a_optional: '0
+            a_optional: BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED ? '{
+                // blen = ceil((num_bytes + addr_offset) / StrbWidth) - 1
+                // addr_offset needed for unaligned starts
+                blen:   (r_num_bytes + r_addr_offset - 1) >> OffsetWidth,
+                bfirst: (r_tf_q.addr == r_tf_q.base_addr),
+                blast:  r_done
+            } : '0
         };
     end
 
@@ -338,7 +346,13 @@ module idma_legalizer_rw_obi #(
             we: 1,
             wdata: '0,
             aid: opt_tf_q.axi_id,
-            a_optional: '0
+            a_optional: BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED ? '{
+                // blen = ceil((num_bytes + addr_offset) / StrbWidth) - 1
+                // addr_offset needed for unaligned starts
+                blen:   (w_num_bytes + w_addr_offset - 1) >> OffsetWidth,
+                bfirst: (w_tf_q.addr == w_tf_q.base_addr),
+                blast:  w_done
+            } : '0
         };
         w_req_o.w_dp_req = '{
             dst_protocol: opt_tf_q.dst_protocol,

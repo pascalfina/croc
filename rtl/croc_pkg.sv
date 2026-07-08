@@ -43,6 +43,7 @@ package croc_pkg;
   localparam int unsigned CoreId        = 0;
 
   localparam int unsigned BurstLenWidth = 32'd8;
+  localparam obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_BEAT_FRAMED;
 
   ////////////////////////
   // SRAM Configuration //

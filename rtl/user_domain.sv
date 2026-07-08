@@ -88,6 +88,7 @@ module user_domain import user_pkg::*; import croc_pkg::*; #(
     .ObiCfg      ( SbrObiCfg     ),
     .obi_req_t   ( sbr_obi_req_t ),
     .obi_rsp_t   ( sbr_obi_rsp_t ),
+    .BurstMode   ( BurstMode     ),
     .NumMgrPorts ( NumDemuxSbr   ),
     .NumMaxTrans ( 2             )
   ) i_obi_demux (
@@ -114,6 +115,7 @@ module user_domain import user_pkg::*; import croc_pkg::*; #(
     .ObiCfg      ( SbrObiCfg     ),
     .obi_req_t   ( sbr_obi_req_t ),
     .obi_rsp_t   ( sbr_obi_rsp_t ),
+    .BurstMode   ( BurstMode     ),
     .NumMaxTrans ( 1             ),
     .RspData     ( 32'hBADCAB1E  )
   ) i_your_design_goes_here (
@@ -129,6 +131,7 @@ module user_domain import user_pkg::*; import croc_pkg::*; #(
     .ObiCfg      ( SbrObiCfg     ),
     .obi_req_t   ( sbr_obi_req_t ),
     .obi_rsp_t   ( sbr_obi_rsp_t ),
+    .BurstMode   ( BurstMode     ),
     .NumMaxTrans ( 1             ),
     .RspData     ( 32'hBADCAB1E  )
   ) i_user_err (
