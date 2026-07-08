@@ -320,14 +320,19 @@ module idma_legalizer_rw_obi #(
             we: 1'b0,
             wdata: '0,
             aid: opt_tf_q.axi_id,
-            a_optional: BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED ? '{
-                // blen = ceil((num_bytes + addr_offset) / StrbWidth) - 1
-                // addr_offset needed for unaligned starts
-                blen:   (r_tf_q.total_length - 1) >> OffsetWidth,
-                bfirst: (r_tf_q.addr == r_tf_q.base_addr),
-                blast:  r_done
-            } : '0
+            // NOTE: this syntax does not work in vsim
+            // a_optional: BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED ? '{
+            //     blen:   (r_tf_q.total_length - 1) >> OffsetWidth,
+            //     bfirst: (r_tf_q.addr == r_tf_q.base_addr),
+            //     blast:  r_done
+            // } : '0
+            a_optional : '0
         };
+        if (BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED) begin
+            r_req_o.ar_req.obi.a_chan.a_optional.blen   = (r_tf_q.total_length - 1) >> OffsetWidth;
+            r_req_o.ar_req.obi.a_chan.a_optional.bfirst = (r_tf_q.addr == r_tf_q.base_addr);
+            r_req_o.ar_req.obi.a_chan.a_optional.blast  = r_done;
+        end
     end
 
     // assign the signals needed to set-up the read data path
@@ -348,14 +353,19 @@ module idma_legalizer_rw_obi #(
             we: 1,
             wdata: '0,
             aid: opt_tf_q.axi_id,
-            a_optional: BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED ? '{
-                // blen = ceil((num_bytes + addr_offset) / StrbWidth) - 1
-                // addr_offset needed for unaligned starts
-                blen:   (w_tf_q.total_length - 1) >> OffsetWidth,
-                bfirst: (w_tf_q.addr == w_tf_q.base_addr),
-                blast:  w_done
-            } : '0
+            //NOTE: this syntax does not work in vsim
+            //a_optional: BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED ? '{
+            //    blen:   (w_tf_q.total_length - 1) >> OffsetWidth,
+            //    bfirst: (w_tf_q.addr == w_tf_q.base_addr),
+            //    blast:  w_done
+            //} : '0
+            a_optional: '0
         };
+        if (BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED) begin
+            w_req_o.aw_req.obi.a_chan.a_optional.blen   = (w_tf_q.total_length - 1) >> OffsetWidth;
+            w_req_o.aw_req.obi.a_chan.a_optional.bfirst = (w_tf_q.addr == w_tf_q.base_addr);
+            w_req_o.aw_req.obi.a_chan.a_optional.blast  = w_done;
+        end
         w_req_o.w_dp_req = '{
             dst_protocol: opt_tf_q.dst_protocol,
             offset:       w_addr_offset,

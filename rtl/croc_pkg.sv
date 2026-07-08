@@ -70,8 +70,8 @@ package croc_pkg;
 
 
   localparam int unsigned BurstLenWidth = 32'd8;
-  // localparam obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_BEAT_FRAMED;
-  localparam obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE;
+  localparam obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_BEAT_FRAMED;
+  // localparam obi_pkg::obi_burst_mode_e BurstMode = obi_pkg::OBI_BURST_NONE;
 
   typedef struct packed {
     logic [BurstLenWidth-1:0] blen;
@@ -116,7 +116,7 @@ package croc_pkg;
   //   5: iDMA read           (only present when iDMAEnable)
   //   6: contention bank 0   (only present when ContentionEnable; index 4 if iDMA disabled)
   //   7: contention bank 1   (only present when ContentionEnable; index 5 if iDMA disabled)
-  typedef int unsigned int_arr_t [NumXbarManagers];
+  typedef int unsigned int_arr_t [NumXbarManagers-1:0];
 
   function automatic int_arr_t get_burst_sbr_group();
     int_arr_t groups;

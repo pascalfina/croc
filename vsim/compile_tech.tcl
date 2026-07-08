@@ -13,6 +13,8 @@ set ROOT ".."
 
 if {[catch { vlog -incr -sv \
     +define+FUNCTIONAL \
+    "$ROOT/ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_io/verilog/sg13g2_io.v" \
+    "$ROOT/ihp13/bondpad/verilog/bondpad_70x70.v" \
     "$ROOT/ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_stdcell/verilog/sg13g2_stdcell.v" \
     "$ROOT/ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/verilog/RM_IHPSG13_1P_core_behavioral_bm_bist.v" \
     "$ROOT/ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/verilog/RM_IHPSG13_1P_64x64_c2_bm_bist.v" \
@@ -20,7 +22,6 @@ if {[catch { vlog -incr -sv \
     "$ROOT/ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/verilog/RM_IHPSG13_1P_512x64_c2_bm_bist.v" \
     "$ROOT/ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/verilog/RM_IHPSG13_1P_1024x64_c2_bm_bist.v" \
     "$ROOT/ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/verilog/RM_IHPSG13_1P_2048x64_c2_bm_bist.v" \
-    "$ROOT/ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/verilog/RM_IHPSG13_1P_256x48_c2_bm_bist.v" \
     "$ROOT/ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/verilog/RM_IHPSG13_1P_256x48_c2_bm_bist.v" \
     "$ROOT/ihp13/tc_sram_impl.sv" \
     "$ROOT/ihp13/tc_clk.sv" \
