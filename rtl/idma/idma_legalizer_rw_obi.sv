@@ -265,6 +265,7 @@ module idma_legalizer_rw_obi #(
                 addr:   req_i.src_addr,
                 valid:   1'b1,
                 base_addr: req_i.src_addr,
+                total_length: req_i.length + req_i.src_addr[OffsetWidth-1:0],
                 default: '0
             };
             // destination or write
@@ -274,6 +275,7 @@ module idma_legalizer_rw_obi #(
                 valid:   1'b1,
                 base_addr: req_i.dst_addr,
                 user: req_i.user,
+                total_length: req_i.length + req_i.dst_addr[OffsetWidth-1:0],
                 default: '0
             };
             // options
@@ -321,7 +323,7 @@ module idma_legalizer_rw_obi #(
             a_optional: BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED ? '{
                 // blen = ceil((num_bytes + addr_offset) / StrbWidth) - 1
                 // addr_offset needed for unaligned starts
-                blen:   (r_num_bytes + r_addr_offset - 1) >> OffsetWidth,
+                blen:   (r_tf_q.total_length - 1) >> OffsetWidth,
                 bfirst: (r_tf_q.addr == r_tf_q.base_addr),
                 blast:  r_done
             } : '0
@@ -349,7 +351,7 @@ module idma_legalizer_rw_obi #(
             a_optional: BurstMode == obi_pkg::OBI_BURST_BEAT_FRAMED ? '{
                 // blen = ceil((num_bytes + addr_offset) / StrbWidth) - 1
                 // addr_offset needed for unaligned starts
-                blen:   (w_num_bytes + w_addr_offset - 1) >> OffsetWidth,
+                blen:   (w_tf_q.total_length - 1) >> OffsetWidth,
                 bfirst: (w_tf_q.addr == w_tf_q.base_addr),
                 blast:  w_done
             } : '0

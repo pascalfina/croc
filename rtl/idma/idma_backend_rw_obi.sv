@@ -228,6 +228,7 @@ module idma_backend_rw_obi #(
         logic    valid;
         addr_t   base_addr;
         user_t   user;
+        tf_len_t total_length;
     } idma_mut_tf_t;
 
 
