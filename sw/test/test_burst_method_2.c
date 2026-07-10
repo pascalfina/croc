@@ -1,6 +1,8 @@
 #include "util.h"
 #include "idma.h"
 #include "config.h"
+#include "uart.h"
+#include "print.h"
 
 #define SRAM_BASE   0x10000000u
 #define BANK_BIT    0x00000800u
@@ -138,11 +140,41 @@ static int test_contention(void) {
 }
 
 int main(void) {
-    CHECK_CALL(test_length_sweep());
-    CHECK_CALL(test_back_to_back());
-    CHECK_CALL(test_bank0_read());
-    CHECK_CALL(test_2d());
-    CHECK_CALL(test_contention());
-    
+    uart_init();
+    int r;
+
+    if ((r = test_length_sweep())) { 
+        printf("FAIL sweep code="); 
+        printf("%x\n", r);
+        uart_write_flush(); 
+        return r;
+    }
+    printf("OK sweep\n");
+
+    if ((r = test_back_to_back())) { 
+        printf("FAIL back2back code=");
+         printf("%x\n", r);
+          uart_write_flush(); 
+          return r;
+    }
+
+    printf("OK back2back\n");
+
+    if ((r = test_bank0_read())) { 
+        printf("FAIL bank0 code="); 
+        printf("%x\n", r);
+        uart_write_flush(); 
+        return r; 
+    }
+    printf("OK bank0\n");
+
+    if ((r = test_2d()))           { printf("FAIL 2d code="); printf("%x\n", r); uart_write_flush(); return r; }
+    printf("OK 2d\n");
+    if ((r = test_contention()))   { printf("FAIL contention code="); printf("%x\n", r); uart_write_flush(); return r; }
+    printf("OK contention\n");
+
+    printf("ALL PASSED\n");
+    uart_write_flush();
     return 0;
 }
+

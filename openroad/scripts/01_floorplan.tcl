@@ -140,12 +140,13 @@ set floor_midpointY   [expr $floor_bottomY + ($floor_topY - $floor_bottomY)/2]
 
 utl::report "Place Macros"
 
-# Bank0
-set X [expr $floor_midpointX - $RamSize256x64_W/2]
+# Bank0  -- nach LINKS gerueckt: grosser horizontaler Abstand zum iDMA (rechts geankert)
+# -> langer KONSTANTER Span iDMA->Endpoint fuer BEIDE Baenke (kein See-Saw).
+set X $floor_leftX
 set Y [expr $floor_topY - $RamSize256x64_H]
 placeInstance $bank0_sram0 $X $Y R0
 
-# Bank1
+# Bank1  (gleiche x wie Bank0 -> beide SRAMs ganz links, vertikal gestapelt)
 set X [expr $X]
 set Y [expr $floor_bottomY]
 placeInstance $bank1_sram0 $X $Y MX
@@ -153,30 +154,39 @@ placeInstance $bank1_sram0 $X $Y MX
 # --- Anker: Endpoint-Zellen an ihre SRAM-Bank fixieren ---
 # WICHTIG: replace/global_placement honoriert nur dbGroup-MIT-Region als Fence,
 # NICHT eine bare dbRegion+addInst (die wird stumm ignoriert).
-proc anchor_endpoint {block sram_inst ep_pat name side} {
+proc anchor_endpoint {block sram_inst ep_pat name side {xlo_frac 0.0} {xhi_frac 1.0}} {
     set bb [[$block findInst $sram_inst] getBBox]
     set strip [expr {int(150 * [$block getDbUnitsPerMicron])}]   ;# 150um Streifen
     if {$side eq "above"} { set ylo [$bb yMax]; set yhi [expr {[$bb yMax]+$strip}] } \
     else                  { set yhi [$bb yMin]; set ylo [expr {[$bb yMin]-$strip}] }
+    # x-Bereich optional auf einen Teil der Bankbreite einschraenken (Frac der Breite)
+    # -> Endpoint zur Seite zwingen, um Abstand zum iDMA zu vergroessern.
+    set bw  [expr {[$bb xMax]-[$bb xMin]}]
+    set xlo [expr {int([$bb xMin] + $xlo_frac*$bw)}]
+    set xhi [expr {int([$bb xMin] + $xhi_frac*$bw)}]
     set r [odb::dbRegion_create $block $name]
-    odb::dbBox_create $r [$bb xMin] $ylo [$bb xMax] $yhi
+    odb::dbBox_create $r $xlo $ylo $xhi $yhi
     set g [odb::dbGroup_create $block ${name}_g]
     $r addGroup $g
     set n 0
     foreach i [$block getInsts] {
         if {[string match $ep_pat [$i getName]]} { $g addInst $i; incr n }
     }
-    utl::report "  Anker $name: $n Zellen -> Region an $sram_inst ($side)"
+    utl::report "  Anker $name: $n Zellen -> Region an $sram_inst ($side, x-frac $xlo_frac..$xhi_frac)"
 }
 set block [ord::get_db_block]
 # Bank1 sitzt unten -> Streifen DARUEBER ; Bank0 oben -> Streifen DARUNTER
-anchor_endpoint $block $bank1_sram0 "*endpoint_sram_bank_1*" ep1_fence above
-anchor_endpoint $block $bank0_sram0 "*endpoint_sram_bank_0*" ep0_fence below
+# x-frac 0..0.5: Endpoint in die LINKE Haelfte der SRAM-Breite zwingen -> direkt ueber/unter
+# der SRAM statt vom iDMA nach rechts gezogen -> togg-Netz Endpoint->SRAM minimal.
+anchor_endpoint $block $bank1_sram0 "*endpoint_sram_bank_1*" ep1_fence above 0.0 0.5
+anchor_endpoint $block $bank0_sram0 "*endpoint_sram_bank_0*" ep0_fence below 0.0 0.5
 
-# --- Anker: Compressoren ganz rechts (weg von den linken SRAMs) ---
-# -> langes KONSTANTES Adress-Netz Compressor->Endpoint (das ist das (A)-Saving).
-# Beide in EINE Region (Overlap vermeiden). global_placement braucht dafuer
-# -init_density_penalty 0.0001 -max_phi_coef 1.02 (siehe 02_placement.tcl), sonst Divergenz.
+# --- Anker: iDMA nach RECHTS (SRAMs/Endpoints sind jetzt links) ---
+# -> langer KONSTANTER Span iDMA->Endpoint fuer BEIDE Baenke (horizontale Trennung).
+# Der alte Compressor-Fence ist RAUS: der hat nur ein internes burst_req-Netz
+# (write_burst->ep = die alten 730um) lang gemacht, NICHT das Saving. Hier zaehlt iDMA->Endpoint.
+# Grosser Fence (6902 Zellen) -> global_placement braucht -init_density_penalty 0.0001
+# -max_phi_coef 1.02 (siehe 02_placement.tcl). Box ggf. anpassen wenn Density zu hoch/Divergenz.
 proc anchor_box {block pats name xlo ylo xhi yhi} {
     set u [$block getDbUnitsPerMicron]
     set r [odb::dbRegion_create $block $name]
@@ -189,7 +199,10 @@ proc anchor_box {block pats name xlo ylo xhi yhi} {
     }
     utl::report "  Anker $name: $n Zellen -> Box ($xlo,$ylo)-($xhi,$yhi)"
 }
-anchor_box $block {*read_burst* *write_burst*} comp_fence 1450 700 1580 1300
+# iDMA-Fence (in fastiter getunt, konvergiert mit max_phi_coef 1.01 in 02_placement):
+# iDMA nach rechts -> langer KONSTANTER Span iDMA->Endpoint fuer BEIDE Baenke.
+# fastiter global_placement: Write-Span 229->466um, Read 502->553um.
+anchor_box $block {*idma*} idma_fence 1100 360 1570 1570
 
 # defined in init_tech.tcl
 insertTapCells

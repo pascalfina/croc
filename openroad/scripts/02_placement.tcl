@@ -47,6 +47,14 @@ utl::report "###################################################################
 set clock_nets [get_nets -of_objects [get_pins -of_objects "*_reg" -filter "name == CLK"]]
 set_dont_touch $clock_nets
 
+# RSZ-2008-Workaround: im gespreizten Floorplan wird das Reset-Mux-Netz zu lang ->
+# repair_timing crasht mit "wire step options empty" -> Stage 02 bricht ab, 02_croc.placed
+# wird NICHT gespeichert -> 03-05 laufen auf altem Layout. Reset ist nicht timing-kritisch.
+# Breites Muster (flachgeklopfter Name mit Punkten) + Zaehler zur Kontrolle.
+set rstnets [get_nets "*i_rstgen*"]
+puts "RSZ-2008 Workaround: [llength $rstnets] i_rstgen-Netze -> dont_touch"
+if {[llength $rstnets]} { set_dont_touch $rstnets }
+
 utl::report "Repair tie fanout"
 repair_tie_fanout $tieHiPin 
 repair_tie_fanout $tieLoPin 
@@ -75,7 +83,7 @@ set_thread_count 8
 
 # Rough placement to get parasitics from steiner-tree estimate so we can run repair_timing
 utl::report "Global Placement (1)"
-global_placement -density 0.60 -init_density_penalty 0.0001 -max_phi_coef 1.02
+global_placement -density 0.60 -init_density_penalty 0.0001 -max_phi_coef 1.01
 report_metrics "02-02_${proj_name}.gpl1"
 report_image "02-02_${proj_name}.gpl1" true true
 save_checkpoint 02-02_${proj_name}.gpl1
@@ -94,7 +102,7 @@ save_checkpoint 02-02_${proj_name}.gpl1_repaired
 utl::report "Global Placement (2)"
 global_placement -density 0.60 \
                  -init_density_penalty 0.0001 \
-                 -max_phi_coef 1.02 \
+                 -max_phi_coef 1.01 \
                  -routability_driven \
                  -routability_check_overflow 0.30 \
                  -timing_driven
@@ -106,6 +114,16 @@ save_checkpoint 02-02_${proj_name}.gpl2
 utl::report "###############################################################################"
 utl::report "# 02-03: Detailed Placement"
 utl::report "###############################################################################"
+
+# Opendp segfaultet (Signal 11 in legalPt) bei der grossen idma_fence-dbGroup. Die Gruppen
+# wurden nur fuer global_placement gebraucht - die Zellen sind jetzt platziert. Vor
+# detailed_placement Gruppen UND Regionen ZERSTOEREN (blosses removeInst reichte nicht).
+# iDMA bleibt rechts / Endpoints an SRAM (detailed_placement macht nur lokale Legalisierung).
+set blk [ord::get_db_block]
+foreach g [$blk getGroups] { foreach i [$g getInsts] { catch {$g removeInst $i} } }
+foreach g [$blk getGroups] { catch {odb::dbGroup_destroy $g} }
+foreach r [$blk getRegions] { catch {odb::dbRegion_destroy $r} }
+puts "Opendp-Workaround: nach Cleanup [llength [$blk getGroups]] Gruppen / [llength [$blk getRegions]] Regionen uebrig (soll 0/0 sein)"
 
 # Legalize overlapping cells
 utl::report "Detailed placement"

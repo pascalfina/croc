@@ -62,10 +62,15 @@ proc d {arr a b} {
 }
 
 puts "\n=== Estimated Dist. (um) ==="
+# KONST. Adr-Netz = iDMA -> Endpoint: ueber diesen ganzen Span ist die Adresse
+#   NICHT pro-Beat toggelnd (Rewrite am iDMA macht a.addr konstant -> Crossbar ->
+#   Endpoint). Erst am Endpoint wird pro-Beat regeneriert. Das ist das (A)-Saving-Netz.
+#   (Frueher faelschlich rd_comp->ep gemessen: beide HINTER dem Crossbar = internes Netz.)
+# TOGG. Adr-Netz  = Endpoint -> SRAM: die regenerierte, toggelnde Adresse (lokal, kurz).
 foreach {a b label} {
-  rd_comp ep0  "Read-Comp -> Bank0-Endpoint  (konst. Adr-Netz)"
-  ep0     sram0 "Bank0-Endpoint -> Bank0-SRAM (togg. Adr-Netz)"
-  wr_comp ep1  "Write-Comp -> Bank1-Endpoint (konst. Adr-Netz)"
-  ep1     sram1 "Bank1-Endpoint -> Bank1-SRAM (togg. Adr-Netz)"
+  idma ep0  "iDMA -> Bank0-Endpoint  (konst. Adr-Netz, Read)"
+  ep0  sram0 "Bank0-Endpoint -> Bank0-SRAM (togg. Adr-Netz)"
+  idma ep1  "iDMA -> Bank1-Endpoint  (konst. Adr-Netz, Write)"
+  ep1  sram1 "Bank1-Endpoint -> Bank1-SRAM (togg. Adr-Netz)"
 } { puts [format "  %-46s %7.1f" $label [d C $a $b]] }
 exit
