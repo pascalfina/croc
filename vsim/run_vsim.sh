@@ -43,7 +43,9 @@ Options:
     --flist             Regenerate compile script reading sources (compile_rtl.tcl, compile_netlist.tcl)
     --build             Compile Croc RTL in VSIM
     --build-netlist     Compile Croc post-synthesis netlist in VSIM
+    --build-postlayout  Compile Croc post-layout netlist in VSIM (for SPEF power analysis)
     --run BINARY        Run binary in VSIM
+    --run-vcd BINARY    Run binary in VSIM and dump croc.vcd (needs TRACE_WAVE build)
     --run-gui BINARY    Prepare running binary in VSIM, open GUI
 
 Example:
@@ -161,12 +163,56 @@ compile_netlist() {
 }
 
 
+compile_postlayout() {
+    run_cmd "echo [INFO][VSIM] Compile post-layout netlist"
+    run_cmd "${VSIM} \
+        -c \
+        -do \"source compile_postlayout.tcl; source compile_tech.tcl; exit\" \
+        > reports/compile_postlayout.log"
+
+    # Collect errors and warnings from compilation log and print summary
+    run_cmd "echo [INFO][VSIM] Check reports/compile_postlayout.log"
+    run_cmd "echo --- QuestaSim compilation report ---  > reports/compile_postlayout.rpt"
+    run_cmd "echo Errors:                              >> reports/compile_postlayout.rpt"
+    run_cmd "grep Error: reports/compile_postlayout.log   >> reports/compile_postlayout.rpt || true"
+    run_cmd "echo                                      >> reports/compile_postlayout.rpt"
+    run_cmd "echo Warnings:                            >> reports/compile_postlayout.rpt"
+    run_cmd "grep Warning: reports/compile_postlayout.log >> reports/compile_postlayout.rpt || true"
+
+    run_cmd "NUM_ERRORS=$(cat reports/compile_postlayout.rpt | grep Error: | wc -l)"
+    run_cmd "NUM_WARNINGS=$(cat reports/compile_postlayout.rpt | grep Warning: | wc -l)"
+    run_cmd "echo \"#######################################################\""
+    run_cmd "echo \"############### Compilation report ####################\""
+    run_cmd "echo \"#######################################################\""
+    run_cmd "echo  Errors   : ${NUM_ERRORS}"
+    run_cmd "echo  Warnings : ${NUM_WARNINGS}"
+    run_cmd "echo See 'reports/compile_postlayout.rpt' for more info"
+    run_cmd "echo \"#######################################################\""
+}
+
+
 run_vsim() {
     run_cmd "${VSIM} \
         +binary=$1 \
         -c \
         tb_croc_soc \
         -t 1ns \
+        -suppress vsim-3009 \
+        -suppress vsim-8683 \
+        -suppress vsim-8386 \
+        -do \"run -a; quit\""
+}
+
+
+# Run with waveform dump for power analysis (testbench dumps via TRACE_WAVE).
+# Needs a library compiled with +define+TRACE_WAVE (--build-netlist / --build-postlayout).
+run_vsim_vcd() {
+    run_cmd "${VSIM} \
+        +binary=$1 \
+        -c \
+        tb_croc_soc \
+        -t 1ns \
+        -voptargs=+acc \
         -suppress vsim-3009 \
         -suppress vsim-8683 \
         -suppress vsim-8386 \
@@ -231,8 +277,16 @@ while [[ $# -gt 0 ]]; do
             compile_netlist
             shift
             ;;
+        --build-postlayout)
+            compile_postlayout
+            shift
+            ;;
         --run)
             run_vsim $2
+            shift 2
+            ;;
+        --run-vcd)
+            run_vsim_vcd $2
             shift 2
             ;;
         --run-gui)

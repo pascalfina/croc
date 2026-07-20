@@ -200,21 +200,17 @@ module tb_croc_soc #(
     $display("@%t | [CORE] Waking core via CLINT msip", $time);
     i_vip.jtag_write_reg32(ClintBaseAddr, 32'h1);
 
-    // halt core
+    // // halt core
     // i_vip.jtag_halt();
-
-    // resume core
+    //
+    // // resume core
     // i_vip.jtag_resume();
 
-    // Start the waveform dump only here: everything before this point is the
-    // JTAG binary load, which would otherwise dominate the trace window and
-    // distort the power measurement.
+    // wait for non-zero return value (written into core status register)
     `ifdef TRACE_WAVE
       $info("Start trace");
       $dumpvars(0, i_croc_soc);
     `endif
-
-    // wait for non-zero return value (written into core status register)
     $display("@%t | [CORE] Wait for end of code...", $time);
     i_vip.jtag_wait_for_eoc(tb_data);
 
@@ -236,6 +232,12 @@ module tb_croc_soc #(
       `endif
     `endif
   end
+
+  initial begin
+      #(25000000ns);
+      $info(1, "Simulation timeout");
+      $finish();
+    end
 
   // flush waveform dump when simulation ends
   final begin

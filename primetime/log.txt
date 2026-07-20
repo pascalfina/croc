@@ -1,0 +1,1555 @@
+Detected [rhel8.1i] setup
+
+                                 PrimeTime (R)
+
+                 Version Y-2026.03 for linux64 - Feb 25, 2026 
+
+                    Copyright (c) 1988 - 2026 Synopsys, Inc.
+   This software and the associated documentation are proprietary to Synopsys,
+      Inc.  This software may only be used in accordance with the terms and
+  conditions of a written license agreement with Synopsys, Inc.  All other use,
+   reproduction, or distribution of this software is strictly prohibited.  By
+   installing, accessing, using, or executing this software, you agree that it
+  will reside on, operate within, and have access to the computers and networks
+    where such software is used ("Host System"), and that Synopsys may access
+     components and data of the Host System as necessary for it to function
+ properly, to authenticate and validate license keys, to verify that it is used
+ only in conformity with the applicable license restrictions, and to communicate
+                 error messages and associated data to Synopsys.
+
+###############################################################################
+# PrimeTime PX - power analysis for the croc SoC
+###############################################################################
+# change path
+set NETLIST ../tmp_sim_data_croc/netlist_debug.v
+../tmp_sim_data_croc/netlist_debug.v
+# change path
+set VCD     ../tmp_sim_data_croc/croc.vcd          
+../tmp_sim_data_croc/croc.vcd
+# post-synth
+set TOP        {croc_soc$croc_chip.i_croc_soc}
+croc_soc$croc_chip.i_croc_soc
+# post-layout
+#set TOP        croc_chip
+set STRIP_PATH tb_croc_soc/i_croc_soc
+tb_croc_soc/i_croc_soc
+set CLK_PORT   clk_i
+clk_i
+set CLK_PERIOD 20
+20
+# change path
+set PDK_DIR ../ihp13/pdk/ihp-sg13g2/libs.ref
+../ihp13/pdk/ihp-sg13g2/libs.ref
+# start link_library with "*" so the design itself is searched too
+set link_library "*"
+*
+# standard cells
+set STDCELL_DIR ${PDK_DIR}/sg13g2_stdcell/lib
+../ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_stdcell/lib
+set STDCELL_LIB sg13g2_stdcell_typ_1p20V_25C.lib
+sg13g2_stdcell_typ_1p20V_25C.lib
+lappend search_path     $STDCELL_DIR
+../ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_stdcell/lib
+lappend link_library    $STDCELL_LIB
+* sg13g2_stdcell_typ_1p20V_25C.lib
+lappend target_library  $STDCELL_LIB
+sg13g2_stdcell_typ_1p20V_25C.lib
+# sram macros - one .lib file per macro used in croc (see ihp13/tc_sram_impl.sv)
+set SRAM_DIR  ${PDK_DIR}/sg13g2_sram/lib
+../ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/lib
+set SRAM_LIB_64x64   RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib
+RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib
+set SRAM_LIB_256x64  RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib
+RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib
+set SRAM_LIB_512x64  RM_IHPSG13_1P_512x64_c2_bm_bist_typ_1p20V_25C.lib
+RM_IHPSG13_1P_512x64_c2_bm_bist_typ_1p20V_25C.lib
+set SRAM_LIB_1024x64 RM_IHPSG13_1P_1024x64_c2_bm_bist_typ_1p20V_25C.lib
+RM_IHPSG13_1P_1024x64_c2_bm_bist_typ_1p20V_25C.lib
+set SRAM_LIB_2048x64 RM_IHPSG13_1P_2048x64_c2_bm_bist_typ_1p20V_25C.lib
+RM_IHPSG13_1P_2048x64_c2_bm_bist_typ_1p20V_25C.lib
+lappend search_path $SRAM_DIR
+../ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_stdcell/lib ../ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/lib
+lappend link_library $SRAM_LIB_64x64
+* sg13g2_stdcell_typ_1p20V_25C.lib RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib
+lappend link_library $SRAM_LIB_256x64
+* sg13g2_stdcell_typ_1p20V_25C.lib RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib
+lappend link_library $SRAM_LIB_512x64
+* sg13g2_stdcell_typ_1p20V_25C.lib RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_512x64_c2_bm_bist_typ_1p20V_25C.lib
+lappend link_library $SRAM_LIB_1024x64
+* sg13g2_stdcell_typ_1p20V_25C.lib RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_512x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_1024x64_c2_bm_bist_typ_1p20V_25C.lib
+lappend link_library $SRAM_LIB_2048x64
+* sg13g2_stdcell_typ_1p20V_25C.lib RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_512x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_1024x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_2048x64_c2_bm_bist_typ_1p20V_25C.lib
+lappend target_library $SRAM_LIB_64x64
+sg13g2_stdcell_typ_1p20V_25C.lib RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib
+lappend target_library $SRAM_LIB_256x64
+sg13g2_stdcell_typ_1p20V_25C.lib RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib
+lappend target_library $SRAM_LIB_512x64
+sg13g2_stdcell_typ_1p20V_25C.lib RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_512x64_c2_bm_bist_typ_1p20V_25C.lib
+lappend target_library $SRAM_LIB_1024x64
+sg13g2_stdcell_typ_1p20V_25C.lib RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_512x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_1024x64_c2_bm_bist_typ_1p20V_25C.lib
+lappend target_library $SRAM_LIB_2048x64
+sg13g2_stdcell_typ_1p20V_25C.lib RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_512x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_1024x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_2048x64_c2_bm_bist_typ_1p20V_25C.lib
+# io cells
+set IO_DIR ${PDK_DIR}/sg13g2_io/lib
+../ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_io/lib
+set IO_LIB sg13g2_io_typ_1p2V_3p3V_25C.lib
+sg13g2_io_typ_1p2V_3p3V_25C.lib
+lappend search_path     $IO_DIR
+../ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_stdcell/lib ../ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/lib ../ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_io/lib
+lappend link_library    $IO_LIB
+* sg13g2_stdcell_typ_1p20V_25C.lib RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_512x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_1024x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_2048x64_c2_bm_bist_typ_1p20V_25C.lib sg13g2_io_typ_1p2V_3p3V_25C.lib
+lappend target_library  $IO_LIB
+sg13g2_stdcell_typ_1p20V_25C.lib RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_512x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_1024x64_c2_bm_bist_typ_1p20V_25C.lib RM_IHPSG13_1P_2048x64_c2_bm_bist_typ_1p20V_25C.lib sg13g2_io_typ_1p2V_3p3V_25C.lib
+set disable_multicore_resource_checks true
+true
+set_host_options -max_cores 8
+Information: The max_cores limit for the local (current) process has been modified by 4 to 8. (CMCR-103)
+1
+set power_enable_analysis true
+Information: Checked out license 'PrimePower' (PT-019)
+true
+set power_analysis_mode   time_based
+time_based
+read_verilog $NETLIST
+1
+link_design $TOP
+Error: Cannot read link_path file 'sg13g2_stdcell_typ_1p20V_25C.lib'. (LNK-001)
+Error: Cannot read link_path file 'RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib'. (LNK-001)
+Error: Cannot read link_path file 'RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib'. (LNK-001)
+Error: Cannot read link_path file 'RM_IHPSG13_1P_512x64_c2_bm_bist_typ_1p20V_25C.lib'. (LNK-001)
+Error: Cannot read link_path file 'RM_IHPSG13_1P_1024x64_c2_bm_bist_typ_1p20V_25C.lib'. (LNK-001)
+Loading verilog file '/scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v'
+Error: Cannot read link_path file 'RM_IHPSG13_1P_2048x64_c2_bm_bist_typ_1p20V_25C.lib'. (LNK-001)
+Error: Cannot read link_path file 'sg13g2_io_typ_1p2V_3p3V_25C.lib'. (LNK-001)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 2. Truncated.
+	At line 2721 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4472 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4478 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4484 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4490 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4496 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4502 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4508 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4514 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4520 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4526 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4532 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4538 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4544 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4550 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4556 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4562 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4568 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4574 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4580 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4586 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4592 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4598 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4604 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4610 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4616 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4622 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4628 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4634 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4640 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4646 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4652 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4658 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4664 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4670 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4676 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4682 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4688 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4694 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4700 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4706 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 4712 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5642 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5648 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5654 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5660 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5666 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5672 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5678 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5684 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5690 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5696 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5702 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5708 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5714 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5720 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5726 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5732 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5738 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5744 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5750 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5756 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5762 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5768 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5774 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5780 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5786 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5792 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5798 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5804 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5810 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5816 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5822 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5828 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5834 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 5840 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6906 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6912 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6918 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6924 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6930 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6936 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6942 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6948 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6954 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6960 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6966 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6972 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6978 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6984 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6990 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 6996 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7002 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7008 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7014 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7020 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7026 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7032 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7038 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7044 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7050 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7056 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7062 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7068 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7074 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7080 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7086 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7092 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7098 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7104 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7110 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7116 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7122 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7128 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7134 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7140 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 7146 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8053 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8059 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8065 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8071 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8077 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8083 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8089 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8095 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8101 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8107 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8113 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8119 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8125 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8131 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8137 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8143 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8149 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8155 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8161 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8167 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8173 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8179 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8185 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8191 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8197 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8203 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8209 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8215 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8221 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8227 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8233 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8239 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8245 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 8251 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 2. Truncated.
+	At line 18830 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 55667 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 55692 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 55698 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 55710 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 2. Truncated.
+	At line 57636 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 2. Truncated.
+	At line 57637 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 129439 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 129456 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 131197 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 131199 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 131200 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 131204 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 183416 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 183418 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 184562 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 184587 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 3. Truncated.
+	At line 207761 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 279759 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 279780 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 279783 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 3. Truncated.
+	At line 290232 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 2. Truncated.
+	At line 290232 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 2. Truncated.
+	At line 294734 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0000000' requires 28 bits
+	which is too large for width 27. Truncated.
+	At line 310517 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 310517 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '1' requires 4 bits
+	which is too large for width 2. Truncated.
+	At line 313416 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 316290 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 316292 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 316293 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 316294 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 316295 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 316312 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 316857 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 316859 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 316860 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 316861 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 316862 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '0' requires 4 bits
+	which is too large for width 1. Truncated.
+	At line 316879 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '00000000000000000000000000000' requires 116 bits
+	which is too large for width 113. Truncated.
+	At line 317561 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Warning: hex constant '2eb72ac7a' requires 36 bits
+	which is too large for width 34. Truncated.
+	At line 317562 in /scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v. (SVR-42)
+Error: Cannot read link_path file 'sg13g2_stdcell_typ_1p20V_25C.lib'. (LNK-001)
+Error: Cannot read link_path file 'RM_IHPSG13_1P_64x64_c2_bm_bist_typ_1p20V_25C.lib'. (LNK-001)
+Error: Cannot read link_path file 'RM_IHPSG13_1P_256x64_c2_bm_bist_typ_1p20V_25C.lib'. (LNK-001)
+Error: Cannot read link_path file 'RM_IHPSG13_1P_512x64_c2_bm_bist_typ_1p20V_25C.lib'. (LNK-001)
+Error: Cannot read link_path file 'RM_IHPSG13_1P_1024x64_c2_bm_bist_typ_1p20V_25C.lib'. (LNK-001)
+Error: Cannot read link_path file 'RM_IHPSG13_1P_2048x64_c2_bm_bist_typ_1p20V_25C.lib'. (LNK-001)
+Error: Cannot read link_path file 'sg13g2_io_typ_1p2V_3p3V_25C.lib'. (LNK-001)
+Linking design croc_soc$croc_chip.i_croc_soc...
+
+
+Information: Main library is not specified. Please specify main library. (LNK-049)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_4' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or3_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_4' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_4' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_4' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_4' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'RM_IHPSG13_1P_256x64_c2_bm_bist' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'RM_IHPSG13_1P_256x64_c2_bm_bist' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_4' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_16' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_4' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_4' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_16' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_16' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_4' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_16' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_4' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_4' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_16' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_4' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a221oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_o21ai_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_inv_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_xnor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21oi_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a22oi_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_and2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor3_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_buf_8' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nor2b_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_a21o_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_nand3b_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_or4_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_2' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_dfrbpq_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Warning: Unable to resolve reference to 'sg13g2_mux2_1' in 'croc_soc$croc_chip.i_croc_soc'. (LNK-005)
+Information: Creating black box for i_croc/i_sram0/gen_512x32xBx1.i_cut/RM_IHPSG13_1P_256x64_c2_bm_bist... (LNK-043)
+Information: Creating black box for i_croc/i_sram1/gen_512x32xBx1.i_cut/RM_IHPSG13_1P_256x64_c2_bm_bist... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236613/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236626/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236639/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$232974/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236675/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236676/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236679/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236680/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236687/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236712/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236744/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236244/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236247/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236250/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236251/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236267/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236268/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236272/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236274/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236285/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236287/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236295/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236299/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.cs_registers_i/$abc$252639$auto$blifparse.cc:397:parse_blif$253539/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.cs_registers_i/$abc$252639$auto$blifparse.cc:397:parse_blif$253554/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.cs_registers_i/$abc$252639$auto$blifparse.cc:397:parse_blif$253582/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.cs_registers_i/$abc$252639$auto$blifparse.cc:397:parse_blif$253033/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.cs_registers_i/$abc$252639$auto$blifparse.cc:397:parse_blif$253854/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.cs_registers_i/$abc$252639$auto$blifparse.cc:397:parse_blif$253366/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.cs_registers_i/$abc$252639$auto$blifparse.cc:397:parse_blif$253399/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.cs_registers_i/$abc$252639$auto$blifparse.cc:397:parse_blif$253651/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.cs_registers_i/$abc$252639$auto$blifparse.cc:397:parse_blif$253485/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.cs_registers_i/$abc$252639$auto$blifparse.cc:397:parse_blif$252914/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.cs_registers_i/$abc$252639$auto$blifparse.cc:397:parse_blif$252953/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.cs_registers_i/$abc$252639$auto$blifparse.cc:397:parse_blif$252980/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.cs_registers_i/$abc$252639$auto$blifparse.cc:397:parse_blif$253515/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236835/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236851/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236870/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/$abc$232040$auto$blifparse.cc:397:parse_blif$236300/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256505/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256508/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256509/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255735/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255738/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256531/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255740/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256533/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256534/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255764/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256558/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255766/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255767/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256561/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256563/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255791/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255793/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256587/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255794/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256589/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256006/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256009/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256590/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256011/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256802/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256035/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256804/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256805/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256037/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256038/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256829/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256062/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256064/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256832/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256065/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256834/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256086/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256088/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256089/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256858/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256860/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256861/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256889/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256892/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256894/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255520/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255522/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255523/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$257113/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$257115/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$257116/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255544/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256338/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255546/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$255547/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$257137/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$256345/sg13g2_mux4_1... (LNK-043)
+Information: Creating black box for i_croc/i_core_wrap/i_core.register_file_i/$abc$255400$auto$blifparse.cc:397:parse_blif$257139/sg13g2_mux4_1... (LNK-043)
+Note - message 'LNK-043' default limit (100) exceeded.  Remainder will be suppressed.
+Information: Removing 92 unneeded designs..... (LNK-034)
+Information: Module 'croc_chip' in file '/scratch/sem26f37/croc_burst2/tmp_sim_data_croc/netlist_debug.v' is not used in the current design.  (LNK-039)
+Information: Design 'croc_soc$croc_chip.i_croc_soc' was not successfully linked: 0 unresolved references. (LNK-003)
+0
+create_clock $CLK_PORT -period $CLK_PERIOD
+1
+update_timing
+Information: Building multi voltage information for entire design. (MV-022)
+1
+read_vcd -strip_path $STRIP_PATH $VCD
+Error: The design was not successfully linked. Please check if the link path is set and the libraries are installed properly. (PLIB-162)
+
+======================================================================
+Summary:
+Total number of nets = 43488
+Number of annotated nets = 43488 (100.00%)
+Total number of leaf cells = 0
+Number of fully annotated leaf cells = 0 (0.00%)
+======================================================================
+
+1
+update_power
+Information: Running time_based power analysis... (PWR-601)
+Error: Can't find main library for the design. (PWR-289)
+0
+file mkdir reports/power
+report_power -nosplit -sort_by total_power -hierarchy -significant_digits 6 > reports/power/croc_soc_power.rpt
+##############################
+exit
+Information: Defining new variable 'STDCELL_LIB'. (CMD-041)
+Information: Defining new variable 'SRAM_LIB_64x64'. (CMD-041)
+Information: Defining new variable 'CLK_PORT'. (CMD-041)
+Information: Defining new variable 'disable_multicore_resource_checks'. (CMD-041)
+Information: Defining new variable 'STRIP_PATH'. (CMD-041)
+Information: Defining new variable 'SRAM_LIB_256x64'. (CMD-041)
+Information: Defining new variable 'IO_DIR'. (CMD-041)
+Information: Defining new variable 'SRAM_LIB_512x64'. (CMD-041)
+Information: Defining new variable 'SRAM_LIB_2048x64'. (CMD-041)
+Information: Defining new variable 'IO_LIB'. (CMD-041)
+Information: Defining new variable 'SRAM_DIR'. (CMD-041)
+Information: Defining new variable 'CLK_PERIOD'. (CMD-041)
+Information: Defining new variable 'PDK_DIR'. (CMD-041)
+Information: Defining new variable 'NETLIST'. (CMD-041)
+Information: Defining new variable 'SRAM_LIB_1024x64'. (CMD-041)
+Information: Defining new variable 'TOP'. (CMD-041)
+Information: Defining new variable 'VCD'. (CMD-041)
+Information: Defining new variable 'STDCELL_DIR'. (CMD-041)
+Suppressed Messages Summary:
+Id          Severity      Occurrences   Suppressed
+-------------------------------------------------------------------------------
+LNK-043     Information         43006        42906
+Total 1 type of message is suppressed
+
+Timing updates: 1 (0 implicit, 1 explicit) (0 incremental, 1 full, 0 logical)
+Noise updates: 0 (0 implicit, 0 explicit) (0 incremental, 0 full)
+Maximum memory usage for this session: 3343.68 MB
+CPU usage for this session: 3 seconds 
+Elapsed time for this session: 3 seconds
+Diagnostics summary: 11 errors, 683 warnings, 127 informationals
+
+Thank you for using pt_shell!
