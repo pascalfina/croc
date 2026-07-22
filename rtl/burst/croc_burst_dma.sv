@@ -5,7 +5,7 @@ import burst_pkg::burst_req_t;
 import burst_pkg::burst_rsp_t;
 
 (
-    input  logic clk_i, 
+    input  logic clk_i,
     input  logic rst_ni,
 
     // iDMA-read and write ports
@@ -118,8 +118,19 @@ burst_compressor write_burst (
 
 
 
-burst_req_t b0_rd_req, b1_rd_req, b0_wr_req, b1_wr_req;   // zu den Endpoints
-burst_rsp_t b0_rd_rsp, b1_rd_rsp, b0_wr_rsp, b1_wr_rsp;   // von den Endpoints
+burst_req_t b0_rd_req, b1_rd_req, b0_wr_req, b1_wr_req;
+burst_rsp_t b0_rd_rsp, b1_rd_rsp, b0_wr_rsp, b1_wr_rsp;
+
+logic [5:0] rd_credit_q;
+wire rd_req_fire     = idma_read_req_i.req && idma_read_rsp_o.gnt;
+wire rd_read_fire    = (bank0_req_o && !bank0_we_o) || (bank1_req_o && !bank1_we_o);
+wire rd_read_allowed = (rd_credit_q != 0);
+always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) rd_credit_q <= '0;
+    else rd_credit_q <= rd_credit_q
+                        + (rd_req_fire  ? 6'd1 : 6'd0)
+                        - ((rd_read_fire && rd_credit_q != 0) ? 6'd1 : 6'd0);
+end
 
 /// bank routing from read compressor ///
 
@@ -135,11 +146,11 @@ always_comb begin
 
     // Route an active burst only through the bank selected at header acceptance.
     if (rd_active_bank_q == 1'b0) begin
-        b0_rd_req.rready = rd_req.rready;
+        b0_rd_req.rready = rd_req.rready && rd_read_allowed;
         rd_rsp.rdata     = b0_rd_rsp.rdata;
         rd_rsp.rvalid    = b0_rd_rsp.rvalid;
     end else begin
-        b1_rd_req.rready = rd_req.rready;
+        b1_rd_req.rready = rd_req.rready && rd_read_allowed;
         rd_rsp.rdata     = b1_rd_rsp.rdata;
         rd_rsp.rvalid    = b1_rd_rsp.rvalid;
     end
@@ -296,6 +307,7 @@ end
 
 assign cpu_bank0_rsp_o.r.rid = b0_rid_q;
 assign cpu_bank1_rsp_o.r.rid = b1_rid_q;
+
 
 
 

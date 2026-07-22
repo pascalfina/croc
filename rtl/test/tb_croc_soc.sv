@@ -206,12 +206,17 @@ module tb_croc_soc #(
     // resume core
     // i_vip.jtag_resume();
 
-    // Start the waveform dump only here: everything before this point is the
-    // JTAG binary load, which would otherwise dominate the trace window and
-    // distort the power measurement.
     `ifdef TRACE_WAVE
-      $info("Start trace");
-      $dumpvars(0, i_croc_soc);
+      fork
+        begin
+          @(posedge gpio_out[0]);
+          $info("DMA trace start (GPIO0 high)");
+          $dumpvars(0, i_croc_soc);
+          @(negedge gpio_out[0]);
+          $info("DMA trace stop (GPIO0 low)");
+          $dumpoff;
+        end
+      join_none
     `endif
 
     // wait for non-zero return value (written into core status register)

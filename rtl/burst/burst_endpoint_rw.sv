@@ -92,7 +92,7 @@ always_comb begin
         end
 
         R_READ: begin
-            if (sram_gnt_i && rd_grant) begin
+            if (sram_gnt_i && rd_grant && rd_req_i.rready) begin
                 rd_rvalid_d = 1;
                 read_addr_d = read_addr_q + 4;
                 if (read_blen_q == 0) begin
@@ -100,7 +100,7 @@ always_comb begin
                 end else begin
                     read_blen_d = read_blen_q - 1;
                 end
-            end 
+            end
         end
 
         R_DRAIN: begin
@@ -186,7 +186,7 @@ end
 
 //////////////////////// arbiter for accessing sram ///////////////////////////////////
 
-assign rd_want = (r_state_q == R_READ);
+assign rd_want = (r_state_q == R_READ) && rd_req_i.rready;
 assign wr_want = (w_state_q == W_WRITE) && wr_req_i.wvalid;
 assign burst_starting =
     (r_state_q == R_IDLE && rd_req_i.hdr_valid) ||
@@ -266,8 +266,9 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
 end
 
 assign cpu_gnt_o    = cpu_grant ? sram_gnt_i : 0;
-assign cpu_rvalid_d = cpu_grant && sram_gnt_i;   // !cpu_we_i out                                         
-assign cpu_rvalid_o = cpu_rvalid_q;  
+assign cpu_rvalid_d = cpu_grant && sram_gnt_i;   // !cpu_we_i out
+assign cpu_rvalid_o = cpu_rvalid_q;
 assign cpu_rdata_o = sram_rdata_i;
+
 
 endmodule
