@@ -75,6 +75,7 @@ module core_wrap import croc_pkg::*; #() (
   // CPU Control Signals
   // fetch_enable_i: gates instruction fetch; ignore if core has no such signal
   input  logic        fetch_enable_i,
+  input  logic        cheriot_enable_i,
 
   // core_busy_o: power-management hint to the SoC; drive 1'b0 if not available
   output logic        core_busy_o
@@ -87,96 +88,6 @@ module core_wrap import croc_pkg::*; #() (
   localparam bit [31:0] DebugAddrOffset       = get_periph_start_addr(PeriphDebug);
   localparam bit [31:0] DebugHaltAddress      = DebugAddrOffset + dm::HaltAddress[31:0];
   localparam bit [31:0] DebugExceptionAddress = DebugAddrOffset + dm::ExceptionAddress[31:0];
-
-  // CVE2 ignores the lowest 8 bits of boot_addr internally; mask here to avoid confusion.
-  // You may want to remove this masking when using a core that uses the full boot address.
-  // logic [31:0] boot_addr_masked;
-  // assign boot_addr_masked = boot_addr_i & 32'hFFFFFF00;
-
-  // CV-X-IF tie-offs: CVE2-specific co-processor extension interface, disabled here.
-  // Remove this block entirely when replacing CVE2 with another core.
-  // If you want to use CV-X-IF, instantiate your accelerator here and connect the x_* signals.
-  // cve2_pkg::x_issue_resp_t x_issue_resp;
-  // cve2_pkg::x_result_t     x_result;
-  // always_comb begin
-  //   x_issue_resp = '0;
-  //   x_result     = '0;
-  // end
-
-// `ifdef TRACE_EXECUTION
-//   cve2_core_tracing #(
-// `else
-//   cve2_core #(
-// `endif
-//     .PMPEnable        ( CorePMPEnable       ),
-//     .PMPGranularity   ( 0                   ),
-//     .PMPNumRegions    ( 4                   ),
-//     .MHPMCounterNum   ( 0                   ),
-//     .MHPMCounterWidth ( 40                  ),
-//     .RV32E            ( 0                   ),
-//     .RV32M            ( cve2_pkg::RV32MNone ),
-//     .RV32B            ( cve2_pkg::RV32BNone ),
-//     .DbgTriggerEn     ( 1'b1                ),
-//     .DbgHwBreakNum    ( 1                   ),
-//     .XInterface       ( 1'b0                )
-//   ) i_core (
-//     .clk_i,
-//     .rst_ni,
-//     .test_en_i        ( test_enable_i    ),
-//     .hart_id_i        ( 32'd0            ),
-//     .boot_addr_i      ( boot_addr_masked ),
-
-//     // Instruction Memory Interface (OBI):
-//     .instr_req_o,
-//     .instr_gnt_i,
-//     .instr_rdata_i,
-//     .instr_rvalid_i,
-//     .instr_addr_o,
-//     .instr_err_i,
-
-//     // Data memory interface (OBI):
-//     .data_req_o,
-//     .data_gnt_i,
-//     .data_rvalid_i,
-//     .data_we_o,
-//     .data_be_o,
-//     .data_addr_o,
-//     .data_wdata_o,
-//     .data_rdata_i,
-//     .data_err_i,
-
-//     // Core-V Extension Interface (CV-X-IF):
-//     .x_issue_valid_o     (),
-//     .x_issue_ready_i     ( 1'b1 ),
-//     .x_issue_req_o       (),
-//     .x_issue_resp_i      ( x_issue_resp ),
-//     .x_register_o        (),
-//     .x_commit_valid_o    (),
-//     .x_commit_o          (),
-//     .x_result_valid_i    ( 1'b0 ),
-//     .x_result_ready_o    (),
-//     .x_result_i          ( x_result ),
-
-//     // Interrupts
-//     .irq_software_i      ( software_irq_i ),
-//     .irq_timer_i         ( timer_irq_i    ),
-//     .irq_external_i      ( 1'b0           ),
-//     .irq_fast_i          ( irqs_i         ),
-//     .irq_nm_i            ( 1'b0           ),
-//     .irq_pending_o       (),
-
-//     // Debug Interface
-//     .debug_req_i,
-//     .debug_halted_o      (),
-//     .dm_halt_addr_i      ( DebugHaltAddress      ),
-//     .dm_exception_addr_i ( DebugExceptionAddress ),
-//     .crash_dump_o        (),
-
-//     // CPU Control Signals
-//     .fetch_enable_i,
-//     .core_busy_o
-//   );
-//);
 
   logic core_sleep;
 
@@ -224,7 +135,7 @@ module core_wrap import croc_pkg::*; #() (
     .ram_cfg_icache_data_i('{default: prim_ram_1p_pkg::RAM_1P_CFG_REQ_DEFAULT}),
     .ram_cfg_icache_data_o(),
 
-    .cheriot_enable_i(ibex_pkg::IbexMuBiOff),
+    .cheriot_enable_i(cheriot_enable_i ? ibex_pkg::IbexMuBiOn : ibex_pkg::IbexMuBiOff),
     .hart_id_i(32'd0 ),
     .boot_addr_i(boot_addr_i   ),
 

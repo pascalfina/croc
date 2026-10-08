@@ -18,7 +18,8 @@ module soc_ctrl_regs #(
   output obi_rsp_t         obi_rsp_o,
   // To hardware
   output logic             fetch_en_o,
-  output logic             sram_dly_o
+  output logic             sram_dly_o,
+  output logic             cheriot_enable_o
 );
   import croc_pkg::*;
   import soc_ctrl_regs_pkg::*;
@@ -59,12 +60,14 @@ module soc_ctrl_regs #(
   logic [31:0] core_status_d, core_status_q;
   logic          boot_mode_d,   boot_mode_q;
   logic           sram_dly_d,    sram_dly_q;
+  logic           cheriot_enable_d, cheriot_enable_q;
 
   `FF(boot_addr_q, boot_addr_d, BootAddrDefault, clk_i, rst_ni)
   `FF(fetch_en_q, fetch_en_d,              1'b1, clk_i, rst_ni)
   `FF(core_status_q, core_status_d,          '0, clk_i, rst_ni)
   `FF(boot_mode_q, boot_mode_d,              '0, clk_i, rst_ni)
   `FF(sram_dly_q, sram_dly_d,                '0, clk_i, rst_ni)
+  `FF(cheriot_enable_q, cheriot_enable_d,   1'b0, clk_i, rst_ni)
 
   // OBI handling, A-phase fields needed in the R-phase
   logic                               req_q;
@@ -85,6 +88,7 @@ module soc_ctrl_regs #(
 
   assign fetch_en_o = fetch_en_q;
   assign sram_dly_o = sram_dly_q;
+  assign cheriot_enable_o = cheriot_enable_q;
 
   // Address phase: update writable registers
   always_comb begin : write_fsm
@@ -93,6 +97,7 @@ module soc_ctrl_regs #(
     core_status_d = core_status_q;
     boot_mode_d   = boot_mode_q;
     sram_dly_d    = sram_dly_q;
+    cheriot_enable_d = cheriot_enable_q;
 
     if (obi_req_i.req && obi_req_i.a.we) begin
       unique case ({obi_req_i.a.addr[IntAddrWidth-1:2], 2'b00})
@@ -101,6 +106,8 @@ module soc_ctrl_regs #(
         SOC_CTRL_CORESTATUS_OFFSET: core_status_d = obi_req_i.a.wdata & be_mask;
         SOC_CTRL_BOOTMODE_OFFSET:   boot_mode_d   = obi_req_i.a.wdata[0] & be_mask[0];
         SOC_CTRL_SRAM_DLY_OFFSET:   sram_dly_d    = obi_req_i.a.wdata[0] & be_mask[0];
+        SOC_CTRL_CHERIOT_ENABLE_OFFSET:
+          cheriot_enable_d = cheriot_enable_q | (obi_req_i.a.wdata[0] & be_mask[0]);
         default: ;  // invalid address: no write, error signalled in R phase
       endcase
     end
@@ -122,6 +129,8 @@ module soc_ctrl_regs #(
           SOC_CTRL_BOOTMODE_OFFSET:   obi_rsp_o.r.rdata = {31'h0, boot_mode_q};
           SOC_CTRL_SRAM_DLY_OFFSET:   obi_rsp_o.r.rdata = {31'b0, sram_dly_q};
           SOC_CTRL_INFO_OFFSET:       obi_rsp_o.r.rdata = HwInfoWord;
+          SOC_CTRL_CHERIOT_ENABLE_OFFSET:
+            obi_rsp_o.r.rdata = {31'h0, cheriot_enable_q};
           default: begin
             obi_rsp_o.r.rdata = 32'hBADCAB1E;
             obi_rsp_o.r.err   = 1'b1;
@@ -133,7 +142,8 @@ module soc_ctrl_regs #(
           SOC_CTRL_FETCHEN_OFFSET,
           SOC_CTRL_CORESTATUS_OFFSET,
           SOC_CTRL_BOOTMODE_OFFSET,
-          SOC_CTRL_SRAM_DLY_OFFSET:  ;  // valid write, no error
+          SOC_CTRL_SRAM_DLY_OFFSET,
+          SOC_CTRL_CHERIOT_ENABLE_OFFSET:  ;  // valid write, no error
           default: obi_rsp_o.r.err = 1'b1;
         endcase
       end

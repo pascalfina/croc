@@ -17,5 +17,6 @@ package soc_ctrl_regs_pkg;
   parameter logic [IntAddrWidth-1:0] SOC_CTRL_BOOTMODE_OFFSET   = 5'h0c;
   parameter logic [IntAddrWidth-1:0] SOC_CTRL_SRAM_DLY_OFFSET   = 5'h10;
   parameter logic [IntAddrWidth-1:0] SOC_CTRL_INFO_OFFSET       = 5'h14;
+  parameter logic [IntAddrWidth-1:0] SOC_CTRL_CHERIOT_ENABLE_OFFSET = 5'h18;
 
 endpackage

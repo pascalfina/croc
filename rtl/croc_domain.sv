@@ -49,6 +49,7 @@ module croc_domain import croc_pkg::*; #(
   logic sram_impl; // soc_ctrl -> SRAM config signals
   logic debug_req;
   logic fetch_enable;
+  logic cheriot_enable;
 
   // interrupts (irqs)
   logic clint_timer_irq;
@@ -247,8 +248,9 @@ module croc_domain import croc_pkg::*; #(
     .data_err_i     ( core_data_obi_rsp.r.err    ),
 
     .debug_req_i    ( debug_req    ),
-    .fetch_enable_i ( fetch_enable ),
-    .core_busy_o    ( core_busy_o  )
+    .fetch_enable_i  ( fetch_enable  ),
+    .cheriot_enable_i( cheriot_enable ),
+    .core_busy_o     ( core_busy_o   )
   );
 
   // -----------------
@@ -564,8 +566,9 @@ module croc_domain import croc_pkg::*; #(
     .rst_ni,
     .obi_req_i  ( soc_ctrl_obi_req ),
     .obi_rsp_o  ( soc_ctrl_obi_rsp ),
-    .fetch_en_o ( fetch_enable     ),
-    .sram_dly_o ( sram_impl        )
+    .fetch_en_o       ( fetch_enable   ),
+    .sram_dly_o       ( sram_impl      ),
+    .cheriot_enable_o ( cheriot_enable )
   );
 
   // UART
