@@ -90,91 +90,209 @@ module core_wrap import croc_pkg::*; #() (
 
   // CVE2 ignores the lowest 8 bits of boot_addr internally; mask here to avoid confusion.
   // You may want to remove this masking when using a core that uses the full boot address.
-  logic [31:0] boot_addr_masked;
-  assign boot_addr_masked = boot_addr_i & 32'hFFFFFF00;
+  // logic [31:0] boot_addr_masked;
+  // assign boot_addr_masked = boot_addr_i & 32'hFFFFFF00;
 
   // CV-X-IF tie-offs: CVE2-specific co-processor extension interface, disabled here.
   // Remove this block entirely when replacing CVE2 with another core.
   // If you want to use CV-X-IF, instantiate your accelerator here and connect the x_* signals.
-  cve2_pkg::x_issue_resp_t x_issue_resp;
-  cve2_pkg::x_result_t     x_result;
-  always_comb begin
-    x_issue_resp = '0;
-    x_result     = '0;
-  end
+  // cve2_pkg::x_issue_resp_t x_issue_resp;
+  // cve2_pkg::x_result_t     x_result;
+  // always_comb begin
+  //   x_issue_resp = '0;
+  //   x_result     = '0;
+  // end
 
-`ifdef TRACE_EXECUTION
-  cve2_core_tracing #(
-`else
-  cve2_core #(
-`endif
-    .PMPEnable        ( CorePMPEnable       ),
-    .PMPGranularity   ( 0                   ),
-    .PMPNumRegions    ( 4                   ),
-    .MHPMCounterNum   ( 0                   ),
-    .MHPMCounterWidth ( 40                  ),
-    .RV32E            ( 0                   ),
-    .RV32M            ( cve2_pkg::RV32MNone ),
-    .RV32B            ( cve2_pkg::RV32BNone ),
-    .DbgTriggerEn     ( 1'b1                ),
-    .DbgHwBreakNum    ( 1                   ),
-    .XInterface       ( 1'b0                )
+// `ifdef TRACE_EXECUTION
+//   cve2_core_tracing #(
+// `else
+//   cve2_core #(
+// `endif
+//     .PMPEnable        ( CorePMPEnable       ),
+//     .PMPGranularity   ( 0                   ),
+//     .PMPNumRegions    ( 4                   ),
+//     .MHPMCounterNum   ( 0                   ),
+//     .MHPMCounterWidth ( 40                  ),
+//     .RV32E            ( 0                   ),
+//     .RV32M            ( cve2_pkg::RV32MNone ),
+//     .RV32B            ( cve2_pkg::RV32BNone ),
+//     .DbgTriggerEn     ( 1'b1                ),
+//     .DbgHwBreakNum    ( 1                   ),
+//     .XInterface       ( 1'b0                )
+//   ) i_core (
+//     .clk_i,
+//     .rst_ni,
+//     .test_en_i        ( test_enable_i    ),
+//     .hart_id_i        ( 32'd0            ),
+//     .boot_addr_i      ( boot_addr_masked ),
+
+//     // Instruction Memory Interface (OBI):
+//     .instr_req_o,
+//     .instr_gnt_i,
+//     .instr_rdata_i,
+//     .instr_rvalid_i,
+//     .instr_addr_o,
+//     .instr_err_i,
+
+//     // Data memory interface (OBI):
+//     .data_req_o,
+//     .data_gnt_i,
+//     .data_rvalid_i,
+//     .data_we_o,
+//     .data_be_o,
+//     .data_addr_o,
+//     .data_wdata_o,
+//     .data_rdata_i,
+//     .data_err_i,
+
+//     // Core-V Extension Interface (CV-X-IF):
+//     .x_issue_valid_o     (),
+//     .x_issue_ready_i     ( 1'b1 ),
+//     .x_issue_req_o       (),
+//     .x_issue_resp_i      ( x_issue_resp ),
+//     .x_register_o        (),
+//     .x_commit_valid_o    (),
+//     .x_commit_o          (),
+//     .x_result_valid_i    ( 1'b0 ),
+//     .x_result_ready_o    (),
+//     .x_result_i          ( x_result ),
+
+//     // Interrupts
+//     .irq_software_i      ( software_irq_i ),
+//     .irq_timer_i         ( timer_irq_i    ),
+//     .irq_external_i      ( 1'b0           ),
+//     .irq_fast_i          ( irqs_i         ),
+//     .irq_nm_i            ( 1'b0           ),
+//     .irq_pending_o       (),
+
+//     // Debug Interface
+//     .debug_req_i,
+//     .debug_halted_o      (),
+//     .dm_halt_addr_i      ( DebugHaltAddress      ),
+//     .dm_exception_addr_i ( DebugExceptionAddress ),
+//     .crash_dump_o        (),
+
+//     // CPU Control Signals
+//     .fetch_enable_i,
+//     .core_busy_o
+//   );
+//);
+
+  logic core_sleep;
+
+  assign core_busy_o = ~core_sleep;
+
+
+
+  /// ibex integration 
+
+   ibex_top #(
+    .BaseIsa          ( ibex_pkg::BaseIsaRV32IorCHERIoT ),
+    .PMPEnable        ( 1'b0                           ),
+    .PMPGranularity   ( 0                              ),
+    .PMPNumRegions    ( 4                              ),
+    .MHPMCounterNum   ( 0                              ),
+    .MHPMCounterWidth ( 40                             ),
+    .RV32E            ( 1'b0                           ),
+    .RV32M            ( ibex_pkg::RV32MNone            ),
+    .RV32B            ( ibex_pkg::RV32BNone            ),
+    .RV32ZC           ( ibex_pkg::RV32Zca              ),
+    .RegFile          ( ibex_pkg::RegFileFF            ),
+    .BranchTargetALU  ( 1'b0                           ),
+    .WritebackStage   ( 1'b1                           ),
+    .ICache           ( 1'b0                           ),
+    .ICacheECC        ( 1'b0                           ),
+    .BranchPredictor  ( 1'b0                           ),
+    .DbgTriggerEn     ( 1'b1                           ),
+    .DbgHwBreakNum    ( 1                              ),
+    .SecureIbex       ( 1'b0                           ),
+    .MemECC           ( 1'b0                           ),
+
+    .DmBaseAddr       ( DebugAddrOffset                ),
+    .DmAddrMask       ( 32'h0003_FFFF                  ),
+    .DmHaltAddr       ( DebugHaltAddress               ),
+    .DmExceptionAddr  ( DebugExceptionAddress          )
   ) i_core (
-    .clk_i,
-    .rst_ni,
-    .test_en_i        ( test_enable_i    ),
-    .hart_id_i        ( 32'd0            ),
-    .boot_addr_i      ( boot_addr_masked ),
 
-    // Instruction Memory Interface (OBI):
-    .instr_req_o,
-    .instr_gnt_i,
-    .instr_rdata_i,
-    .instr_rvalid_i,
-    .instr_addr_o,
-    .instr_err_i,
+    .clk_i(clk_i),
+    .rst_ni(rst_ni),
 
-    // Data memory interface (OBI):
-    .data_req_o,
-    .data_gnt_i,
-    .data_rvalid_i,
-    .data_we_o,
-    .data_be_o,
-    .data_addr_o,
-    .data_wdata_o,
-    .data_rdata_i,
-    .data_err_i,
+    .test_en_i(test_enable_i | ~rst_ni),
+    .scan_rst_ni(1'b1),
+    .ram_cfg_icache_tag_i('{default: prim_ram_1p_pkg::RAM_1P_CFG_REQ_DEFAULT}),
+    .ram_cfg_icache_tag_o(),
+    .ram_cfg_icache_data_i('{default: prim_ram_1p_pkg::RAM_1P_CFG_REQ_DEFAULT}),
+    .ram_cfg_icache_data_o(),
 
-    // Core-V Extension Interface (CV-X-IF):
-    .x_issue_valid_o     (),
-    .x_issue_ready_i     ( 1'b1 ),
-    .x_issue_req_o       (),
-    .x_issue_resp_i      ( x_issue_resp ),
-    .x_register_o        (),
-    .x_commit_valid_o    (),
-    .x_commit_o          (),
-    .x_result_valid_i    ( 1'b0 ),
-    .x_result_ready_o    (),
-    .x_result_i          ( x_result ),
+    .cheriot_enable_i(ibex_pkg::IbexMuBiOff),
+    .hart_id_i(32'd0 ),
+    .boot_addr_i(boot_addr_i   ),
 
-    // Interrupts
-    .irq_software_i      ( software_irq_i ),
-    .irq_timer_i         ( timer_irq_i    ),
-    .irq_external_i      ( 1'b0           ),
-    .irq_fast_i          ( irqs_i         ),
-    .irq_nm_i            ( 1'b0           ),
-    .irq_pending_o       (),
+    .instr_req_o(instr_req_o),
+    .instr_gnt_i(instr_gnt_i),
+    .instr_rvalid_i(instr_rvalid_i),
+    .instr_addr_o(instr_addr_o),
+    .instr_rdata_i(instr_rdata_i),
+    .instr_rdata_intg_i(7'd0),
+    .instr_err_i(instr_err_i),
 
-    // Debug Interface
-    .debug_req_i,
-    .debug_halted_o      (),
-    .dm_halt_addr_i      ( DebugHaltAddress      ),
-    .dm_exception_addr_i ( DebugExceptionAddress ),
-    .crash_dump_o        (),
+    .data_req_o(data_req_o),
+    .data_gnt_i(data_gnt_i),
+    .data_rvalid_i(data_rvalid_i),
+    .data_we_o(data_we_o),
+    .data_be_o(data_be_o),
+    .data_addr_o(data_addr_o),
+    .data_wdata_o(data_wdata_o),
+    .data_wdata_intg_o(),
+    .data_tag_o(),
+    .data_rdata_i(data_rdata_i),
+    .data_rdata_intg_i(7'd0 ),
+    .data_tag_i(1'b0),
+    .data_err_i(data_err_i),
 
-    // CPU Control Signals
-    .fetch_enable_i,
-    .core_busy_o
+    .trvk_heap_base_addr_i    ( 32'd0 ),
+    .trvk_revbm_req_o         (),
+    .trvk_revbm_gnt_i         ( 1'b0 ),
+    .trvk_revbm_rvalid_i      ( 1'b0 ),
+    .trvk_revbm_addr_o        (),
+    .trvk_revbm_rdata_i       ( 32'd0 ),
+    .trvk_revbm_rdata_intg_i  ( 7'd0 ),
+    .trvk_revbm_err_i         ( 1'b0 ),
+
+    .irq_software_i(software_irq_i),
+    .irq_timer_i(timer_irq_i),
+    .irq_external_i(1'b0),
+    .irq_fast_i(irqs_i[14:0]),
+    .irq_nm_i(1'b0),
+
+    .scramble_key_valid_i ( 1'b0 ),
+    .scramble_key_i       ( '0   ),
+    .scramble_nonce_i     ( '0   ),
+    .scramble_req_o       (),
+
+    .debug_req_i          ( debug_req_i ),
+    .crash_dump_o         (),
+    .double_fault_seen_o  (),
+
+    .fetch_enable_i         (fetch_enable_i ? ibex_pkg::IbexMuBiOn : ibex_pkg::IbexMuBiOff),
+    .mcounteren_writable_i  ( ibex_pkg::IbexMuBiOn ),
+    .alert_minor_o          (),
+    .alert_major_internal_o (),
+    .alert_major_bus_o      (),
+    .core_sleep_o           ( core_sleep ),
+
+    .lockstep_cmp_en_o(),
+
+    .data_req_shadow_o(),
+    .data_we_shadow_o(),
+    .data_be_shadow_o(),
+    .data_addr_shadow_o(),
+    .data_wdata_shadow_o(),
+    .data_wdata_intg_shadow_o(),
+
+    .instr_req_shadow_o(),
+    .instr_addr_shadow_o()
   );
 
+  
 endmodule

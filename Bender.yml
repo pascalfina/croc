@@ -21,7 +21,7 @@ dependencies:
   obi:                  { git: "https://github.com/pulp-platform/obi.git",                  rev: 6a724da    } # 0.1.7+
   obi_peripherals:      { git: "https://github.com/pulp-platform/obi_peripherals.git",      rev: 21ee04d    } # UART
   idma:                 { git: "https://github.com/pulp-platform/idma.git",                 rev: "__deploy__e618e4d__master" } # master with generated files
-  cve2:                 { path: "rtl/cve2" } # a vendor package (no Bender.yml), see below 
+  ibex:                 { path: "ibex" } # a vendor package (no Bender.yml), see below 
 
 
 sources:

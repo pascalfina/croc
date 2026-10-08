@@ -78,6 +78,15 @@ _start:
   la      ra, _eoc     # ra = &_eoc (return address for main)
   jalr    zero, 0(t0)  # Jump to boot address (rd=zero, ra preserved)
 
+
+# boot rom starts for ibex at offset 0x80 andn ot at 0x00
+  .org 0x80
+  _ibex_reset:
+    j _start
+
+
+
+
 # -----------------------------------------------------------------------------
 # End of Computation (_eoc)
 # Reached when main() returns (via ra set above)

@@ -34,7 +34,8 @@ module bootrom #(
     // Bootrom divided into blocks per contiguous label
     //-----------------------------------------------------------------------------------
     // Contiguous block starting at 0x02000000: _start
-    localparam int unsigned StartRomWords = 25;
+   // localparam int unsigned StartRomWords = 25;
+    localparam int unsigned StartRomWords = 33;
     localparam logic [31:0] StartRom [StartRomWords] = '{
         // <_start>
         32'h30445073, // 0x02000000: csrwi mie,8
@@ -61,7 +62,15 @@ module bootrom #(
         32'h0002A283, // 0x02000054: lw t0,0(t0) # 3000000 <__global_pointer$+0xffe4d0>
         32'h00000097, // 0x02000058: auipc ra,0x0
         32'h0A808093, // 0x0200005C: addi ra,ra,168 # 2000100 <_eoc>
-        32'h00028067 // 0x02000060: jr t0
+        32'h00028067, // 0x02000060: jr t0
+        32'h00000000, // 0x02000064
+        32'h00000000, // 0x02000068
+        32'h00000000, // 0x0200006C
+        32'h00000000, // 0x02000070
+        32'h00000000, // 0x02000074
+        32'h00000000, // 0x02000078
+        32'h00000000, // 0x0200007C
+        32'hF81FF06F  // 0x02000080: jal zero, 0x02000000
     };
 
     // Contiguous block starting at 0x02000100: _eoc

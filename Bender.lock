@@ -20,11 +20,11 @@ packages:
     source:
       Path: rtl/common_verification
     dependencies: []
-  cve2:
+  ibex:
     revision: null
     version: null
     source:
-      Path: rtl/cve2
+      Path: ibex
     dependencies:
     - common_cells
   idma:
