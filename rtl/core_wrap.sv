@@ -78,7 +78,10 @@ module core_wrap import croc_pkg::*; #() (
   input  logic        cheriot_enable_i,
 
   // core_busy_o: power-management hint to the SoC; drive 1'b0 if not available
-  output logic        core_busy_o
+  output logic        core_busy_o,
+
+  output logic data_tag_o,
+  input logic data_tag_i
 );
 
   // CVE2: debug halt/exception vectors are provided as runtime inputs.
@@ -90,8 +93,19 @@ module core_wrap import croc_pkg::*; #() (
   localparam bit [31:0] DebugExceptionAddress = DebugAddrOffset + dm::ExceptionAddress[31:0];
 
   logic core_sleep;
+  logic trvk_revbm_req;
+  logic trvk_revbm_rvalid_q;
 
   assign core_busy_o = ~core_sleep;
+
+  // Tag-storage bring-up: every bitmap lookup returns "not revoked" after one cycle.
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      trvk_revbm_rvalid_q <= 1'b0;
+    end else begin
+      trvk_revbm_rvalid_q <= trvk_revbm_req;
+    end
+  end
 
 
 
@@ -155,16 +169,16 @@ module core_wrap import croc_pkg::*; #() (
     .data_addr_o(data_addr_o),
     .data_wdata_o(data_wdata_o),
     .data_wdata_intg_o(),
-    .data_tag_o(),
+    .data_tag_o(data_tag_o),
     .data_rdata_i(data_rdata_i),
     .data_rdata_intg_i(7'd0 ),
-    .data_tag_i(1'b0),
+    .data_tag_i(data_tag_i),
     .data_err_i(data_err_i),
 
     .trvk_heap_base_addr_i    ( 32'd0 ),
-    .trvk_revbm_req_o         (),
-    .trvk_revbm_gnt_i         ( 1'b0 ),
-    .trvk_revbm_rvalid_i      ( 1'b0 ),
+    .trvk_revbm_req_o         ( trvk_revbm_req ),
+    .trvk_revbm_gnt_i         ( 1'b1 ),
+    .trvk_revbm_rvalid_i      ( trvk_revbm_rvalid_q ),
     .trvk_revbm_addr_o        (),
     .trvk_revbm_rdata_i       ( 32'd0 ),
     .trvk_revbm_rdata_intg_i  ( 7'd0 ),

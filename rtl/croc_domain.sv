@@ -68,6 +68,10 @@ module croc_domain import croc_pkg::*; #(
     interrupts[4+:NumExternalIrqs] = interrupts_i;
   end
 
+  //cheriot 
+
+  logic data_tag_out;
+
   // ----------------------------
   // Manager buses into crossbar
   // ----------------------------
@@ -85,7 +89,7 @@ module croc_domain import croc_pkg::*; #(
   mgr_obi_req_t core_data_obi_req;
   mgr_obi_rsp_t core_data_obi_rsp;
   assign core_data_obi_req.a.aid = '0;
-  assign core_data_obi_req.a.a_optional = '0;
+  assign core_data_obi_req.a.a_optional = data_tag_out;
 
   // dbg req bus
   mgr_obi_req_t dbg_req_obi_req;
@@ -218,6 +222,8 @@ module croc_domain import croc_pkg::*; #(
   // -----------------
   // Core
   // -----------------
+
+
   core_wrap #(
   ) i_core_wrap (
     .clk_i,
@@ -250,7 +256,10 @@ module croc_domain import croc_pkg::*; #(
     .debug_req_i    ( debug_req    ),
     .fetch_enable_i  ( fetch_enable  ),
     .cheriot_enable_i( cheriot_enable ),
-    .core_busy_o     ( core_busy_o   )
+    .core_busy_o     ( core_busy_o   ),
+    .data_tag_o       (data_tag_out),
+    .data_tag_i       (core_data_obi_rsp.r.r_optional)
+    // .data_tag_i       (1'b0)
   );
 
   // -----------------
@@ -450,6 +459,8 @@ module croc_domain import croc_pkg::*; #(
     logic [SramBankAddrWidth-1:0] bank_word_addr;
     logic [SbrObiCfg.DataWidth-1:0] bank_wdata, bank_rdata;
     logic [SbrObiCfg.DataWidth/8-1:0] bank_be;
+    logic bank_tag_rdata;
+    localparam logic [31:0] BankBaseAddr = 32'h1000_0000 + i * 32'h800;
 
     obi_sram_shim #(
       .ObiCfg    ( SbrObiCfg     ),
@@ -469,7 +480,8 @@ module croc_domain import croc_pkg::*; #(
       .be_o    ( bank_be        ),
 
       .gnt_i   ( bank_gnt   ),
-      .rdata_i ( bank_rdata )
+      .rdata_i ( bank_rdata ),
+      .tag_rdata_i(bank_tag_rdata)
     );
 
     assign bank_word_addr = bank_byte_addr[SbrObiCfg.AddrWidth-1:2];
@@ -496,6 +508,19 @@ module croc_domain import croc_pkg::*; #(
     );
 
     assign bank_gnt = 1'b1; // always ready for request
+
+    tag_memory #(
+      .SRAM_OFFSET(BankBaseAddr)
+    ) i_tag_mem (
+      .clk_i(clk_i),
+      .rst_ni(rst_ni),
+      .data_req_i(bank_req),
+      .data_addr_i(bank_byte_addr),
+      .data_tag_i(xbar_mem_bank_obi_req[i].a.a_optional),
+      .data_we_i(bank_we),
+      .data_tag_o(bank_tag_rdata)
+    );
+
   end
 
 

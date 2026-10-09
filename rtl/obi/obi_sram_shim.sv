@@ -25,7 +25,8 @@ module obi_sram_shim #(
   output logic [ObiCfg.DataWidth/8-1:0] be_o,
 
   input  logic                          gnt_i,
-  input  logic [  ObiCfg.DataWidth-1:0] rdata_i
+  input  logic [  ObiCfg.DataWidth-1:0] rdata_i,
+  input  logic                          tag_rdata_i
 );
 
   if (ObiCfg.OptionalCfg.UseAtop) $error("Please use an ATOP resolver before sram shim.");
@@ -50,6 +51,7 @@ module obi_sram_shim #(
     obi_rsp_o.r.rdata = rdata_i;
     obi_rsp_o.r.rid   = id_q;
     obi_rsp_o.r.err   = 1'b0;
+    obi_rsp_o.r.r_optional = tag_rdata_i;
   end
 
   assign rvalid_d = obi_req_i.req & obi_rsp_o.gnt;
