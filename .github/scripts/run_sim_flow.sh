@@ -99,6 +99,17 @@ grep -q "\[UART\] Hello World from Croc!" "$simulation_log"
 "$SCRIPT_DIR/check_sim.sh" "$simulation_log"
 grep -q "\[JTAG\] Simulation finished: SUCCESS" "$simulation_log"
 
+echo ""
+echo "============================================="
+echo "Phase 1b: default config — CHERIoT programs"
+echo "============================================="
+
+"$SCRIPT_DIR/run_tests.sh" \
+    --sim "$simulation_binary" \
+    --hexdir ../sw/bin/cheriot \
+    --filter '*' \
+    --timeout 30
+
 cd "$CROC_ROOT"
 
 echo ""

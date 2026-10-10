@@ -39,7 +39,8 @@ INCDIR   ?= lib/inc
 LIB_SOURCES  := $(wildcard $(SRCDIR)/*.[cS])
 TOP_SOURCES  := $(filter-out $(CRT0), $(wildcard *.[cS]))
 TEST_SOURCES := $(wildcard test/*.[cS])
-PROG_SOURCES := $(TOP_SOURCES) $(TEST_SOURCES)
+CHERIOT_SOURCES := $(wildcard cheriot/*.[cS])
+PROG_SOURCES := $(TOP_SOURCES) $(TEST_SOURCES) $(CHERIOT_SOURCES)
 
 PROG_NAMES   := $(basename $(PROG_SOURCES))
 
