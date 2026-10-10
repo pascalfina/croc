@@ -37,187 +37,200 @@
 //   Do not route CV-X-IF through the SoC hierarchy; the types are CVE2-specific and the tight
 //   coupling belongs at the core boundary, not in user_domain.
 
-module core_wrap import croc_pkg::*; #() (
-  input  logic clk_i,
-  input  logic rst_ni,
-  input  logic test_enable_i,
+module core_wrap
+  import croc_pkg::*;
+#(
+) (
+    input logic clk_i,
+    input logic rst_ni,
+    input logic test_enable_i,
 
-  // Interrupts
-  // irqs_i maps to RISC-V fast interrupts (IRQ 16..31); see header comment for remapping
-  input logic [15:0] irqs_i,
-  input logic timer_irq_i,
-  input logic software_irq_i,
+    // Interrupts
+    // irqs_i maps to RISC-V fast interrupts (IRQ 16..31); see header comment for remapping
+    input logic [15:0] irqs_i,
+    input logic timer_irq_i,
+    input logic software_irq_i,
 
-  input  logic [31:0] boot_addr_i,
+    input logic [31:0] boot_addr_i,
 
-  // Instruction memory interface (OBI)
-  output logic        instr_req_o,
-  input  logic        instr_gnt_i,
-  input  logic        instr_rvalid_i,
-  output logic [31:0] instr_addr_o,
-  input  logic [31:0] instr_rdata_i,
-  input  logic        instr_err_i,
+    // Instruction memory interface (OBI)
+    output logic        instr_req_o,
+    input  logic        instr_gnt_i,
+    input  logic        instr_rvalid_i,
+    output logic [31:0] instr_addr_o,
+    input  logic [31:0] instr_rdata_i,
+    input  logic        instr_err_i,
 
-  // Data memory interface (OBI)
-  output logic        data_req_o,
-  input  logic        data_gnt_i,
-  input  logic        data_rvalid_i,
-  output logic        data_we_o,
-  output logic [3:0]  data_be_o,
-  output logic [31:0] data_addr_o,
-  output logic [31:0] data_wdata_o,
-  input  logic [31:0] data_rdata_i,
-  input  logic        data_err_i,
+    // Data memory interface (OBI)
+    output logic        data_req_o,
+    input  logic        data_gnt_i,
+    input  logic        data_rvalid_i,
+    output logic        data_we_o,
+    output logic [ 3:0] data_be_o,
+    output logic [31:0] data_addr_o,
+    output logic [31:0] data_wdata_o,
+    input  logic [31:0] data_rdata_i,
+    input  logic        data_err_i,
 
-  // Debug Interface
-  input  logic        debug_req_i,
+    // Debug Interface
+    input logic debug_req_i,
 
-  // CPU Control Signals
-  // fetch_enable_i: gates instruction fetch; ignore if core has no such signal
-  input  logic        fetch_enable_i,
-  input  logic        cheriot_enable_i,
+    // CPU Control Signals
+    // fetch_enable_i: gates instruction fetch; ignore if core has no such signal
+    input logic fetch_enable_i,
+    input logic cheriot_enable_i,
 
-  // core_busy_o: power-management hint to the SoC; drive 1'b0 if not available
-  output logic        core_busy_o,
+    // core_busy_o: power-management hint to the SoC; drive 1'b0 if not available
+    output logic core_busy_o,
 
-  output logic data_tag_o,
-  input logic data_tag_i
+    output logic data_tag_o,
+    input  logic data_tag_i, 
+
+    output logic        trvk_revbm_req_o,
+    input  logic        trvk_revbm_gnt_i,
+    input  logic        trvk_revbm_rvalid_i,
+    output logic [31:0] trvk_revbm_addr_o,
+    input  logic [31:0] trvk_revbm_rdata_i,
+    input  logic        trvk_revbm_err_i
+
 );
 
   // CVE2: debug halt/exception vectors are provided as runtime inputs.
   // Cores that hardcode these addresses internally do not need these params.
   // Remove the localparams and connections below when replacing with such a core.
   // Make sure to check PeriphDebug's start_addr in croc_pkg and adjust if necesary.
-  localparam bit [31:0] DebugAddrOffset       = get_periph_start_addr(PeriphDebug);
-  localparam bit [31:0] DebugHaltAddress      = DebugAddrOffset + dm::HaltAddress[31:0];
+  localparam bit [31:0] DebugAddrOffset = get_periph_start_addr(PeriphDebug);
+  localparam bit [31:0] DebugHaltAddress = DebugAddrOffset + dm::HaltAddress[31:0];
   localparam bit [31:0] DebugExceptionAddress = DebugAddrOffset + dm::ExceptionAddress[31:0];
 
   logic core_sleep;
-  logic trvk_revbm_req;
-  logic trvk_revbm_rvalid_q;
+  // logic trvk_revbm_req;
+  // logic trvk_revbm_rvalid_q;
 
   assign core_busy_o = ~core_sleep;
 
-  // Tag-storage bring-up: every bitmap lookup returns "not revoked" after one cycle.
-  always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (!rst_ni) begin
-      trvk_revbm_rvalid_q <= 1'b0;
-    end else begin
-      trvk_revbm_rvalid_q <= trvk_revbm_req;
-    end
-  end
+  // // Tag-storage bring-up: every bitmap lookup returns "not revoked" after one cycle.
+  // always_ff @(posedge clk_i or negedge rst_ni) begin
+  //   if (!rst_ni) begin
+  //     trvk_revbm_rvalid_q <= 1'b0;
+  //   end else begin
+  //     trvk_revbm_rvalid_q <= trvk_revbm_req;
+  //   end
+  // end
 
-
+  localparam logic [31:0] HeapBaseAddr = 32'h1000_0d00;
+  localparam logic [31:0] RevBitmapBaseAddr = 32'h1000_1000;
 
   /// ibex integration 
 
-   ibex_top #(
-    .BaseIsa          ( ibex_pkg::BaseIsaRV32IorCHERIoT ),
-    .PMPEnable        ( 1'b0                           ),
-    .PMPGranularity   ( 0                              ),
-    .PMPNumRegions    ( 4                              ),
-    .MHPMCounterNum   ( 0                              ),
-    .MHPMCounterWidth ( 40                             ),
-    .RV32E            ( 1'b0                           ),
-    .RV32M            ( ibex_pkg::RV32MNone            ),
-    .RV32B            ( ibex_pkg::RV32BNone            ),
-    .RV32ZC           ( ibex_pkg::RV32Zca              ),
-    .RegFile          ( ibex_pkg::RegFileFF            ),
-    .BranchTargetALU  ( 1'b0                           ),
-    .WritebackStage   ( 1'b1                           ),
-    .ICache           ( 1'b0                           ),
-    .ICacheECC        ( 1'b0                           ),
-    .BranchPredictor  ( 1'b0                           ),
-    .DbgTriggerEn     ( 1'b1                           ),
-    .DbgHwBreakNum    ( 1                              ),
-    .SecureIbex       ( 1'b0                           ),
-    .MemECC           ( 1'b0                           ),
+  ibex_top #(
+      .BaseIsa                 (ibex_pkg::BaseIsaRV32IorCHERIoT),
+      .CheriotRevBitmapBaseAddr(RevBitmapBaseAddr),
+      .PMPEnable               (1'b0),
+      .PMPGranularity          (0),
+      .PMPNumRegions           (4),
+      .MHPMCounterNum          (0),
+      .MHPMCounterWidth        (40),
+      .RV32E                   (1'b0),
+      .RV32M                   (ibex_pkg::RV32MNone),
+      .RV32B                   (ibex_pkg::RV32BNone),
+      .RV32ZC                  (ibex_pkg::RV32Zca),
+      .RegFile                 (ibex_pkg::RegFileFF),
+      .BranchTargetALU         (1'b0),
+      .WritebackStage          (1'b1),
+      .ICache                  (1'b0),
+      .ICacheECC               (1'b0),
+      .BranchPredictor         (1'b0),
+      .DbgTriggerEn            (1'b1),
+      .DbgHwBreakNum           (1),
+      .SecureIbex              (1'b0),
+      .MemECC                  (1'b0),
 
-    .DmBaseAddr       ( DebugAddrOffset                ),
-    .DmAddrMask       ( 32'h0003_FFFF                  ),
-    .DmHaltAddr       ( DebugHaltAddress               ),
-    .DmExceptionAddr  ( DebugExceptionAddress          )
+      .DmBaseAddr     (DebugAddrOffset),
+      .DmAddrMask     (32'h0003_FFFF),
+      .DmHaltAddr     (DebugHaltAddress),
+      .DmExceptionAddr(DebugExceptionAddress)
   ) i_core (
 
-    .clk_i(clk_i),
-    .rst_ni(rst_ni),
+      .clk_i (clk_i),
+      .rst_ni(rst_ni),
 
-    .test_en_i(test_enable_i | ~rst_ni),
-    .scan_rst_ni(1'b1),
-    .ram_cfg_icache_tag_i('{default: prim_ram_1p_pkg::RAM_1P_CFG_REQ_DEFAULT}),
-    .ram_cfg_icache_tag_o(),
-    .ram_cfg_icache_data_i('{default: prim_ram_1p_pkg::RAM_1P_CFG_REQ_DEFAULT}),
-    .ram_cfg_icache_data_o(),
+      .test_en_i(test_enable_i | ~rst_ni),
+      .scan_rst_ni(1'b1),
+      .ram_cfg_icache_tag_i('{default: prim_ram_1p_pkg::RAM_1P_CFG_REQ_DEFAULT}),
+      .ram_cfg_icache_tag_o(),
+      .ram_cfg_icache_data_i('{default: prim_ram_1p_pkg::RAM_1P_CFG_REQ_DEFAULT}),
+      .ram_cfg_icache_data_o(),
 
-    .cheriot_enable_i(cheriot_enable_i ? ibex_pkg::IbexMuBiOn : ibex_pkg::IbexMuBiOff),
-    .hart_id_i(32'd0 ),
-    .boot_addr_i(boot_addr_i   ),
+      .cheriot_enable_i(cheriot_enable_i ? ibex_pkg::IbexMuBiOn : ibex_pkg::IbexMuBiOff),
+      .hart_id_i(32'd0 ),
+      .boot_addr_i(boot_addr_i   ),
 
-    .instr_req_o(instr_req_o),
-    .instr_gnt_i(instr_gnt_i),
-    .instr_rvalid_i(instr_rvalid_i),
-    .instr_addr_o(instr_addr_o),
-    .instr_rdata_i(instr_rdata_i),
-    .instr_rdata_intg_i(7'd0),
-    .instr_err_i(instr_err_i),
+      .instr_req_o(instr_req_o),
+      .instr_gnt_i(instr_gnt_i),
+      .instr_rvalid_i(instr_rvalid_i),
+      .instr_addr_o(instr_addr_o),
+      .instr_rdata_i(instr_rdata_i),
+      .instr_rdata_intg_i(7'd0),
+      .instr_err_i(instr_err_i),
 
-    .data_req_o(data_req_o),
-    .data_gnt_i(data_gnt_i),
-    .data_rvalid_i(data_rvalid_i),
-    .data_we_o(data_we_o),
-    .data_be_o(data_be_o),
-    .data_addr_o(data_addr_o),
-    .data_wdata_o(data_wdata_o),
-    .data_wdata_intg_o(),
-    .data_tag_o(data_tag_o),
-    .data_rdata_i(data_rdata_i),
-    .data_rdata_intg_i(7'd0 ),
-    .data_tag_i(data_tag_i),
-    .data_err_i(data_err_i),
+      .data_req_o(data_req_o),
+      .data_gnt_i(data_gnt_i),
+      .data_rvalid_i(data_rvalid_i),
+      .data_we_o(data_we_o),
+      .data_be_o(data_be_o),
+      .data_addr_o(data_addr_o),
+      .data_wdata_o(data_wdata_o),
+      .data_wdata_intg_o(),
+      .data_tag_o(data_tag_o),
+      .data_rdata_i(data_rdata_i),
+      .data_rdata_intg_i(7'd0),
+      .data_tag_i(data_tag_i),
+      .data_err_i(data_err_i),
 
-    .trvk_heap_base_addr_i    ( 32'd0 ),
-    .trvk_revbm_req_o         ( trvk_revbm_req ),
-    .trvk_revbm_gnt_i         ( 1'b1 ),
-    .trvk_revbm_rvalid_i      ( trvk_revbm_rvalid_q ),
-    .trvk_revbm_addr_o        (),
-    .trvk_revbm_rdata_i       ( 32'd0 ),
-    .trvk_revbm_rdata_intg_i  ( 7'd0 ),
-    .trvk_revbm_err_i         ( 1'b0 ),
+      .trvk_heap_base_addr_i  (HeapBaseAddr),
+      .trvk_revbm_req_o       (trvk_revbm_req_o),
+      .trvk_revbm_gnt_i       (trvk_revbm_gnt_i),
+      .trvk_revbm_rvalid_i    (trvk_revbm_rvalid_i),
+      .trvk_revbm_addr_o      (trvk_revbm_addr_o),
+      .trvk_revbm_rdata_i     (trvk_revbm_rdata_i),
+      .trvk_revbm_rdata_intg_i(7'd0),
+      .trvk_revbm_err_i       (trvk_revbm_err_i),
 
-    .irq_software_i(software_irq_i),
-    .irq_timer_i(timer_irq_i),
-    .irq_external_i(1'b0),
-    .irq_fast_i(irqs_i[14:0]),
-    .irq_nm_i(1'b0),
+      .irq_software_i(software_irq_i),
+      .irq_timer_i(timer_irq_i),
+      .irq_external_i(1'b0),
+      .irq_fast_i(irqs_i[14:0]),
+      .irq_nm_i(1'b0),
 
-    .scramble_key_valid_i ( 1'b0 ),
-    .scramble_key_i       ( '0   ),
-    .scramble_nonce_i     ( '0   ),
-    .scramble_req_o       (),
+      .scramble_key_valid_i(1'b0),
+      .scramble_key_i      ('0),
+      .scramble_nonce_i    ('0),
+      .scramble_req_o      (),
 
-    .debug_req_i          ( debug_req_i ),
-    .crash_dump_o         (),
-    .double_fault_seen_o  (),
+      .debug_req_i        (debug_req_i),
+      .crash_dump_o       (),
+      .double_fault_seen_o(),
 
-    .fetch_enable_i         (fetch_enable_i ? ibex_pkg::IbexMuBiOn : ibex_pkg::IbexMuBiOff),
-    .mcounteren_writable_i  ( ibex_pkg::IbexMuBiOn ),
-    .alert_minor_o          (),
-    .alert_major_internal_o (),
-    .alert_major_bus_o      (),
-    .core_sleep_o           ( core_sleep ),
+      .fetch_enable_i        (fetch_enable_i ? ibex_pkg::IbexMuBiOn : ibex_pkg::IbexMuBiOff),
+      .mcounteren_writable_i (ibex_pkg::IbexMuBiOn),
+      .alert_minor_o         (),
+      .alert_major_internal_o(),
+      .alert_major_bus_o     (),
+      .core_sleep_o          (core_sleep),
 
-    .lockstep_cmp_en_o(),
+      .lockstep_cmp_en_o(),
 
-    .data_req_shadow_o(),
-    .data_we_shadow_o(),
-    .data_be_shadow_o(),
-    .data_addr_shadow_o(),
-    .data_wdata_shadow_o(),
-    .data_wdata_intg_shadow_o(),
+      .data_req_shadow_o(),
+      .data_we_shadow_o(),
+      .data_be_shadow_o(),
+      .data_addr_shadow_o(),
+      .data_wdata_shadow_o(),
+      .data_wdata_intg_shadow_o(),
 
-    .instr_req_shadow_o(),
-    .instr_addr_shadow_o()
+      .instr_req_shadow_o (),
+      .instr_addr_shadow_o()
   );
 
-  
+
 endmodule

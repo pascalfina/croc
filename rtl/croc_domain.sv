@@ -258,8 +258,16 @@ module croc_domain import croc_pkg::*; #(
     .cheriot_enable_i( cheriot_enable ),
     .core_busy_o     ( core_busy_o   ),
     .data_tag_o       (data_tag_out),
-    .data_tag_i       (core_data_obi_rsp.r.r_optional)
+    .data_tag_i       (core_data_obi_rsp.r.r_optional), 
     // .data_tag_i       (1'b0)
+
+    .trvk_revbm_req_o(trvk_req),
+    .trvk_revbm_gnt_i(trvk_gnt),
+    .trvk_revbm_rvalid_i(trvk_rvalid),
+    .trvk_revbm_addr_o(trvk_addr),
+    .trvk_revbm_rdata_i(trvk_rdata),
+    .trvk_revbm_err_i(trvk_err)
+
   );
 
   // -----------------
@@ -508,7 +516,7 @@ module croc_domain import croc_pkg::*; #(
     );
 
     assign bank_gnt = 1'b1; // always ready for request
-
+    // cheriot tag memory 
     tag_memory #(
       .SRAM_OFFSET(BankBaseAddr)
     ) i_tag_mem (
@@ -522,6 +530,45 @@ module croc_domain import croc_pkg::*; #(
     );
 
   end
+
+
+  // cheriot revocation bit map 
+
+  assign all_sbr_obi_rsp[XbarRevBitmap].r.err = 1'b0;
+  assign all_sbr_obi_rsp[XbarRevBitmap].r.rid = '0;
+  assign all_sbr_obi_rsp[XbarRevBitmap].r.r_optional = 1'b0;
+
+  logic        trvk_req;
+  logic        trvk_gnt;
+  logic        trvk_rvalid;
+  logic [31:0] trvk_addr;
+  logic [31:0] trvk_rdata;
+  logic        trvk_err;
+
+
+  revc_bitmap_memory #(
+    .BitmapBase(32'h1000_1000),
+    .BitmapNumb(1'd1)
+  ) i_revoc_map_mem (
+    .clk_i(clk_i),
+    .rst_ni(rst_ni),
+    .data_req_i(all_sbr_obi_req[XbarRevBitmap].req),
+    .data_we_i(all_sbr_obi_req[XbarRevBitmap].a.we),
+    .data_addr_i(all_sbr_obi_req[XbarRevBitmap].a.addr),
+    .data_wdata_i(all_sbr_obi_req[XbarRevBitmap].a.wdata),
+    .data_be_i(all_sbr_obi_req[XbarRevBitmap].a.be),
+    .data_rvalid_o(all_sbr_obi_rsp[XbarRevBitmap].rvalid),
+    .data_rdata_o(all_sbr_obi_rsp[XbarRevBitmap].r.rdata),
+    .data_gnt_o(all_sbr_obi_rsp[XbarRevBitmap].gnt),
+    .trvk_revbm_req_i(trvk_req),
+    .trvk_revbm_addr_i(trvk_addr),
+    .trvk_revbm_gnt_o(trvk_gnt),
+    .trvk_revbm_rvalid_o(trvk_rvalid),
+    .trvk_revbm_rdata_o(trvk_rdata),
+    .trvk_revbm_err_o(trvk_err)
+
+  );
+
 
 
   // Xbar space error subordinate

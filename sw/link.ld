@@ -12,8 +12,14 @@ ENTRY(_start)
 
 MEMORY
 {
-	/* unified on-chip SRAM region used for all code and data */
-	SRAM (rwxail) : ORIGIN = 0x10000000, LENGTH = 4K
+	/* Program code and static data. */
+	APP   (rwxail) : ORIGIN = 0x10000000, LENGTH = 0xD00
+
+	/* Reserved heap region for capability allocations. */
+	HEAP  (rw)     : ORIGIN = 0x10000D00, LENGTH = 0x100
+
+	/* Stack grows down from the top of SRAM. */
+	STACK (rw)     : ORIGIN = 0x10000E00, LENGTH = 0x200
 }
 
 PHDRS
@@ -32,20 +38,20 @@ SECTIONS
 	}
 
     /* Start placing following sections at the SRAM base address */
-	. = ORIGIN(SRAM);
+	. = ORIGIN(APP);
 
     /* Interrupt vector table */
 	.vectors : ALIGN(4)
 	{
 	*(.vectors)
 	KEEP(*(.vectors))
-	} > SRAM :text
+	} > APP :text
 
     /* Startup entry (first instructions executed after bootrom) */
 	.text._start : ALIGN(4)
 	{
 	*(.text._start)
-	} > SRAM :text
+	} > APP :text
 
     /* Main code (text) and read-only data (rodata) */
 	.text : ALIGN(4)
@@ -54,7 +60,7 @@ SECTIONS
 	*(.text.*)
 	*(.rodata)
 	*(.rodata.*)
-	} > SRAM :text
+	} > APP :text
 
     /* Writable data (what people colloquially call RAM) */
 	.misc : ALIGN(4)
@@ -68,15 +74,19 @@ SECTIONS
 	*(.bss)
 	*(.bss.*)
 	*(COMMON)
-	} > SRAM :data
+	} > APP :data
 }
 
 /* Global absolute symbols */
 
 /* Place GP near the middle for efficient GP-relative access */
 PROVIDE(__global_pointer$ = ADDR(.misc) + SIZEOF(.misc) / 2);
-/* Initial stack pointer at the end of SRAM */
-PROVIDE(__stack_pointer$ = ORIGIN(SRAM) + LENGTH(SRAM));
+
+/* Heap and stack boundaries */
+PROVIDE(__heap_start = ORIGIN(HEAP));
+PROVIDE(__heap_end   = ORIGIN(HEAP) + LENGTH(HEAP));
+PROVIDE(__stack_limit = ORIGIN(STACK));
+PROVIDE(__stack_pointer$ = ORIGIN(STACK) + LENGTH(STACK));
 
 /* Bootrom symbols (fixed addresses) */
 PROVIDE(_eoc = 0x02000100);

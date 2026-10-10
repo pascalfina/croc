@@ -81,15 +81,17 @@ package croc_pkg;
     XbarError  = 0,
     XbarPeriph = 1,
     XbarUser   = 2,
-    XbarBank0  = 3
+    XbarBank0  = 3, 
+    XbarRevBitmap = 5
   } croc_xbar_outputs_e;
 
   /// Address map given to the main crossbar
-  localparam addr_map_rule_t [3:0] CrocAddrMap = '{
+  localparam addr_map_rule_t [4:0] CrocAddrMap = '{
     '{ idx: XbarPeriph,  start_addr: 32'h0000_0000, end_addr: 32'h1000_0000 },
     '{ idx: XbarUser,    start_addr: 32'h2000_0000, end_addr: 32'h8000_0000 },
     '{ idx: XbarBank0,   start_addr: 32'h1000_0000, end_addr: 32'h1000_0800 },
-    '{ idx: XbarBank0+1, start_addr: 32'h1000_0800, end_addr: 32'h1000_1000 }
+    '{ idx: XbarBank0+1, start_addr: 32'h1000_0800, end_addr: 32'h1000_1000 },
+    '{ idx: XbarRevBitmap,start_addr: 32'h1000_1000,end_addr:   32'h1000_1008 }
   };
 
   // +1 for additional OBI error
