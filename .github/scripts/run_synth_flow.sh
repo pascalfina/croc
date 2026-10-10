@@ -7,7 +7,7 @@
 # - Philippe Sauter <phsauter@iis.ee.ethz.ch>
 #
 # Two-phase Yosys synthesis flow:
-#   Phase 1 (default): Synthesize with iDMA disabled (default config), PROJ_NAME=croc
+#   Phase 1 (default): Synthesize with iDMA enabled (default config),  PROJ_NAME=croc
 #   Phase 2 (iDMA on): Synthesize with iDMA enabled,                   PROJ_NAME=croc_idma
 
 set -euo pipefail
@@ -21,7 +21,7 @@ echo "============================================="
 echo "Phase 1: default config — synthesis (croc)"
 echo "============================================="
 
-# Ensure default config (iDMA off)
+# Ensure default config (iDMA on)
 "$SCRIPT_DIR/set_croc_config.sh"
 
 cd yosys

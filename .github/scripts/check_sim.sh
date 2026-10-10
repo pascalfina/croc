@@ -12,7 +12,7 @@ expected_lines=(
   "\[JTAG\] Halting hart 0"
   "\[JTAG\] Resumed hart 0"
   "\[UART\] Hello World from Croc v2!"
-  "\[UART\]   iDMAEnable: 0"
+  "\[UART\]   iDMAEnable: 1"
   "\[UART\]   Core: CVE2, RV32CIU"
   "\[UART\]   PMPEnable: 0"
   "\[UART\]   SRAM: 2h banks x 200h words"
@@ -23,7 +23,7 @@ expected_lines=(
   "\[UART\]   UART\s*: present"
   "\[UART\]   GPIO\s*: present"
   "\[UART\]   Timer\s*: present"
-  "\[UART\]   iDMA\s*: not present"
+  "\[UART\]   iDMA\s*: present"
   "\[UART\]   User ROM\s*: not present"
 )
 

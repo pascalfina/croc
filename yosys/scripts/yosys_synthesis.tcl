@@ -104,6 +104,9 @@ yosys techmap
 yosys opt -fast
 yosys clean -purge
 
+# Map the active-low latch from Ibex clock gating to the SG13G2 latch cell.
+yosys techmap -map scripts/sg13g2_latch_map.v
+
 
 # -----------------------------------------------------------------------------
 yosys tee -q -o "${rep_dir}/${proj_name}_generic.rpt" stat -tech cmos
