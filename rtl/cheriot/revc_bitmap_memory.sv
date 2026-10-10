@@ -71,6 +71,7 @@ module revc_bitmap_memory #(
           rev_bitmap_d[word_index][8*b+:8] = data_wdata_i[8*b+:8];
         end
       end
+      rvalid_d = 1'b1;
     end else if (mode == TRVK_READ) begin
       int word_index;
       word_index = (trvk_revbm_addr_i - BitmapBase) >> 2;
