@@ -11,7 +11,7 @@
 /// After reset the core fetches from here:
 /// 1. Enables MSIE, executes WFI, waits until woken by CLINT msip
 /// 2. Clears msip, disables interrupts, clears registers x1/x3-x15
-/// 3. Sets mtvec to bootrom trap handler
+/// 3. Sets mtvec to bootrom trap vector table
 /// 4. Reads boot address from soc_ctrl, jumps there with jalr zero (ra = &_eoc)
 /// 5. On main() return: _eoc packs retval, writes CORESTATUS, halts
 /// Trap handler dispatches to SRAM function pointer table at 0x1000_0000.
@@ -56,7 +56,7 @@ module bootrom #(
         32'h00000713, // 0x0200003C: li a4,0
         32'h00000793, // 0x02000040: li a5,0
         32'h00000297, // 0x02000044: auipc t0,0x0
-        32'h1BC28293, // 0x02000048: addi t0,t0,444 # 2000200 <_trap_handler_wrapper>
+        32'h1BC28293, // 0x02000048: addi t0,t0,444 # 2000200 <_trap_vector_base>
         32'h30529073, // 0x0200004C: csrw mtvec,t0
         32'h030002B7, // 0x02000050: lui t0,0x3000
         32'h0002A283, // 0x02000054: lw t0,0(t0) # 3000000 <__global_pointer$+0xffe4d0>
@@ -84,50 +84,119 @@ module bootrom #(
         32'h10500073 // 0x02000110: wfi
     };
 
-    // Contiguous block starting at 0x02000200: _trap_handler_wrapper
+    // Contiguous block starting at 0x02000200: vectored trap entries
+    localparam int unsigned TrapVectorRomWords = 64;
+    localparam logic [31:0] TrapVectorRom [TrapVectorRomWords] = '{
+        32'h1000006F, // 0x02000200: jal zero, _trap_handler_wrapper
+        32'h0FC0006F, // 0x02000204: jal zero, _trap_handler_wrapper
+        32'h0F80006F, // 0x02000208: jal zero, _trap_handler_wrapper
+        32'h0F40006F, // 0x0200020c: jal zero, _trap_handler_wrapper
+        32'h0F00006F, // 0x02000210: jal zero, _trap_handler_wrapper
+        32'h0EC0006F, // 0x02000214: jal zero, _trap_handler_wrapper
+        32'h0E80006F, // 0x02000218: jal zero, _trap_handler_wrapper
+        32'h0E40006F, // 0x0200021c: jal zero, _trap_handler_wrapper
+        32'h0E00006F, // 0x02000220: jal zero, _trap_handler_wrapper
+        32'h0DC0006F, // 0x02000224: jal zero, _trap_handler_wrapper
+        32'h0D80006F, // 0x02000228: jal zero, _trap_handler_wrapper
+        32'h0D40006F, // 0x0200022c: jal zero, _trap_handler_wrapper
+        32'h0D00006F, // 0x02000230: jal zero, _trap_handler_wrapper
+        32'h0CC0006F, // 0x02000234: jal zero, _trap_handler_wrapper
+        32'h0C80006F, // 0x02000238: jal zero, _trap_handler_wrapper
+        32'h0C40006F, // 0x0200023c: jal zero, _trap_handler_wrapper
+        32'h0C00006F, // 0x02000240: jal zero, _trap_handler_wrapper
+        32'h0BC0006F, // 0x02000244: jal zero, _trap_handler_wrapper
+        32'h0B80006F, // 0x02000248: jal zero, _trap_handler_wrapper
+        32'h0B40006F, // 0x0200024c: jal zero, _trap_handler_wrapper
+        32'h0B00006F, // 0x02000250: jal zero, _trap_handler_wrapper
+        32'h0AC0006F, // 0x02000254: jal zero, _trap_handler_wrapper
+        32'h0A80006F, // 0x02000258: jal zero, _trap_handler_wrapper
+        32'h0A40006F, // 0x0200025c: jal zero, _trap_handler_wrapper
+        32'h0A00006F, // 0x02000260: jal zero, _trap_handler_wrapper
+        32'h09C0006F, // 0x02000264: jal zero, _trap_handler_wrapper
+        32'h0980006F, // 0x02000268: jal zero, _trap_handler_wrapper
+        32'h0940006F, // 0x0200026c: jal zero, _trap_handler_wrapper
+        32'h0900006F, // 0x02000270: jal zero, _trap_handler_wrapper
+        32'h08C0006F, // 0x02000274: jal zero, _trap_handler_wrapper
+        32'h0880006F, // 0x02000278: jal zero, _trap_handler_wrapper
+        32'h0840006F, // 0x0200027c: jal zero, _trap_handler_wrapper
+        32'h00000000, // 0x02000280: reserved
+        32'h00000000, // 0x02000284: reserved
+        32'h00000000, // 0x02000288: reserved
+        32'h00000000, // 0x0200028c: reserved
+        32'h00000000, // 0x02000290: reserved
+        32'h00000000, // 0x02000294: reserved
+        32'h00000000, // 0x02000298: reserved
+        32'h00000000, // 0x0200029c: reserved
+        32'h00000000, // 0x020002a0: reserved
+        32'h00000000, // 0x020002a4: reserved
+        32'h00000000, // 0x020002a8: reserved
+        32'h00000000, // 0x020002ac: reserved
+        32'h00000000, // 0x020002b0: reserved
+        32'h00000000, // 0x020002b4: reserved
+        32'h00000000, // 0x020002b8: reserved
+        32'h00000000, // 0x020002bc: reserved
+        32'h00000000, // 0x020002c0: reserved
+        32'h00000000, // 0x020002c4: reserved
+        32'h00000000, // 0x020002c8: reserved
+        32'h00000000, // 0x020002cc: reserved
+        32'h00000000, // 0x020002d0: reserved
+        32'h00000000, // 0x020002d4: reserved
+        32'h00000000, // 0x020002d8: reserved
+        32'h00000000, // 0x020002dc: reserved
+        32'h00000000, // 0x020002e0: reserved
+        32'h00000000, // 0x020002e4: reserved
+        32'h00000000, // 0x020002e8: reserved
+        32'h00000000, // 0x020002ec: reserved
+        32'h00000000, // 0x020002f0: reserved
+        32'h00000000, // 0x020002f4: reserved
+        32'h00000000, // 0x020002f8: reserved
+        32'h00000000 // 0x020002fc: reserved
+    };
+
+    // Contiguous block starting at 0x02000300: _trap_handler_wrapper
     localparam int unsigned TrapHandlerRomWords = 22;
     localparam logic [31:0] TrapHandlerRom [TrapHandlerRomWords] = '{
         // <_trap_handler_wrapper>
-        32'hFB010113, // 0x02000200: addi sp,sp,-80
-        32'h04112423, // 0x02000204: sw ra,72(sp)
-        32'h04512023, // 0x02000208: sw t0,64(sp)
-        32'h02612C23, // 0x0200020C: sw t1,56(sp)
-        32'h02712823, // 0x02000210: sw t2,48(sp)
-        32'h02A12423, // 0x02000214: sw a0,40(sp)
-        32'h02B12023, // 0x02000218: sw a1,32(sp)
-        32'h00C12C23, // 0x0200021C: sw a2,24(sp)
-        32'h00D12823, // 0x02000220: sw a3,16(sp)
-        32'h00E12423, // 0x02000224: sw a4,8(sp)
-        32'h00F12023, // 0x02000228: sw a5,0(sp)
-        32'h100002B7, // 0x0200022C: lui t0,0x10000
-        32'h34202573, // 0x02000230: csrr a0,mcause
-        32'h00054863, // 0x02000234: bltz a0,2000244 <_handle_interrupt>
-        32'h0042A303, // 0x02000238: lw t1,4(t0) # 10000004 <__global_pointer$+0xdffe4d4>
-        32'h000300E7, // 0x0200023C: jalr t1
-        32'h0C00006F, // 0x02000240: j 2000300 <_trap_exit>
-        32'h00151513, // 0x02000244: slli a0,a0,0x1
-        32'h00155513, // 0x02000248: srli a0,a0,0x1
-        32'h0082A303, // 0x0200024C: lw t1,8(t0)
-        32'h000300E7, // 0x02000250: jalr t1
-        32'h0AC0006F // 0x02000254: j 2000300 <_trap_exit>
+        32'hFB010113, // 0x02000300: addi sp,sp,-80
+        32'h04112423, // 0x02000304: sw ra,72(sp)
+        32'h04512023, // 0x02000308: sw t0,64(sp)
+        32'h02612C23, // 0x0200030C: sw t1,56(sp)
+        32'h02712823, // 0x02000310: sw t2,48(sp)
+        32'h02A12423, // 0x02000314: sw a0,40(sp)
+        32'h02B12023, // 0x02000318: sw a1,32(sp)
+        32'h00C12C23, // 0x0200031C: sw a2,24(sp)
+        32'h00D12823, // 0x02000320: sw a3,16(sp)
+        32'h00E12423, // 0x02000324: sw a4,8(sp)
+        32'h00F12023, // 0x02000328: sw a5,0(sp)
+        32'h100002B7, // 0x0200032C: lui t0,0x10000
+        32'h34202573, // 0x02000330: csrr a0,mcause
+        32'h00054863, // 0x02000334: bltz a0,2000344 <_handle_interrupt>
+        32'h0042A303, // 0x02000338: lw t1,4(t0) # 10000004 <__global_pointer$+0xdffe4d4>
+        32'h000300E7, // 0x0200033C: jalr t1
+        32'h0C00006F, // 0x02000340: j 2000400 <_trap_exit>
+        32'h00151513, // 0x02000344: slli a0,a0,0x1
+        32'h00155513, // 0x02000348: srli a0,a0,0x1
+        32'h0082A303, // 0x0200034C: lw t1,8(t0)
+        32'h000300E7, // 0x02000350: jalr t1
+        32'h0AC0006F // 0x02000354: j 2000400 <_trap_exit>
     };
 
-    // Contiguous block starting at 0x02000300: _trap_exit
+    // Contiguous block starting at 0x02000400: _trap_exit
     localparam int unsigned TrapExitRomWords = 12;
     localparam logic [31:0] TrapExitRom [TrapExitRomWords] = '{
         // <_trap_exit>
-        32'h04812083, // 0x02000300: lw ra,72(sp)
-        32'h04012283, // 0x02000304: lw t0,64(sp)
-        32'h03812303, // 0x02000308: lw t1,56(sp)
-        32'h03012383, // 0x0200030C: lw t2,48(sp)
-        32'h02812503, // 0x02000310: lw a0,40(sp)
-        32'h02012583, // 0x02000314: lw a1,32(sp)
-        32'h01812603, // 0x02000318: lw a2,24(sp)
-        32'h01012683, // 0x0200031C: lw a3,16(sp)
-        32'h00812703, // 0x02000320: lw a4,8(sp)
-        32'h00012783, // 0x02000324: lw a5,0(sp)
-        32'h05010113, // 0x02000328: addi sp,sp,80
-        32'h30200073 // 0x0200032C: mret
+        32'h04812083, // 0x02000400: lw ra,72(sp)
+        32'h04012283, // 0x02000404: lw t0,64(sp)
+        32'h03812303, // 0x02000408: lw t1,56(sp)
+        32'h03012383, // 0x0200040C: lw t2,48(sp)
+        32'h02812503, // 0x02000410: lw a0,40(sp)
+        32'h02012583, // 0x02000414: lw a1,32(sp)
+        32'h01812603, // 0x02000418: lw a2,24(sp)
+        32'h01012683, // 0x0200041C: lw a3,16(sp)
+        32'h00812703, // 0x02000420: lw a4,8(sp)
+        32'h00012783, // 0x02000424: lw a5,0(sp)
+        32'h05010113, // 0x02000428: addi sp,sp,80
+        32'h30200073 // 0x0200042C: mret
     };
 
     // --------------------------------------------------------------------------
@@ -158,7 +227,8 @@ module bootrom #(
     // --------------------------------------------------------------------------
     logic        rom_req;
     logic [ 3:0] rom_select;
-    logic [ 5:0] rom_idx, rom_size;
+    logic [ 5:0] rom_idx;
+    logic [ 6:0] rom_size;
     logic        rom_error;
     logic [31:0] rom_rdata;
 
@@ -173,9 +243,10 @@ module bootrom #(
         case (rom_select)
             4'b0000: rom_size  = StartRomWords;
             4'b0001: rom_size  = EocRomWords;
-            4'b0010: rom_size  = TrapHandlerRomWords;
-            4'b0011: rom_size  = TrapExitRomWords;
-            default: rom_size = 6'h00;
+            4'b0010: rom_size  = TrapVectorRomWords;
+            4'b0011: rom_size  = TrapHandlerRomWords;
+            4'b0100: rom_size  = TrapExitRomWords;
+            default: rom_size = 7'h00;
         endcase
 
         rom_error = (rom_idx >= rom_size);
@@ -184,8 +255,9 @@ module bootrom #(
             case (rom_select)
                 4'b0000: rom_rdata = StartRom[rom_idx];
                 4'b0001: rom_rdata = EocRom[rom_idx];
-                4'b0010: rom_rdata = TrapHandlerRom[rom_idx];
-                4'b0011: rom_rdata = TrapExitRom[rom_idx];
+                4'b0010: rom_rdata = TrapVectorRom[rom_idx];
+                4'b0011: rom_rdata = TrapHandlerRom[rom_idx];
+                4'b0100: rom_rdata = TrapExitRom[rom_idx];
                 default: rom_rdata = 32'h0000_0000;
             endcase
         end

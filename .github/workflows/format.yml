@@ -31,5 +31,6 @@ jobs:
       name: Run Clang-format
       uses: DoozyX/clang-format-lint-action@v0.18.2
       with:
+        exclude: './ibex'
         extensions: 'c,h,cpp'
         clangFormatVersion: 17

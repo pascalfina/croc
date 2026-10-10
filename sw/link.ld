@@ -90,8 +90,9 @@ PROVIDE(__stack_pointer$ = ORIGIN(STACK) + LENGTH(STACK));
 
 /* Bootrom symbols (fixed addresses) */
 PROVIDE(_eoc = 0x02000100);
-PROVIDE(_trap_handler_wrapper = 0x02000200);
-PROVIDE(_trap_exit = 0x02000300);
+PROVIDE(_trap_vector_base = 0x02000200);
+PROVIDE(_trap_handler_wrapper = 0x02000300);
+PROVIDE(_trap_exit = 0x02000400);
 
 /* SoC register symbols */
 PROVIDE(corestatus = 0x03000008);

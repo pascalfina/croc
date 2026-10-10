@@ -12,7 +12,7 @@
 # 1. Enable MSIE, WFI (wait until woken by JTAG via msip)
 # 2. Wake: clear msip, disable interrupts
 # 3. Clear registers x1, x3-x15 (x2/SP set by SRAM stub)
-# 4. Set mtvec to bootrom trap handler
+# 4. Set mtvec to bootrom trap vector table
 # 5. Read boot address from soc_ctrl, jump there with jalr zero
 #    (ra is set to &_eoc so main() returning goes to _eoc)
 # 6. _eoc: pack return value, write CORESTATUS, WFI
@@ -27,8 +27,9 @@
 # Fixed section offsets (from base 0x0200_0000):
 # 0x000  _start                 (WFI trampoline + boot)
 # 0x100  _eoc                   (end of computation)
-# 0x200  _trap_handler_wrapper  (trap entry, save regs, dispatch)
-# 0x300  _trap_exit             (restore regs, mret)
+# 0x200  _trap_vector_base      (vectored trap entries)
+# 0x300  _trap_handler_wrapper  (save regs, dispatch)
+# 0x400  _trap_exit             (restore regs, mret)
 
 # -----------------------------------------------------------------------------
 # WFI Trampoline (entry point after reset)
@@ -64,9 +65,9 @@ _start:
 
 # -----------------------------------------------------------------------------
 # CSR Initialization
-# Set mtvec to bootrom trap handler
+# Set mtvec to bootrom trap vector table
 # -----------------------------------------------------------------------------
-  la      t0, _trap_handler_wrapper
+  la      t0, _trap_vector_base
   csrw    mtvec, t0
 
 # -----------------------------------------------------------------------------
@@ -102,11 +103,23 @@ _eoc:
   wfi                  # Halt
 
 # -----------------------------------------------------------------------------
+# Trap Vector Table
+# Ibex uses vectored mtvec mode while CHERIoT is disabled. Each supported
+# exception/interrupt vector jumps to the common handler below.
+# -----------------------------------------------------------------------------
+.org 0x200
+.globl _trap_vector_base
+_trap_vector_base:
+  .rept 32
+  jal     zero, _trap_handler_wrapper
+  .endr
+
+# -----------------------------------------------------------------------------
 # Trap Handler Wrapper
 # Saves caller-saved registers, reads mcause,
 # dispatches to interrupt/exception handler in SRAM via function pointer table
 # -----------------------------------------------------------------------------
-.org 0x200
+.org 0x300
 _trap_handler_wrapper:
   addi    sp, sp, -80
   sw      ra, 72(sp)
@@ -147,7 +160,7 @@ _handle_interrupt:
 # Trap Exit
 # Restore caller-saved registers and return from trap
 # -----------------------------------------------------------------------------
-.org 0x300
+.org 0x400
 _trap_exit:
   lw      ra, 72(sp)
   lw      t0, 64(sp)

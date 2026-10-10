@@ -21,15 +21,16 @@ The address of the application is stored in the `SOC_CTRL` registers in `BOOTADD
 
 ### Fixed Offsets inside the Bootrom
 
-The bootrom is divided into four contiguous blocks at fixed offsets so that
+The bootrom is divided into five contiguous blocks at fixed offsets so that
 addresses are stable regardless of code changes in other sections:
 
 | Offset  | Label                  | Purpose                                  |
 |---------|------------------------|------------------------------------------|
 | `0x000` | `_start`               | WFI trampoline, register init, boot jump |
 | `0x100` | `_eoc`                 | End-of-computation: write status, halt   |
-| `0x200` | `_trap_handler_wrapper`| Save regs, read mcause, dispatch         |
-| `0x300` | `_trap_exit`           | Restore regs, `mret`                     |
+| `0x200` | `_trap_vector_base`    | Vectored trap entries                    |
+| `0x300` | `_trap_handler_wrapper`| Save regs, read mcause, dispatch         |
+| `0x400` | `_trap_exit`           | Restore regs, `mret`                     |
 
 ## Boot Flow
 
@@ -43,7 +44,7 @@ flowchart TD
        jtag[JTAG loads program into SRAM]
        clear_msip[Clear msip, disable interrupts]
        clear_regs[Clear registers]
-       set_mtvec[Set mtvec to bootrom trap handler 0x0200_0200]
+       set_mtvec[Set mtvec to bootrom trap vector table 0x0200_0200]
        read_boot[Read boot address from SOC_CTRL 0x0300_0000]
        set_ra[Set return address to _eoc, jump to boot address]
    end
@@ -110,7 +111,9 @@ Because the trap handler itself is in ROM (immutable), user programs provide the
 0x1000_0008:  .word croc_interrupt_handler  # function pointer used by bootrom
 ```
 
-When a trap fires:
+When a trap fires, Ibex uses vectored `mtvec` mode while CHERIoT is disabled.
+The 32 entries at `0x0200_0200` through `0x0200_027c` jump to the common
+handler at `0x0200_0300`:
 
 1. `_trap_handler_wrapper` saves the 10 caller-saved registers onto the stack.
 2. It reads `mcause`: MSB=1 means interrupt, MSB=0 means exception.
@@ -126,7 +129,7 @@ Override the functions `croc_exception_handler` or `croc_interrupt_handler` in y
 The module is a purely combinational ROM with a one-cycle OBI response latency
 (the request is registered, data is presented one cycle later, standard for SRAM-like peripherals).
 
-The ROM is stored as four `localparam` arrays, one per section.
+The ROM is stored as five `localparam` arrays, one per section.
 The upper 4 bits of the word address select the array; the lower 6 bits index into it.
 Write accesses are always rejected with an OBI error and return the value `0xBADCAB1E`.
 

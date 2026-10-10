@@ -9,12 +9,12 @@
 #include "obi_timer.h"
 #include "config.h"
 
-// Bootrom trap handler address (set as mtvec by bootrom during boot)
-#define BOOTROM_TRAP_HANDLER 0x02000200
+// Bootrom trap vector table address (set as mtvec by bootrom during boot)
+#define BOOTROM_TRAP_VECTOR 0x02000200
 
 // SRAM vector table addresses (read by bootrom trap handler)
-#define SRAM_VEC_EXCEPTION   0x10000004
-#define SRAM_VEC_INTERRUPT   0x10000008
+#define SRAM_VEC_EXCEPTION  0x10000004
+#define SRAM_VEC_INTERRUPT  0x10000008
 
 static volatile int irq_fired      = 0;
 static volatile uint32_t irq_cause = 0;
@@ -33,10 +33,10 @@ void croc_interrupt_handler(uint32_t cause) {
 int main() {
     // --- Verify bootrom interrupt vector mapping ---
 
-    // Check mtvec points to bootrom trap handler (set during boot)
+    // Ibex reports vectored mtvec mode as BASE | 1 when CHERIoT is disabled.
     uint32_t mtvec;
     asm volatile("csrr %0, mtvec" : "=r"(mtvec));
-    CHECK_ASSERT(1, mtvec == BOOTROM_TRAP_HANDLER);
+    CHECK_ASSERT(1, mtvec == (BOOTROM_TRAP_VECTOR | 1));
 
     // Check SRAM vector table entries point to our handlers
     uint32_t exc_handler = *(volatile uint32_t *)SRAM_VEC_EXCEPTION;
@@ -45,7 +45,7 @@ int main() {
     CHECK_ASSERT(3, exc_handler != 0);
 
     // --- Fire interrupt through bootrom trap handler chain ---
-    // Flow: OBI timer expires → CPU traps to mtvec (0x0200_0200, bootrom)
+    // Flow: OBI timer expires → CPU vectors through 0x0200_0200
     //     → bootrom reads mcause, loads handler from 0x1000_0008
     //     → calls croc_interrupt_handler → sets irq_fired
     //     → bootrom _trap_exit restores regs, mret
