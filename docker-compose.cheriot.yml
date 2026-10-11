@@ -1,0 +1,9 @@
+# Local override for the OSEDA image with the CHERIoT LLVM toolchain.
+# Keep docker-compose.yml unchanged so CI continues using the pre-built image.
+
+services:
+  pulp-docker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: croc-iic-osic-tools:2025.12-cheriot

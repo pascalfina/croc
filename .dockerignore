@@ -1,0 +1,10 @@
+.git
+.github
+.bender
+ihp13/pdk/gds
+technology
+yosys/out
+verilator/obj_dir*
+verilator/*.log
+sw/bin
+sw/build
