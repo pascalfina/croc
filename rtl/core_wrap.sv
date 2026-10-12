@@ -120,12 +120,15 @@ module core_wrap
 
   localparam logic [31:0] HeapBaseAddr = 32'h1000_0d00;
   localparam logic [31:0] RevBitmapBaseAddr = 32'h1000_1000;
+  // The Croc address map exposes 8 bytes for the revocation bitmap.
+  localparam int unsigned RevBitmapAddrWidth = 3; // 2^3 bytes
 
   /// ibex integration 
 
   ibex_top #(
       .BaseIsa                 (ibex_pkg::BaseIsaRV32IorCHERIoT),
-      .CheriotRevBitmapBaseAddr(RevBitmapBaseAddr),
+      .CheriotRevBitmapAddrWidth(RevBitmapAddrWidth),
+      .CheriotRevBitmapBaseAddr (RevBitmapBaseAddr),
       .PMPEnable               (1'b0),
       .PMPGranularity          (0),
       .PMPNumRegions           (4),

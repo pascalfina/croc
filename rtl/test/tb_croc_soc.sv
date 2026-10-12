@@ -142,11 +142,17 @@ module tb_croc_soc #(
     $display("@%t | [CORE] Waking core via CLINT msip", $time);
     i_vip.jtag_write_reg32(ClintBaseAddr, 32'h1);
 
-    // halt core
-    i_vip.jtag_halt();
+    // Let the application finish its early startup before halting the hart. In
+    // CHERIoT programs this includes capability-based stack setup; halting in
+    // the middle of that sequence can resume after a capability instruction
+    // without its writeback having retired.
+    //repeat (600) @(posedge sys_clk);
 
-    // resume core
-    i_vip.jtag_resume();
+    // halt core
+    // i_vip.jtag_halt();
+
+    // // resume core
+    // i_vip.jtag_resume();
 
     // wait for non-zero return value (written into core status register)
     $display("@%t | [CORE] Wait for end of code...", $time);
