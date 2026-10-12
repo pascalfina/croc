@@ -35,8 +35,9 @@ LINK     ?= link.ld
 SRCDIR   ?= lib/src
 INCDIR   ?= lib/inc
 
-# Set CHERIOT=1 for a target below bin/cheriot. The default remains the legacy
-# GCC build used by the existing Croc tests.
+# The default build remains the legacy GCC build used by the existing Croc
+# tests. CHERIOT=1 is retained for compatibility with existing commands; use
+# the explicit `cheriot` target to build the CHERIoT programs.
 CHERIOT         ?= 0
 
 # CHERIoT bare-metal toolchain and image layout.
@@ -45,7 +46,8 @@ CHERIOT_OBJCOPY  ?= /foss/tools/riscv-gnu-toolchain/bin/riscv64-unknown-elf-objc
 CHERIOT_TARGET   ?= riscv32-unknown-elf
 CHERIOT_CPU      ?= cheriot
 CHERIOT_ABI      ?= cheriot-baremetal
-CHERIOT_STARTUP  ?= crt0_cheriot.S
+CHERIOT_ASM_STARTUP ?= crt0_cheriot.S
+CHERIOT_C_STARTUP   ?= crt0_cheriot_stack.S
 CHERIOT_LINK     ?= link_cheriot.ld
 CHERIOT_BUILDDIR ?= build/cheriot
 CHERIOT_BINDIR   ?= bin/cheriot
@@ -55,10 +57,9 @@ CHERIOT_FLAGS    ?= --target=$(CHERIOT_TARGET) -mcpu=$(CHERIOT_CPU) \
 
 # Collecting source files
 LIB_SOURCES  := $(wildcard $(SRCDIR)/*.[cS])
-TOP_SOURCES  := $(filter-out $(CRT0), $(wildcard *.[cS]))
+TOP_SOURCES  := $(filter-out $(CRT0) $(CHERIOT_ASM_STARTUP) $(CHERIOT_C_STARTUP), $(wildcard *.[cS]))
 TEST_SOURCES := $(wildcard test/*.[cS])
-CHERIOT_SOURCES := $(wildcard cheriot/*.S)
-PROG_SOURCES := $(TOP_SOURCES) $(TEST_SOURCES) $(CHERIOT_SOURCES)
+PROG_SOURCES := $(TOP_SOURCES) $(TEST_SOURCES)
 
 PROG_NAMES   := $(basename $(PROG_SOURCES))
 
@@ -74,16 +75,30 @@ ALL_TARGETS := $(PROG_NAMES:%=$(BINDIR)/%.elf) \
 	           $(PROG_NAMES:%=$(BINDIR)/%.dump) \
 	           $(PROG_NAMES:%=$(BINDIR)/%.hex)
 
-# Dependency files for automatic rebuilds
-DEPFILES := $(CRT0_OBJ:.o=.d) $(LIB_OBJS:.o=.d) $(PROG_OBJS:.o=.d)
+# CHERIoT programs are deliberately split by startup ABI. The handwritten
+# assembly tests enable CHERIoT themselves; compiler-generated C programs use
+# the stack/global-pointer startup.
+CHERIOT_ASM_SOURCES       := $(wildcard cheriot/*.S)
+CHERIOT_C_SOURCES         := $(wildcard cheriot/with_cheriot_compiler_only/*.c)
+CHERIOT_ASM_PROGRAMS      := $(basename $(notdir $(CHERIOT_ASM_SOURCES)))
+CHERIOT_C_PROGRAMS        := $(basename $(notdir $(CHERIOT_C_SOURCES)))
+CHERIOT_ASM_OBJECTS       := $(CHERIOT_ASM_PROGRAMS:%=$(CHERIOT_BUILDDIR)/%.o)
+CHERIOT_C_OBJECTS         := $(CHERIOT_C_PROGRAMS:%=$(CHERIOT_BUILDDIR)/%.o)
+CHERIOT_ASM_STARTUP_OBJ   := $(CHERIOT_BUILDDIR)/$(CHERIOT_ASM_STARTUP:.S=.o)
+CHERIOT_C_STARTUP_OBJ     := $(CHERIOT_BUILDDIR)/$(CHERIOT_C_STARTUP:.S=.o)
+CHERIOT_ASM_ELFS          := $(CHERIOT_ASM_PROGRAMS:%=$(CHERIOT_BINDIR)/%.elf)
+CHERIOT_C_ELFS            := $(CHERIOT_C_PROGRAMS:%=$(CHERIOT_BINDIR)/%.elf)
+CHERIOT_HEX_TARGETS       := $(CHERIOT_ASM_ELFS:.elf=.hex) $(CHERIOT_C_ELFS:.elf=.hex)
 
-CHERIOT_STARTUP_OBJ := $(CHERIOT_BUILDDIR)/$(CHERIOT_STARTUP:.S=.o)
-CHERIOT_PROGRAMS    := $(basename $(notdir $(wildcard cheriot/*.[cS])))
-CHERIOT_OBJECTS     := $(CHERIOT_PROGRAMS:%=$(CHERIOT_BUILDDIR)/%.o)
+# Dependency files for automatic rebuilds
+DEPFILES := $(CRT0_OBJ:.o=.d) $(LIB_OBJS:.o=.d) $(PROG_OBJS:.o=.d) \
+	$(CHERIOT_ASM_STARTUP_OBJ:.o=.d) $(CHERIOT_C_STARTUP_OBJ:.o=.d) \
+	$(CHERIOT_ASM_OBJECTS:.o=.d) $(CHERIOT_C_OBJECTS:.o=.d)
 
 # Ensure intermediate object files are not deleted after linking
 .SECONDARY: $(CRT0_OBJ) $(LIB_OBJS) $(PROG_OBJS) \
-	$(CHERIOT_STARTUP_OBJ) $(CHERIOT_OBJECTS)
+	$(CHERIOT_ASM_STARTUP_OBJ) $(CHERIOT_C_STARTUP_OBJ) \
+	$(CHERIOT_ASM_OBJECTS) $(CHERIOT_C_OBJECTS)
 
 all: compile
 
@@ -119,41 +134,49 @@ $(BINDIR)/%.hex: $(BINDIR)/%.elf
 	$(RISCV_OBJCOPY) -O verilog $< $@
 
 # Phonies
-.PHONY: all clean compile cheriot-inline
+.PHONY: all clean compile cheriot cheriot-inline
 
 clean:
 	rm -rf $(BINDIR) $(BUILDDIR)
 
 compile: $(BINDIR) $(BUILDDIR) $(ALL_TARGETS)
 
+# Build all CHERIoT binaries explicitly. This target is intentionally not part
+# of `all`, so a normal GCC build never needs the CHERIoT LLVM image.
+cheriot: $(CHERIOT_HEX_TARGETS)
+
 # Convenience alias for the first CHERIoT compiler test.
-cheriot-inline:
-	$(MAKE) CHERIOT=1 $(CHERIOT_BINDIR)/test_simple_inline.hex
+cheriot-inline: $(CHERIOT_BINDIR)/test_simple_inline.hex
 
-ifeq ($(CHERIOT),1)
-
-# CHERIoT startup and source objects use a separate directory from GCC.
-$(CHERIOT_STARTUP_OBJ): $(CHERIOT_STARTUP)
+# CHERIoT startup objects use a separate directory from GCC.
+$(CHERIOT_ASM_STARTUP_OBJ): $(CHERIOT_ASM_STARTUP)
 	mkdir -p $(dir $@)
 	$(CHERIOT_CC) $(CHERIOT_FLAGS) -MMD -MP -c $< -o $@
 
-$(CHERIOT_BUILDDIR)/%.o: cheriot/%.S
+$(CHERIOT_C_STARTUP_OBJ): $(CHERIOT_C_STARTUP)
 	mkdir -p $(dir $@)
 	$(CHERIOT_CC) $(CHERIOT_FLAGS) -Iinclude -I$(INCDIR) -I$(CURDIR) -MMD -MP -c $< -o $@
 
-$(CHERIOT_BUILDDIR)/%.o: cheriot/%.c
+$(CHERIOT_ASM_OBJECTS): $(CHERIOT_BUILDDIR)/%.o: cheriot/%.S
 	mkdir -p $(dir $@)
 	$(CHERIOT_CC) $(CHERIOT_FLAGS) -Iinclude -I$(INCDIR) -I$(CURDIR) -MMD -MP -c $< -o $@
 
-$(CHERIOT_BINDIR)/%.elf: $(CHERIOT_BUILDDIR)/%.o $(CHERIOT_STARTUP_OBJ) $(CHERIOT_LINK)
+$(CHERIOT_C_OBJECTS): $(CHERIOT_BUILDDIR)/%.o: cheriot/with_cheriot_compiler_only/%.c
+	mkdir -p $(dir $@)
+	$(CHERIOT_CC) $(CHERIOT_FLAGS) -Iinclude -I$(INCDIR) -I$(CURDIR) -MMD -MP -c $< -o $@
+
+$(CHERIOT_ASM_ELFS): $(CHERIOT_BINDIR)/%.elf: $(CHERIOT_BUILDDIR)/%.o $(CHERIOT_ASM_STARTUP_OBJ) $(CHERIOT_LINK)
 	mkdir -p $(dir $@)
 	$(CHERIOT_CC) $(CHERIOT_FLAGS) -fuse-ld=lld -nostartfiles -T$(CHERIOT_LINK) \
-		$(CHERIOT_STARTUP_OBJ) $(CHERIOT_BUILDDIR)/$*.o -o $@
+		$(CHERIOT_ASM_STARTUP_OBJ) $(CHERIOT_BUILDDIR)/$*.o -o $@
+
+$(CHERIOT_C_ELFS): $(CHERIOT_BINDIR)/%.elf: $(CHERIOT_BUILDDIR)/%.o $(CHERIOT_C_STARTUP_OBJ) $(CHERIOT_LINK)
+	mkdir -p $(dir $@)
+	$(CHERIOT_CC) $(CHERIOT_FLAGS) -fuse-ld=lld -nostartfiles -T$(CHERIOT_LINK) \
+		$(CHERIOT_C_STARTUP_OBJ) $(CHERIOT_BUILDDIR)/$*.o -o $@
 
 $(CHERIOT_BINDIR)/%.hex: $(CHERIOT_BINDIR)/%.elf
 	mkdir -p $(dir $@)
 	$(CHERIOT_OBJCOPY) -O verilog $< $@
-
-endif
 
 -include $(DEPFILES)

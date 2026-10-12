@@ -16,6 +16,12 @@ jobs:
   simulation:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    env:
+      COMPOSE_FILE: docker-compose.yml:docker-compose.cheriot-ci.yml
+      CHERIOT_CI_IMAGE: ghcr.io/${{ github.repository_owner }}/croc-iic-osic-tools:2025.12-cheriot
     steps:
       - name: Checkout repository (with submodules)
         uses: actions/checkout@v4
@@ -23,6 +29,12 @@ jobs:
           submodules: true
       - name: Free disk space
         uses: ./.github/actions/free-space
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Run simulation flow in OSEDA
         uses: ./.github/actions/oseda-cmd
         with:

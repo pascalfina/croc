@@ -6,7 +6,9 @@
 # - Philippe Sauter <phsauter@iis.ee.ethz.ch>
 
 # Run unit tests through Verilator simulation.
-# Usage: run_tests.sh [--sim SIM_BINARY] [--hexdir HEX_DIR] [--filter PATTERN][--timeout SECONDS]
+# Usage: run_tests.sh [--sim SIM_BINARY] [--hexdir HEX_DIR] [--filter PATTERN]
+#                     [--exclude TEST_NAME] [--expect-fail TEST_NAME]
+#                     [--timeout SECONDS]
 #
 # Expects to be run from the verilator/ directory (or paths adjusted via flags).
 # Each test writes its own log file.
@@ -18,15 +20,19 @@ SIM_BINARY="obj_dir/Vtb_croc_soc"
 HEX_DIR="../sw/bin/test"
 FILTER="test_*"
 TIMEOUT=120
+EXCLUDES=()
+EXPECTED_FAILURES=()
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --sim)     SIM_BINARY="$2"; shift 2 ;;
         --hexdir)  HEX_DIR="$2";   shift 2 ;;
         --filter)  FILTER="$2";    shift 2 ;;
+        --exclude) EXCLUDES+=("$2"); shift 2 ;;
+        --expect-fail) EXPECTED_FAILURES+=("$2"); shift 2 ;;
         --timeout) TIMEOUT="$2";   shift 2 ;;
         -h|--help)
-            echo "Usage: $0 [--sim SIM_BINARY] [--hexdir HEX_DIR] [--filter PATTERN] [--timeout SECONDS]"
+            echo "Usage: $0 [--sim SIM_BINARY] [--hexdir HEX_DIR] [--filter PATTERN] [--exclude TEST_NAME] [--expect-fail TEST_NAME] [--timeout SECONDS]"
             exit 0
             ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
@@ -57,6 +63,27 @@ declare -a results=()
 
 for hex in "${hex_files[@]}"; do
     test_name=$(basename "$hex" .hex)
+
+    skip_test=false
+    for excluded_test in "${EXCLUDES[@]}"; do
+        if [[ "$test_name" == "$excluded_test" ]]; then
+            skip_test=true
+            break
+        fi
+    done
+    if [[ "$skip_test" == true ]]; then
+        echo "Skipping $test_name"
+        continue
+    fi
+
+    expected_failure=false
+    for expected_test in "${EXPECTED_FAILURES[@]}"; do
+        if [[ "$test_name" == "$expected_test" ]]; then
+            expected_failure=true
+            break
+        fi
+    done
+
     log_file="${test_name}.log"
 
     printf "Running %-20s ... " "$test_name"
@@ -76,8 +103,21 @@ for hex in "${hex_files[@]}"; do
         continue
     fi
 
+    # An expected-failure test passes only if the exception handler reports the
+    # exception and the testbench reaches its deliberate FAIL result.
+    if [[ "$expected_failure" == true ]]; then
+        if grep -q '\[EXCEPTION\] mcause=' "$log_file" \
+            && grep -q '\[JTAG\] Simulation finished: FAIL' "$log_file"; then
+            echo "PASS (expected failure)"
+            results+=("PASS $test_name (expected failure)")
+            ((passed++)) || true
+        else
+            echo "FAIL (expected failure was not reported)"
+            results+=("FAIL $test_name (expected failure was not reported)")
+            ((failed++)) || true
+        fi
     # Check for SUCCESS/FAIL in the log
-    if grep -q '\[JTAG\] Simulation finished: SUCCESS' "$log_file"; then
+    elif grep -q '\[JTAG\] Simulation finished: SUCCESS' "$log_file"; then
         echo "PASS"
         results+=("PASS $test_name")
         ((passed++)) || true

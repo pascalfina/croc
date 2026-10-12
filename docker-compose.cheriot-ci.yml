@@ -1,0 +1,7 @@
+# CI override for the pre-built CHERIoT-enabled OSEDA image.
+# The image is published once to GHCR by cheriot-image.yml and then pulled by
+# the simulation job; it is not rebuilt for every commit.
+
+services:
+  pulp-docker:
+    image: ${CHERIOT_CI_IMAGE:-ghcr.io/pascalfina/croc-iic-osic-tools:2025.12-cheriot}

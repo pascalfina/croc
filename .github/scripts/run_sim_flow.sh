@@ -86,6 +86,9 @@ echo "============================================="
 if [[ "$simulation_mode" == "rtl" ]]; then
     "$SCRIPT_DIR/set_croc_config.sh"
     make -C sw
+    # CHERIoT binaries are built only in the CHERIoT-enabled container. They
+    # are kept outside the default GCC build so legacy tests stay independent.
+    make -C sw cheriot
 else
     cp "$default_netlist" yosys/out/netlist_debug.v
 fi
@@ -108,6 +111,7 @@ echo "============================================="
     --sim "$simulation_binary" \
     --hexdir ../sw/bin/cheriot \
     --filter '*' \
+    --expect-fail test_cheriot_exception \
     --timeout 30
 
 cd "$CROC_ROOT"
