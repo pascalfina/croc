@@ -34,10 +34,22 @@ capability. The CHERIoT path therefore avoids stack access in ROM:
    SoC-control registers, reports failure through `CORE_STATUS`, and waits in
    `wfi`.
 
+The bootrom contains two trap-vector regions because Ibex uses different trap
+addressing rules depending on the CHERIoT state. With CHERIoT disabled, Ibex
+normalizes `mtvec` to vectored mode (`MODE = 01`), so interrupts use
+`BASE + 4 * cause`. The table at `0x0200_0200` therefore provides 32 entries
+that forward all supported causes to the common integer handler. With CHERIoT
+enabled, Ibex uses the aligned trap base directly for both exceptions and
+interrupts. The CHERIoT startup sets that base to `0x0200_0500`, where one
+entry forwards to the capability-safe trampoline at `0x0200_0600`.
+
 The interrupt handler is currently only a minimal `ct.cret` return path. Its
 CHERIoT compatibility has not been investigated yet, so interrupt entry,
 context handling and return may still require a dedicated CHERIoT-aware
 implementation.
+
+**TODO:** verify interrupt handling with CHERIoT enabled and implement a
+capability-safe interrupt context save/restore path if required.
 
 The Ibex integration also needs the trap vector table at `0x0200_0200`.
 Ibex initializes `mtvec` with vectored-mode semantics when CHERIoT is
