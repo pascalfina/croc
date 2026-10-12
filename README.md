@@ -227,8 +227,94 @@ To switch back to the original metal stack, export `CROC_PDK=sg13g2` before runn
 To simulate you can use:
 
 ```sh
-cd sw && make all
+cd sw && make CHERIOT=0 CRT0=crt0.S all
 cd ../verilator && ./run_verilator.sh --build --run ../sw/bin/helloworld.hex
+```
+
+### CHERIoT software
+
+The CHERIoT programs require the CHERIoT-enabled Docker image. Build all
+CHERIoT assembly and C tests with the dedicated Make target:
+
+```sh
+make -C sw cheriot
+```
+
+The Makefile selects `crt0_cheriot.S` for assembly tests and
+`crt0_cheriot_stack.S` for compiler-generated C tests by default.
+
+The handwritten assembly tests use `crt0_cheriot.S`. C programs compiled with
+the CHERIoT LLVM compiler use `crt0_cheriot_stack.S`, which sets up bounded
+stack and global-pointer capabilities. To build one program only, for example:
+
+```sh
+make -C sw bin/cheriot/test_simple_inline.hex
+```
+
+If a program needs an explicitly selected startup file, pass the CHERIoT
+settings on the command line. This still builds only the requested program:
+
+```sh
+# Assembly program with an explicitly selected startup.
+make -C sw CHERIOT=1 \
+  CHERIOT_ASM_STARTUP=crt0_cheriot.S \
+  bin/cheriot/my_assembly_test.hex
+
+# C program with an explicitly selected startup.
+make -C sw CHERIOT=1 \
+  CHERIOT_C_STARTUP=crt0_cheriot_stack.S \
+  bin/cheriot/my_c_test.hex
+```
+
+Place assembly sources in `sw/cheriot/` and C sources in
+`sw/cheriot/with_cheriot_compiler_only/`. Replace the target name with the
+source filename without its extension.
+
+Run a CHERIoT program with the normal RTL Verilator binary:
+
+```sh
+cd verilator
+./run_verilator.sh --build
+./run_verilator.sh --run ../sw/bin/cheriot/test_simple_inline.hex
+```
+
+The complete RTL flow builds the standard and CHERIoT programs and runs all
+CHERIoT tests. `test_cheriot_exception` is an intentional exception test and
+is counted as expected failure:
+
+```sh
+cd ..
+.github/scripts/run_sim_flow.sh --rtl
+```
+
+To run the legacy tests and the CHERIoT tests separately with the already
+built RTL simulator:
+
+```sh
+# Build the legacy programs and tests.
+make -C sw
+# Explicit equivalent: make -C sw CHERIOT=0 CRT0=crt0.S all
+
+# Build all CHERIoT assembly and C programs.
+make -C sw cheriot
+
+cd verilator
+./run_verilator.sh --build
+
+# Legacy tests in sw/bin/test.
+../.github/scripts/run_tests.sh \
+  --sim obj_dir_rtl/Vtb_croc_soc \
+  --hexdir ../sw/bin/test \
+  --filter '*' \
+  --timeout 30
+
+# CHERIoT tests in sw/bin/cheriot.
+../.github/scripts/run_tests.sh \
+  --sim obj_dir_rtl/Vtb_croc_soc \
+  --hexdir ../sw/bin/cheriot \
+  --filter '*' \
+  --expect-fail test_cheriot_exception \
+  --timeout 30
 ```
 
 To simulate the post-Yosys netlist with Verilator instead, first generate the netlist and then use the explicit netlist commands:

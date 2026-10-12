@@ -1,10 +1,7 @@
 /* 1:1 inline-assembly version of test_simple.S. */
 
 __attribute__((noreturn, naked)) void main(void) {
-    __asm__ volatile("li t1, 1\n\t"
-                     "li t2, 0x03000018\n\t"
-                     "sw t1, 0(t2)\n\t"
-                     "li x1, 69\n\t"
+    __asm__ volatile("li x1, 69\n\t"
                      "li x5, 0x03000008\n\t"
                      "cspecialr c3, mtdc\n\t"
                      "csetaddr c4, c3, x5\n\t"
