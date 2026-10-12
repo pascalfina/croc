@@ -30,6 +30,8 @@
 # 0x200  _trap_vector_base      (vectored trap entries)
 # 0x300  _trap_handler_wrapper  (save regs, dispatch)
 # 0x400  _trap_exit             (restore regs, mret)
+# 0x500  _cheriot_trap_vector_base (CHERIoT direct-mode entry)
+# 0x600  _cheriot_trap_handler   (CHERIoT trampoline to SRAM handler)
 
 # -----------------------------------------------------------------------------
 # WFI Trampoline (entry point after reset)
@@ -174,3 +176,31 @@ _trap_exit:
   lw      a5,  0(sp)
   addi    sp, sp, 80
   mret
+
+# -----------------------------------------------------------------------------
+# CHERIoT Trap Vector
+# CHERIoT uses direct trap-vector mode. The actual CHERIoT handler starts at
+# 0x0200_0600; this entry only transfers control to that trampoline.
+# -----------------------------------------------------------------------------
+.org 0x500
+.globl _cheriot_trap_vector_base
+_cheriot_trap_vector_base:
+  .word   0x1000006F  # jal zero, 0x02000600
+
+# -----------------------------------------------------------------------------
+# CHERIoT Trap Handler Trampoline
+# Reads the raw exception-handler address from the SRAM vector table, creates
+# a valid executable capability from mtcc, and enters the SRAM handler with
+# CJALR. No stack access is performed here.
+# -----------------------------------------------------------------------------
+.org 0x600
+.globl _cheriot_trap_handler
+_cheriot_trap_handler:
+  .word   0x03D0025B  # cspecialr c4, mtdc
+  .word   0x100002B7  # lui t0, 0x10000
+  .word   0x2052025B  # csetaddr c4, c4, t0
+  # Keep the handler address in x6; cspecialr c5 also overwrites x5/t0.
+  .word   0x00422303  # lw t1, 4(x4)
+  .word   0x03C002DB  # cspecialr c5, mtcc
+  .word   0x206282DB  # csetaddr c5, c5, t1
+  .word   0x00028067  # cjalr c0, c5, 0

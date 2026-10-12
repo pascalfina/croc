@@ -149,10 +149,10 @@ module tb_croc_soc #(
     //repeat (600) @(posedge sys_clk);
 
     // halt core
-    // i_vip.jtag_halt();
+    i_vip.jtag_halt();
 
-    // // resume core
-    // i_vip.jtag_resume();
+    // resume core
+    i_vip.jtag_resume();
 
     // wait for non-zero return value (written into core status register)
     $display("@%t | [CORE] Wait for end of code...", $time);

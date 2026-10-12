@@ -153,6 +153,31 @@ module bootrom #(
         32'h00000000 // 0x020002fc: reserved
     };
 
+    // CHERIoT trap dispatch
+
+    // Contiguous block starting at 0x02000500:
+    // CHERIoT direct-mode trap entry
+    localparam int unsigned CheriotTrapVectorRomWords = 1;
+    localparam logic [31:0] CheriotTrapVectorRom [CheriotTrapVectorRomWords] = '{
+        32'h1000006F // 0x02000500: jal zero, 0x02000600
+    };
+
+
+    // Contiguous block starting at 0x02000600:
+    // CHERIoT trap trampoline to SRAM exception handler
+    localparam int unsigned CheriotTrapHandlerRomWords = 7;
+    localparam logic [31:0] CheriotTrapHandlerRom [CheriotTrapHandlerRomWords] = '{
+        32'h03D0025B, // 0x02000600: cspecialr c4, mtdc
+        32'h100002B7, // 0x02000604: lui t0, 0x10000
+        32'h2052025B, // 0x02000608: csetaddr c4, c4, t0
+        32'h00422303, // 0x0200060C: lw t1, 4(x4)
+        32'h03C002DB, // 0x02000610: cspecialr c5, mtcc
+        32'h206282DB, // 0x02000614: csetaddr c5, c5, t1
+        32'h00028067  // 0x02000618: cjalr c0, c5, 0
+    };
+
+    //cheriot end
+
     // Contiguous block starting at 0x02000300: _trap_handler_wrapper
     localparam int unsigned TrapHandlerRomWords = 22;
     localparam logic [31:0] TrapHandlerRom [TrapHandlerRomWords] = '{
@@ -246,6 +271,8 @@ module bootrom #(
             4'b0010: rom_size  = TrapVectorRomWords;
             4'b0011: rom_size  = TrapHandlerRomWords;
             4'b0100: rom_size  = TrapExitRomWords;
+            4'b0101: rom_size = CheriotTrapVectorRomWords;
+            4'b0110: rom_size = CheriotTrapHandlerRomWords;
             default: rom_size = 7'h00;
         endcase
 
@@ -258,6 +285,8 @@ module bootrom #(
                 4'b0010: rom_rdata = TrapVectorRom[rom_idx];
                 4'b0011: rom_rdata = TrapHandlerRom[rom_idx];
                 4'b0100: rom_rdata = TrapExitRom[rom_idx];
+                4'b0101: rom_rdata = CheriotTrapVectorRom[rom_idx];
+                4'b0110: rom_rdata = CheriotTrapHandlerRom[rom_idx];
                 default: rom_rdata = 32'h0000_0000;
             endcase
         end

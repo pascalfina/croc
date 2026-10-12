@@ -61,6 +61,9 @@ module soc_ctrl_regs #(
   logic          boot_mode_d,   boot_mode_q;
   logic           sram_dly_d,    sram_dly_q;
   logic           cheriot_enable_d, cheriot_enable_q;
+  logic [31:0] exception_cause_d, exception_cause_q;
+  logic [31:0] exception_tval_d,  exception_tval_q;
+  logic [31:0] exception_mepc_d,  exception_mepc_q;
 
   `FF(boot_addr_q, boot_addr_d, BootAddrDefault, clk_i, rst_ni)
   `FF(fetch_en_q, fetch_en_d,              1'b1, clk_i, rst_ni)
@@ -68,6 +71,9 @@ module soc_ctrl_regs #(
   `FF(boot_mode_q, boot_mode_d,              '0, clk_i, rst_ni)
   `FF(sram_dly_q, sram_dly_d,                '0, clk_i, rst_ni)
   `FF(cheriot_enable_q, cheriot_enable_d,   1'b0, clk_i, rst_ni)
+  `FF(exception_cause_q, exception_cause_d,  '0, clk_i, rst_ni)
+  `FF(exception_tval_q,  exception_tval_d,   '0, clk_i, rst_ni)
+  `FF(exception_mepc_q,  exception_mepc_d,   '0, clk_i, rst_ni)
 
   // OBI handling, A-phase fields needed in the R-phase
   logic                               req_q;
@@ -98,6 +104,9 @@ module soc_ctrl_regs #(
     boot_mode_d   = boot_mode_q;
     sram_dly_d    = sram_dly_q;
     cheriot_enable_d = cheriot_enable_q;
+    exception_cause_d = exception_cause_q;
+    exception_tval_d  = exception_tval_q;
+    exception_mepc_d  = exception_mepc_q;
 
     if (obi_req_i.req && obi_req_i.a.we) begin
       unique case ({obi_req_i.a.addr[IntAddrWidth-1:2], 2'b00})
@@ -108,6 +117,9 @@ module soc_ctrl_regs #(
         SOC_CTRL_SRAM_DLY_OFFSET:   sram_dly_d    = obi_req_i.a.wdata[0] & be_mask[0];
         SOC_CTRL_CHERIOT_ENABLE_OFFSET:
           cheriot_enable_d = cheriot_enable_q | (obi_req_i.a.wdata[0] & be_mask[0]);
+        SOC_CTRL_EXCEPTION_CAUSE_OFFSET: exception_cause_d = obi_req_i.a.wdata & be_mask;
+        SOC_CTRL_EXCEPTION_TVAL_OFFSET:  exception_tval_d  = obi_req_i.a.wdata & be_mask;
+        SOC_CTRL_EXCEPTION_MEPC_OFFSET:  exception_mepc_d  = obi_req_i.a.wdata & be_mask;
         default: ;  // invalid address: no write, error signalled in R phase
       endcase
     end
@@ -131,6 +143,9 @@ module soc_ctrl_regs #(
           SOC_CTRL_INFO_OFFSET:       obi_rsp_o.r.rdata = HwInfoWord;
           SOC_CTRL_CHERIOT_ENABLE_OFFSET:
             obi_rsp_o.r.rdata = {31'h0, cheriot_enable_q};
+          SOC_CTRL_EXCEPTION_CAUSE_OFFSET: obi_rsp_o.r.rdata = exception_cause_q;
+          SOC_CTRL_EXCEPTION_TVAL_OFFSET:  obi_rsp_o.r.rdata = exception_tval_q;
+          SOC_CTRL_EXCEPTION_MEPC_OFFSET:  obi_rsp_o.r.rdata = exception_mepc_q;
           default: begin
             obi_rsp_o.r.rdata = 32'hBADCAB1E;
             obi_rsp_o.r.err   = 1'b1;
@@ -143,7 +158,10 @@ module soc_ctrl_regs #(
           SOC_CTRL_CORESTATUS_OFFSET,
           SOC_CTRL_BOOTMODE_OFFSET,
           SOC_CTRL_SRAM_DLY_OFFSET,
-          SOC_CTRL_CHERIOT_ENABLE_OFFSET:  ;  // valid write, no error
+          SOC_CTRL_CHERIOT_ENABLE_OFFSET,
+          SOC_CTRL_EXCEPTION_CAUSE_OFFSET,
+          SOC_CTRL_EXCEPTION_TVAL_OFFSET,
+          SOC_CTRL_EXCEPTION_MEPC_OFFSET:  ;  // valid write, no error
           default: obi_rsp_o.r.err = 1'b1;
         endcase
       end

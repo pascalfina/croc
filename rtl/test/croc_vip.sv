@@ -271,10 +271,19 @@ module croc_vip #(
       jtag_dbg.read_dmi_exp_backoff(dm::SBData0, exit_code);
     end while (exit_code == 0);
     exit_code >>= 1;
-    if (exit_code)
+    if (exit_code) begin
+      logic [31:0] exception_cause;
+      logic [31:0] exception_tval;
+      logic [31:0] exception_mepc;
+      jtag_read_reg32(ExceptionCauseAddr, exception_cause);
+      jtag_read_reg32(ExceptionTvalAddr, exception_tval);
+      jtag_read_reg32(ExceptionMepcAddr, exception_mepc);
+      $display("@%t | [EXCEPTION] mcause=0x%08h mtval=0x%08h mepc=0x%08h",
+        $time, exception_cause, exception_tval, exception_mepc);
       $display("@%t | [JTAG] Simulation finished: FAIL (return code 0x%0h)", $time, exit_code);
-    else
+    end else begin
       $display("@%t | [JTAG] Simulation finished: SUCCESS", $time);
+    end
     $finish();
   endtask
 

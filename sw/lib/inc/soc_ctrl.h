@@ -12,6 +12,9 @@
 #define SOC_CTRL_BOOTMODE_REG_OFFSET    0x0C
 #define SOC_CTRL_SRAM_DLY_REG_OFFSET    0x10
 #define SOC_CTRL_CHERIOT_ENABLE_OFFSET  0x18
+#define SOC_CTRL_EXCEPTION_CAUSE_OFFSET 0x1C
+#define SOC_CTRL_EXCEPTION_TVAL_OFFSET  0x20
+#define SOC_CTRL_EXCEPTION_MEPC_OFFSET  0x24
 
 // Read-only hardware info register (see soc_ctrl_regs.sv for full field layout)
 // Groups: SoC identity/features [31:24], core identity/features [23:16], SRAM config [15:0]
