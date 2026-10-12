@@ -72,10 +72,39 @@ returned with one-cycle read latency.
 - reset to a non-revoked bitmap state,
 - address bounds checking for both access paths.
 
-The current Croc configuration exposes two 32-bit bitmap words at
-`0x1000_1000`. Simultaneous normal OBI and TRVK accesses are not yet handled
-by an arbiter; the module currently selects one access mode. This is a known
-limitation but is not required for the current single-request tests.
+The bitmap is revocation metadata for the configured heap region; it is not
+stored in the SRAM banks. `revc_bitmap_memory.sv` implements it as a small
+flip-flop array and exposes an OBI address window for software access. The
+current Croc configuration exposes two 32-bit bitmap words at
+`0x1000_1000` (this is the bitmap window, not the heap base). TRVK reads the
+same flip-flop state through its separate request path. Simultaneous normal
+OBI and TRVK accesses are not yet handled by an arbiter; the module currently
+selects one access mode. This is a known limitation but is not required for
+the current single-request tests.
+
+The bitmap window is outside the physical SRAM address range and is reserved
+for bitmap accesses:
+
+```text
+0x1000_0000  +-------------------------+
+              | APP: code + static data|
+0x1000_0d00  +-------------------------+
+              | Heap                  |  256 bytes
+0x1000_0e00  +-------------------------+
+              | Stack                 |  512 bytes, grows down
+0x1000_1000  +-------------------------+  SRAM ends
+              | Revocation bitmap      |  flip-flops, 8 bytes
+0x1000_1008  +-------------------------+
+```
+
+The revocation bitmap normally tracks capability-backed objects in the heap;
+it is not a tag store for the code or stack regions. The heap base used by
+TRVK is therefore `0x1000_0d00`, while the bitmap itself remains in its
+separate address window.
+
+A normal store to `0x1000_1000` therefore cannot overwrite SRAM; the
+crossbar routes it to `revc_bitmap_memory.sv`. If the SRAM size changes, this
+reserved address window must be moved or the address map must be updated.
 
 ### CHERIoT compiler and startup
 
