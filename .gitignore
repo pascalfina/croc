@@ -86,3 +86,4 @@
 #/openroad/src
 #yosys
 /yosys/out
+scripts/publish_cheriot_image.sh
