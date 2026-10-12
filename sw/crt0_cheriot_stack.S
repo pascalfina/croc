@@ -19,7 +19,7 @@
 _start:
   /*        Capability instructions are legal only after CHERIoT is enabled. */
   li        t0, 0x02000500
-  csrw      mtvec, t0
+  csrw      mtvec, t0 // overwrite to jump to the right trap vector
 
   li        t0, 0x03000018
   li        t1, 1

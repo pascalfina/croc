@@ -34,6 +34,11 @@ capability. The CHERIoT path therefore avoids stack access in ROM:
    SoC-control registers, reports failure through `CORE_STATUS`, and waits in
    `wfi`.
 
+The interrupt handler is currently only a minimal `ct.cret` return path. Its
+CHERIoT compatibility has not been investigated yet, so interrupt entry,
+context handling and return may still require a dedicated CHERIoT-aware
+implementation.
+
 The Ibex integration also needs the trap vector table at `0x0200_0200`.
 Ibex initializes `mtvec` with vectored-mode semantics when CHERIoT is
 disabled and requires a 256-byte-aligned base, so the bootrom provides one
