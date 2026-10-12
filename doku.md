@@ -48,8 +48,8 @@ CHERIoT compatibility has not been investigated yet, so interrupt entry,
 context handling and return may still require a dedicated CHERIoT-aware
 implementation.
 
-**TODO:** verify interrupt handling with CHERIoT enabled and implement a
-capability-safe interrupt context save/restore path if required.
+**Low-priority TODO:** verify interrupt handling with CHERIoT enabled and
+implement a capability-safe interrupt context save/restore path if required.
 
 The Ibex integration also needs the trap vector table at `0x0200_0200`.
 Ibex initializes `mtvec` with vectored-mode semantics when CHERIoT is
