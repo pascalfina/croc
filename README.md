@@ -270,6 +270,41 @@ Place assembly sources in `sw/cheriot/` and C sources in
 `sw/cheriot/with_cheriot_compiler_only/`. Replace the target name with the
 source filename without its extension.
 
+#### CHERIoT-RTOS software
+
+The CHERIoT-RTOS build uses the vendored RTOS tree, the Croc board
+description at `cheriot-rtos/sdk/boards/croc.json`, and `xmake` from the
+CHERIoT-enabled Docker image. Build the current RTOS hello-world image with:
+
+```sh
+make -C sw cheriot-rtos
+```
+
+This creates the following Croc-compatible outputs:
+
+```text
+sw/bin/cheriot-rtos/hello_world.elf
+sw/bin/cheriot-rtos/hello_world.hex
+sw/bin/cheriot-rtos/hello_world.dump
+```
+
+After building the RTL simulator, run the image directly with:
+
+```sh
+cd verilator
+./run_verilator.sh --build
+./run_verilator.sh --run ../sw/bin/cheriot-rtos/hello_world.hex
+```
+
+The complete test flow builds and runs the RTOS image automatically. The RTOS
+test timeout is 300 seconds per image, and `--show-output` prints the complete
+hello-world simulation log:
+
+```sh
+cd ..
+.github/scripts/run_sim_flow.sh --rtl
+```
+
 Run a CHERIoT program with the normal RTL Verilator binary:
 
 ```sh

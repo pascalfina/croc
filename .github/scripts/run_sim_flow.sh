@@ -126,7 +126,8 @@ echo "============================================="
     --sim "$simulation_binary" \
     --hexdir ../sw/bin/cheriot-rtos \
     --filter '*' \
-    --timeout 300
+    --timeout 300 \
+    --show-output
 
 cd "$CROC_ROOT"
 

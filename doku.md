@@ -1,3 +1,27 @@
+## Memory map
+
+The Croc memory map currently used by the CHERIoT integration is:
+
+```text
+0x0200_0000 - 0x0200_4000   Boot ROM
+0x0204_0000 - 0x0208_0000   CLINT
+0x0300_0000 - 0x0300_1000   SoC control registers
+0x0300_2000 - 0x0300_3000   UART
+0x0300_5000 - 0x0300_6000   GPIO
+0x0300_A000 - 0x0300_B000   OBI timer
+0x0300_B000 - 0x0300_C000   iDMA registers
+
+0x1000_0000 - 0x1001_0000   SRAM bank 0: 64 KiB
+0x1001_0000 - 0x1002_0000   SRAM bank 1: 64 KiB / CHERIoT heap
+0x1002_0000 - 0x1002_0400   Revocation bitmap: 1 KiB
+```
+
+The two SRAM banks are the logical banks exposed by the Croc crossbar. Each
+logical bank contains 16,384 32-bit words. In the IHP implementation, one
+logical bank is physically assembled from four `2048 x 64` SRAM macros. Thus
+the crossbar still sees two banks, while the implementation uses four physical
+macro slices per logical bank (eight macro instances in total).
+
 ## CHERIoT Integration Status
 
 ### Debug module limitation
@@ -60,51 +84,56 @@ the old bootrom flow.
 
 ### Tags and revocation bitmap
 
-`tag_memory.sv` stores one tag bit for every 32-bit SRAM word. Each SRAM bank
-has 512 tag bits. Tags reset to zero, are updated on data writes, and are
-returned with one-cycle read latency.
+`tag_memory.sv` stores one tag bit for every 32-bit SRAM word. The tag memory
+was extended together with the SRAM: each logical bank now has 16,384 tag
+bits, for 2 KiB of tag state per bank and 4 KiB in total. Tags are currently
+implemented as flip-flops, reset to zero, updated on data writes, and returned
+with one-cycle read latency.
 
-`revc_bitmap_memory.sv` currently provides:
-
-- normal OBI reads and writes to the bitmap,
-- byte-enable handling for bitmap writes,
-- a separate one-cycle TRVK bitmap-read path,
-- reset to a non-revoked bitmap state,
-- address bounds checking for both access paths.
-
-The bitmap is revocation metadata for the configured heap region; it is not
-stored in the SRAM banks. `revc_bitmap_memory.sv` implements it as a small
-flip-flop array and exposes an OBI address window for software access. The
-current Croc configuration exposes two 32-bit bitmap words at
-`0x1000_1000` (this is the bitmap window, not the heap base). TRVK reads the
-same flip-flop state through its separate request path. Simultaneous normal
-OBI and TRVK accesses are not yet handled by an arbiter; the module currently
-selects one access mode. This is a known limitation but is not required for
-the current single-request tests.
-
-The bitmap window is outside the physical SRAM address range and is reserved
-for bitmap accesses:
+`revc_bitmap_memory.sv` stores the heap revocation metadata outside the SRAM
+banks. The current configuration contains 256 32-bit words, equal to 8,192
+revocation bits or 1 KiB, at `0x1002_0000 - 0x1002_0400`. This gives one
+revocation bit per 8 bytes of the 64 KiB heap. The bitmap is implemented as a
+flip-flop array and is accessed both through the normal OBI window and the
+TRVK read path.
 
 ```text
-0x1000_0000  +-------------------------+
-              | APP: code + static data|
-0x1000_0d00  +-------------------------+
-              | Heap                  |  256 bytes
-0x1000_0e00  +-------------------------+
-              | Stack                 |  512 bytes, grows down
-0x1000_1000  +-------------------------+  SRAM ends
-              | Revocation bitmap      |  flip-flops, 8 bytes
-0x1000_1008  +-------------------------+
+addresses increase downward
+
+0x1000_0000  +------------------------------------------+
+              | SRAM bank 0 / RTOS image                 |
+              | 64 KiB = 16384 x 32-bit words           |
+              |                                          |
+              | linker-managed sections:                 |
+              |   loader and persistent code            |
+              |   scheduler and compartment code        |
+              |   read-only and static data              |
+              |   trusted and thread stack sections     |
+              |                                          |
+              | exact internal offsets vary by image     |
+0x1001_0000  +==========================================+
+              | SRAM bank 1 / CHERIoT heap              |
+              | 64 KiB = 16384 x 32-bit words           |
+              | dynamic heap allocations                 |
+0x1002_0000  +==========================================+
+              | Revocation bitmap                        |
+              | 1 KiB = 256 x 32-bit words = 8192 bits |
+              | metadata for the 64 KiB heap             |
+0x1002_0400  +------------------------------------------+
 ```
 
-The revocation bitmap normally tracks capability-backed objects in the heap;
-it is not a tag store for the code or stack regions. The heap base used by
-TRVK is therefore `0x1000_0d00`, while the bitmap itself remains in its
-separate address window.
+The revocation bitmap is metadata for the heap; it is not a replacement for
+the tag memory and it is not physically stored in the SRAM banks. Normal OBI
+and TRVK accesses are not yet arbitrated if they arrive simultaneously; this
+is a known limitation for future work.
 
-A normal store to `0x1000_1000` therefore cannot overwrite SRAM; the
-crossbar routes it to `revc_bitmap_memory.sv`. If the SRAM size changes, this
-reserved address window must be moved or the address map must be updated.
+Tag memory is parallel metadata and has no normal CPU address range:
+
+```text
+SRAM bank 0  -> 16384 tag bits = 2 KiB
+SRAM bank 1  -> 16384 tag bits = 2 KiB
+                         4 KiB total tag state
+```
 
 ### CHERIoT compiler and startup
 
@@ -120,3 +149,20 @@ make -C sw cheriot
 capabilities. Compiler-generated C tests can therefore use local variables,
 stack objects and pointers; this has already been exercised in RTL
 simulation.
+
+### CHERIoT-RTOS
+
+CHERIoT-RTOS uses the Croc board description in
+`cheriot-rtos/sdk/boards/croc.json`. Its loader does not use the Croc test
+programs' `crt0`; instead, Croc adds a platform pre-loader hook in
+`cheriot-rtos/sdk/include/platform/croc/platform-early_boot_prestart.inc`.
+This hook runs before the RTOS loader, installs the CHERIoT trap base at
+`0x0200_0500`, and enables CHERIoT through the SoC-control register at
+`0x0300_0018`. The RTOS loader therefore starts with CHERIoT enabled and can
+retain the root capabilities required by the system.
+
+The Croc UART was initially incompatible with the generic CHERIoT-RTOS UART
+initialisation. Its baud-rate calculation did not match Croc's UART baud
+generator, so the RTOS could remain blocked while waiting for UART progress.
+The Croc platform UART now programs the fixed divisor for the 20 MHz Croc
+clock and 125,000 baud, and polls the transmitter-empty status before writing.
