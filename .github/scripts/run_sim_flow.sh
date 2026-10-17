@@ -30,6 +30,10 @@ if [[ $# -gt 1 ]]; then
     exit 1
 fi
 
+cheriot_test_timeout=180
+rtos_test_timeout=300
+legacy_test_timeout=120
+
 case "${1:-}" in
     ""|--rtl)
         ;;
@@ -78,6 +82,10 @@ else
     run_option="--run-netlist"
     simulation_binary="obj_dir_netlist_yosys/Vtb_croc_soc"
     simulation_log="croc_netlist_yosys.log"
+    # Netlist simulation is substantially slower than RTL simulation.
+    cheriot_test_timeout=600
+    rtos_test_timeout=600
+    legacy_test_timeout=600
 fi
 
 echo "============================================="
@@ -115,7 +123,7 @@ echo "============================================="
     --filter '*' \
     --exclude test_simple_recv_bitmap_storage \
     --expect-fail test_cheriot_exception \
-    --timeout 180
+    --timeout "$cheriot_test_timeout"
 
 echo ""
 echo "============================================="
@@ -126,7 +134,7 @@ echo "============================================="
     --sim "$simulation_binary" \
     --hexdir ../sw/bin/cheriot-rtos \
     --filter '*' \
-    --timeout 300 \
+    --timeout "$rtos_test_timeout" \
     --show-output
 
 cd "$CROC_ROOT"
@@ -145,7 +153,9 @@ fi
 cd verilator
 ./run_verilator.sh "$build_option"
 
-"$SCRIPT_DIR/run_tests.sh" --sim "$simulation_binary"
+"$SCRIPT_DIR/run_tests.sh" \
+    --sim "$simulation_binary" \
+    --timeout "$legacy_test_timeout"
 cd "$CROC_ROOT"
 
 echo ""
