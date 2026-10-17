@@ -146,13 +146,13 @@ module tb_croc_soc #(
     // CHERIoT programs this includes capability-based stack setup; halting in
     // the middle of that sequence can resume after a capability instruction
     // without its writeback having retired.
-    //repeat (600) @(posedge sys_clk);
+    repeat (600) @(posedge sys_clk);
 
     // halt core
-    i_vip.jtag_halt();
+    // i_vip.jtag_halt();
 
-    // resume core
-    i_vip.jtag_resume();
+    // // resume core
+    // i_vip.jtag_resume();
 
     // wait for non-zero return value (written into core status register)
     $display("@%t | [CORE] Wait for end of code...", $time);

@@ -3,9 +3,9 @@
     "start": 0x10000000,
     "end": 0x10010000
   },
-  "heap": {
-  "start": 0x10008000,
-  "end": 0x10010000
+ "heap": {
+  "start": 0x10010000,
+  "end": 0x10020000
 },
 
   "devices": {
@@ -16,6 +16,10 @@
     "uart": {
       "start": 0x03002000,
       "end": 0x03003000
+    },
+    "core_status": {
+      "start": 0x03000008,
+      "end": 0x0300000c
     }
   },
   "defines": [
@@ -23,9 +27,11 @@
     "CROC"
   ],
   "driver_includes": [
+    "${sdk}/include/platform/croc",
     "${sdk}/include/platform/ibex",
     "${sdk}/include/platform/generic-riscv"
   ],
   "timer_hz": 20000000,
-  "tickrate_hz": 100
+  "tickrate_hz": 100,
+  "simulation": true
 }

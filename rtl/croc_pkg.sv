@@ -52,7 +52,8 @@ package croc_pkg;
   /// Number of SRAM banks, each bank has its own OBI port (accessible in parallel)
   localparam int unsigned NumSramBanks      = 32'd2;
   /// Number of 32-bit words per SRAM bank, determines the depth of each SRAM bank
-  localparam int unsigned SramBankNumWords  = 512;
+  //localparam int unsigned SramBankNumWords  = 512;
+  localparam int unsigned SramBankNumWords  = 16384;
 
 
   //////////////////////
@@ -89,9 +90,9 @@ package croc_pkg;
   localparam addr_map_rule_t [4:0] CrocAddrMap = '{
     '{ idx: XbarPeriph,  start_addr: 32'h0000_0000, end_addr: 32'h1000_0000 },
     '{ idx: XbarUser,    start_addr: 32'h2000_0000, end_addr: 32'h8000_0000 },
-    '{ idx: XbarBank0,   start_addr: 32'h1000_0000, end_addr: 32'h1000_0800 },
-    '{ idx: XbarBank0+1, start_addr: 32'h1000_0800, end_addr: 32'h1000_1000 },
-    '{ idx: XbarRevBitmap,start_addr: 32'h1000_1000,end_addr:   32'h1000_1008 }
+    '{ idx: XbarBank0,   start_addr: 32'h1000_0000, end_addr: 32'h1001_0000 },
+    '{ idx: XbarBank0+1, start_addr: 32'h1001_0000, end_addr: 32'h1002_0000 },
+    '{ idx: XbarRevBitmap,start_addr: 32'h1002_0000,end_addr:   32'h1002_0400 }
   };
 
   // +1 for additional OBI error

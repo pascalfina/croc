@@ -1,0 +1,31 @@
+[*]
+[*] GTKWave Analyzer v4.0.0-prealpha (a6aae77) (w)1999-2022 BSI
+[*] Sat Oct 17 16:36:27 2026
+[*]
+[dumpfile] "/fosic/designs/croc/verilator/croc.fst"
+[dumpfile_mtime] "Sat Oct 17 16:07:23 2026"
+[dumpfile_size] 22704697
+[savefile] "/fosic/designs/croc/verilator/core_debug.gtkw"
+[timestart] 53774632000
+[size] 1920 1043
+[pos] -1 -1
+*-17.000000 53775100000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[treeopen] tb_croc_soc.
+[treeopen] tb_croc_soc.i_croc_soc.
+[treeopen] tb_croc_soc.i_croc_soc.i_croc.
+[treeopen] tb_croc_soc.i_croc_soc.i_croc.i_core_wrap.
+[treeopen] tb_croc_soc.i_croc_soc.i_croc.i_core_wrap.i_core.
+[sst_width] 278
+[signals_width] 198
+[sst_expanded] 1
+[sst_vpaned_height] 305
+@28
+tb_croc_soc.i_croc_soc.i_croc.i_core_wrap.i_core.u_ibex_core.clk_i
+@22
+tb_croc_soc.i_croc_soc.i_croc.i_core_wrap.i_core.u_ibex_core.cheriot_enable_i[3:0]
+tb_croc_soc.i_croc_soc.i_croc.i_core_wrap.i_core.u_ibex_core.pc_if[31:0]
+tb_croc_soc.i_croc_soc.i_croc.i_core_wrap.i_core.u_ibex_core.csr_mepc[31:0]
+@23
+tb_croc_soc.i_croc_soc.i_croc.i_core_wrap.i_core.u_ibex_core.csr_mtval[31:0]
+[pattern_trace] 1
+[pattern_trace] 0

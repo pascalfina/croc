@@ -468,7 +468,7 @@ module croc_domain import croc_pkg::*; #(
     logic [SbrObiCfg.DataWidth-1:0] bank_wdata, bank_rdata;
     logic [SbrObiCfg.DataWidth/8-1:0] bank_be;
     logic bank_tag_rdata;
-    localparam logic [31:0] BankBaseAddr = 32'h1000_0000 + i * 32'h800;
+    localparam logic [31:0] BankBaseAddr = BootAddr + i * SramBankNumWords * 4;
 
     obi_sram_shim #(
       .ObiCfg    ( SbrObiCfg     ),
@@ -518,7 +518,8 @@ module croc_domain import croc_pkg::*; #(
     assign bank_gnt = 1'b1; // always ready for request
     // cheriot tag memory 
     tag_memory #(
-      .SRAM_OFFSET(BankBaseAddr)
+      .SRAM_OFFSET(BankBaseAddr),
+      .TAG_WIDTH(SramBankNumWords)
     ) i_tag_mem (
       .clk_i(clk_i),
       .rst_ni(rst_ni),
@@ -547,8 +548,8 @@ module croc_domain import croc_pkg::*; #(
 
 
   revc_bitmap_memory #(
-    .BitmapBase(32'h1000_1000),
-    .BitmapNumb(1'd1)
+    .BitmapBase(32'h1002_0000),
+    .BitmapNumbWords(256)
   ) i_revoc_map_mem (
     .clk_i(clk_i),
     .rst_ni(rst_ni),

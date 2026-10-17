@@ -1,6 +1,6 @@
 module revc_bitmap_memory #(
     parameter logic [31:0] BitmapBase = 32'h1000_1000,
-    parameter int BitmapNumb = 1'd1
+    parameter int BitmapNumbWords = 1'd1
 ) (
     input logic clk_i,
     input logic rst_ni,
@@ -23,7 +23,7 @@ module revc_bitmap_memory #(
 
 );
 
-  localparam logic [31:0] BitmapEnd = BitmapBase + BitmapNumb * 8;
+  localparam logic [31:0] BitmapEnd = BitmapBase + BitmapNumbWords * 4;
 
   typedef enum logic [1:0] {
     IDLE,
@@ -42,8 +42,8 @@ module revc_bitmap_memory #(
   logic rvalid_d, rvalid_q;
 
 
-  logic [31:0] rev_bitmap_d[0:BitmapNumb];
-  logic [31:0] rev_bitmap_q[0:BitmapNumb];
+  logic [31:0] rev_bitmap_d[0:BitmapNumbWords - 1];
+  logic [31:0] rev_bitmap_q[0:BitmapNumbWords - 1];
 
   assign trvk_revbm_rdata_o = trvk_rdata_q;
   assign trvk_revbm_rvalid_o = trvk_rvalid_q;
@@ -106,7 +106,7 @@ module revc_bitmap_memory #(
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
-      for (int i = 0; i < BitmapNumb + 1; ++i) begin
+      for (int i = 0; i < BitmapNumbWords; ++i) begin
         rev_bitmap_q[i] <= 0;
       end
       trvk_rdata_q <= 0;

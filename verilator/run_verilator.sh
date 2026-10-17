@@ -105,7 +105,8 @@ build_rtl_verilator() {
         -O3 \
         --top tb_croc_soc \
         --Mdir obj_dir_rtl \
-        -f croc_rtl.f 2>&1 | \
+        -f croc_rtl.f \
+        -f technology_netlist_yosys.f 2>&1 | \
         tee ${PROJ_NAME}_rtl_build.log"
 }
 
@@ -148,6 +149,8 @@ generate_rtl_flist() {
     run_cmd "echo [INFO][Bender] Generate croc_rtl.f"
     run_cmd "bender \
         script flist-plus \
+        -t asic \
+        -t ihp13 \
         -t rtl \
         -t verilator \
         -t synthesis \

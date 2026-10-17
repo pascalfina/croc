@@ -84,7 +84,7 @@ module core_wrap
     output logic core_busy_o,
 
     output logic data_tag_o,
-    input  logic data_tag_i, 
+    input  logic data_tag_i,
 
     output logic        trvk_revbm_req_o,
     input  logic        trvk_revbm_gnt_i,
@@ -118,36 +118,36 @@ module core_wrap
   //   end
   // end
 
-  localparam logic [31:0] HeapBaseAddr = 32'h1000_0d00;
-  localparam logic [31:0] RevBitmapBaseAddr = 32'h1000_1000;
+  localparam logic [31:0] HeapBaseAddr = 32'h1001_0000;
+  localparam logic [31:0] RevBitmapBaseAddr = 32'h1002_0000;
   // The Croc address map exposes 8 bytes for the revocation bitmap.
-  localparam int unsigned RevBitmapAddrWidth = 3; // 2^3 bytes
+  localparam int unsigned RevBitmapAddrWidth = 10;  // 2^3 bytes
 
   /// ibex integration 
 
   ibex_top #(
-      .BaseIsa                 (ibex_pkg::BaseIsaRV32IorCHERIoT),
+      .BaseIsa                  (ibex_pkg::BaseIsaRV32IorCHERIoT),
       .CheriotRevBitmapAddrWidth(RevBitmapAddrWidth),
       .CheriotRevBitmapBaseAddr (RevBitmapBaseAddr),
-      .PMPEnable               (1'b0),
-      .PMPGranularity          (0),
-      .PMPNumRegions           (4),
-      .MHPMCounterNum          (0),
-      .MHPMCounterWidth        (40),
-      .RV32E                   (1'b0),
-      .RV32M                   (ibex_pkg::RV32MNone),
-      .RV32B                   (ibex_pkg::RV32BNone),
-      .RV32ZC                  (ibex_pkg::RV32Zca),
-      .RegFile                 (ibex_pkg::RegFileFF),
-      .BranchTargetALU         (1'b0),
-      .WritebackStage          (1'b1),
-      .ICache                  (1'b0),
-      .ICacheECC               (1'b0),
-      .BranchPredictor         (1'b0),
-      .DbgTriggerEn            (1'b1),
-      .DbgHwBreakNum           (1),
-      .SecureIbex              (1'b0),
-      .MemECC                  (1'b0),
+      .PMPEnable                (1'b0),
+      .PMPGranularity           (0),
+      .PMPNumRegions            (4),
+      .MHPMCounterNum           (0),
+      .MHPMCounterWidth         (40),
+      .RV32E                    (1'b0),
+      .RV32M                    (ibex_pkg::RV32MFast),
+      .RV32B                    (ibex_pkg::RV32BNone),
+      .RV32ZC                   (ibex_pkg::RV32Zca),
+      .RegFile                  (ibex_pkg::RegFileFF),
+      .BranchTargetALU          (1'b0),
+      .WritebackStage           (1'b1),
+      .ICache                   (1'b0),
+      .ICacheECC                (1'b0),
+      .BranchPredictor          (1'b0),
+      .DbgTriggerEn             (1'b1),
+      .DbgHwBreakNum            (1),
+      .SecureIbex               (1'b0),
+      .MemECC                   (1'b0),
 
       .DmBaseAddr     (DebugAddrOffset),
       .DmAddrMask     (32'h0003_FFFF),

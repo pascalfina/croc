@@ -354,6 +354,109 @@ module tc_sram_impl #(
        .A_BIST_EN    (  1'b0 )
       );
 
+  end else if (NumWords == 16384 && DataWidth == 32 && P1L1) begin : gen_16384x32xBx1
+
+      logic [1:0]  macro_sel;
+      logic        word_upper;
+      logic [10:0] macro_addr;
+      logic [63:0] rdata64 [0:3];
+      logic [31:0] rdata32; 
+      logic [63:0] wdata64;
+      logic [63:0] bm64;
+
+      logic upper_d, upper_q;
+      logic rdata_ready_d, rdata_ready_q;
+      logic [1:0] macro_d, macro_q;
+
+      logic [31:0] bm32;
+
+      assign macro_sel  = addr_i[0][13:12];
+      assign macro_addr = addr_i[0][11:1];
+      assign word_upper = addr_i[0][0];
+      assign bm32 = {{8{be_i[0][3]}},{8{be_i[0][2]}},{8{be_i[0][1]}},{8{be_i[0][0]}}};
+
+      assign rdata_o[0] = rdata32;
+
+      always_comb begin
+          upper_d = upper_q;
+          rdata_ready_d = 1'b0;
+          macro_d = macro_q;
+          wdata64 = 64'b0;
+          bm64    = 64'b0;
+
+          if (req_i) begin
+            if (we_i) begin //write
+              if (word_upper) begin
+                wdata64 = {wdata_i[0], 32'b0};
+                bm64    = {bm32, 32'b0};
+              end
+              else begin
+                wdata64= {32'b0, wdata_i[0]};
+                bm64    = {32'b0, bm32};
+              end
+            end 
+            else begin //read
+              rdata_ready_d = 1'b1;
+              upper_d = word_upper;
+              macro_d = macro_sel;
+            end
+          end 
+        end
+
+        always_comb begin
+          rdata32 = 32'b0;
+          if (rdata_ready_q) begin
+            if (upper_q) begin
+              rdata32 = rdata64[macro_q][63:32];
+            end
+            else begin
+              rdata32 = rdata64[macro_q][31:0];
+            end 
+          end
+        end
+
+
+        always_ff @(posedge clk_i or negedge rst_ni) begin
+          if (!rst_ni) begin
+            upper_q <= 0;
+            rdata_ready_q <= 0;
+            macro_q <= 0;
+          end
+          else begin
+            upper_q <= upper_d;
+            rdata_ready_q <= rdata_ready_d;
+            macro_q <= macro_d;
+          end
+        end
+
+   
+      for (genvar i = 0; i < 4; i++) begin
+        
+        // read data avail 1 cycle after macro was activated
+        RM_IHPSG13_1P_2048x64_c2_bm_bist i_cut (
+        .A_CLK   ( clk_i    ),
+        .A_DLY   ( impl_i   ),
+        .A_ADDR  ( macro_addr ),
+        .A_BM    ( bm64     ),
+        .A_MEN   ( req_i && (macro_sel == i)   ), //activate macro
+        .A_WEN   ( we_i     ),
+        .A_REN   ( ~we_i    ),
+        .A_DIN        ( wdata64  ),
+        .A_DOUT       ( rdata64[i]  ),
+        .A_BIST_CLK   (  1'b0 ),
+        .A_BIST_ADDR  ( 11'd0 ),
+        .A_BIST_DIN   ( 64'd0 ),
+        .A_BIST_BM    ( 64'd0 ),
+        .A_BIST_MEN   (  1'b0 ),
+        .A_BIST_WEN   (  1'b0 ),
+        .A_BIST_REN   (  1'b0 ),
+        .A_BIST_EN    (  1'b0 )
+        );
+
+      end
+
+
+
   end else begin : gen_blackbox
 
   `ifndef SYNTHESIS

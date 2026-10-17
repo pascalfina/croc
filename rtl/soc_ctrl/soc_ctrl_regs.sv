@@ -39,8 +39,8 @@ module soc_ctrl_regs #(
   //   [19:16] reserved        0  (reserved for future core-level features)
   //   --- Memory ---
   //   [15:13] sram_banks      Number of SRAM banks (croc_pkg::NumSramBanks)
-  //   [12:5]  sram_bank_words Words per SRAM bank / 64 (croc_pkg::SramBankNumWords)
-  //   [4:0]   reserved        0 (reserved for future memory config details)
+  //   [12:4]  sram_bank_words Words per SRAM bank / 64 (croc_pkg::SramBankNumWords)
+  //   [3:0]   reserved        0 (reserved for future memory config details)
 
   localparam logic [31:0] HwInfoWord = {
     4'(PulpJtagIdCode.version),        // [31:28] version
@@ -50,8 +50,8 @@ module soc_ctrl_regs #(
     1'(CorePMPEnable),                 // [20]    pmp_enable
     4'b0,                              // [19:16] reserved (core features)
     3'(NumSramBanks),                  // [15:12] sram_banks
-    8'(SramBankNumWords / 64),         // [11:5]  sram_bank_words (in units of 64 words)
-    5'b0                               // [4:0]   reserved
+    9'(SramBankNumWords / 64),         // [12:4]  sram_bank_words (in units of 64 words)
+    4'b0                               // [3:0]   reserved
   };
 
   // read-write registers

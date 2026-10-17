@@ -42,6 +42,7 @@ CHERIOT         ?= 0
 
 # CHERIoT bare-metal toolchain and image layout.
 CHERIOT_CC       ?= /cheriot-tools/bin/clang
+CHERIOT_OBJDUMP  ?= /cheriot-tools/bin/llvm-objdump
 CHERIOT_OBJCOPY  ?= /foss/tools/riscv-gnu-toolchain/bin/riscv64-unknown-elf-objcopy
 CHERIOT_TARGET   ?= riscv32-unknown-elf
 CHERIOT_CPU      ?= cheriot
@@ -63,6 +64,7 @@ CHERIOT_RTOS_BOARD        ?= ../../cheriot-rtos/sdk/boards/croc.json
 CHERIOT_RTOS_HELLO_BUILD  ?= $(CHERIOT_RTOS_PROJECT)/build/cheriot/cheriot/release/hello_world
 CHERIOT_RTOS_HELLO_ELF    := $(CHERIOT_RTOS_BINDIR)/hello_world.elf
 CHERIOT_RTOS_HELLO_HEX    := $(CHERIOT_RTOS_BINDIR)/hello_world.hex
+CHERIOT_RTOS_HELLO_DUMP   := $(CHERIOT_RTOS_BINDIR)/hello_world.dump
 
 # Collecting source files
 LIB_SOURCES  := $(wildcard $(SRCDIR)/*.[cS])
@@ -147,7 +149,8 @@ $(BINDIR)/%.hex: $(BINDIR)/%.elf
 	cheriot-rtos-build cheriot-rtos-hello
 
 clean:
-	rm -rf $(BINDIR) $(BUILDDIR)
+	rm -rf $(BINDIR) $(BUILDDIR) \
+		$(CHERIOT_RTOS_PROJECT)/build $(CHERIOT_RTOS_BINDIR)
 
 compile: $(BINDIR) $(BUILDDIR) $(ALL_TARGETS)
 
@@ -162,7 +165,8 @@ cheriot-inline: $(CHERIOT_BINDIR)/test_simple_inline.hex
 # 32-bit Verilog HEX format expected by the Croc testbench.
 cheriot-rtos: cheriot-rtos-hello
 
-cheriot-rtos-hello: cheriot-rtos-build $(CHERIOT_RTOS_HELLO_HEX)
+cheriot-rtos-hello: cheriot-rtos-build $(CHERIOT_RTOS_HELLO_HEX) \
+	$(CHERIOT_RTOS_HELLO_DUMP)
 
 cheriot-rtos-build:
 	cd $(CHERIOT_RTOS_PROJECT) && xmake config -c \
@@ -177,6 +181,11 @@ $(CHERIOT_RTOS_HELLO_ELF): cheriot-rtos-build
 $(CHERIOT_RTOS_HELLO_HEX): $(CHERIOT_RTOS_HELLO_ELF)
 	mkdir -p $(dir $@)
 	$(CHERIOT_OBJCOPY) -O verilog $< $@
+
+$(CHERIOT_RTOS_HELLO_DUMP): $(CHERIOT_RTOS_HELLO_ELF)
+	mkdir -p $(dir $@)
+	$(CHERIOT_OBJDUMP) -D -s --print-imm-hex \
+		--start-address=0x10000000 $< > $@
 
 # CHERIoT startup objects use a separate directory from GCC.
 $(CHERIOT_ASM_STARTUP_OBJ): $(CHERIOT_ASM_STARTUP)

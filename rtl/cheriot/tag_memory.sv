@@ -6,7 +6,8 @@
 //  since each bank 512 for both banks 
 
 module tag_memory #(
-    parameter logic [31:0] SRAM_OFFSET = 32'h1000_0000
+    parameter logic [31:0] SRAM_OFFSET = 32'h1000_0000,
+    parameter int unsigned TAG_WIDTH = 512
 ) (
     input logic clk_i,
     input logic rst_ni,
@@ -17,10 +18,10 @@ module tag_memory #(
     output logic data_tag_o
 );
 
- localparam int unsigned TAG_WIDTH = 512;
+ 
 
   logic [TAG_WIDTH-1:0] tag_mem_q, tag_mem_d;
-  logic [8:0] idx;
+  logic [$clog2(TAG_WIDTH)-1:0] idx;
   logic tag_read_d, tag_read_q;
 
 

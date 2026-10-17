@@ -187,10 +187,14 @@ module croc_vip #(
     int status;
     string line;
     bit [31:0] addr;
-    bit [31:0] data;
     bit [7:0] byte_data;
-    int byte_count;
-    static dm::sbcs_t sbcs = dm::sbcs_t'{sbautoincrement: 1'b1, sbaccess: 2, default: '0};
+    bit [31:0] word_addr;
+    bit [31:0] word_data;
+    int unsigned word_bytes;
+    int active_access;
+    bit [31:0] active_next_addr;
+    automatic dm::sbcs_t byte_sbcs = dm::sbcs_t'{sbautoincrement: 1'b1, sbaccess: 0, default: '0};
+    automatic dm::sbcs_t word_sbcs = dm::sbcs_t'{sbautoincrement: 1'b1, sbaccess: 2, default: '0};
 
     file = $fopen(filename, "r");
     if (file == 0) begin
@@ -200,7 +204,10 @@ module croc_vip #(
     end
 
     $display("@%t | [JTAG] Loading binary from %s", $time, filename);
-    jtag_dbg.write_dmi(dm::SBCS, sbcs);
+    word_data = '0;
+    word_bytes = 0;
+    active_access = -1;
+    active_next_addr = '0;
 
     // line by line
     while (!$feof(file)) begin
@@ -210,50 +217,88 @@ module croc_vip #(
 
       // '@' indicates address
       if (line[0] == "@") begin
+        // Flush an incomplete aligned word byte-wise before a new segment.
+        if (word_bytes != 0) begin
+          if (active_access != 0 || active_next_addr != word_addr) begin
+            jtag_write(dm::SBCS, byte_sbcs, 0, 1);
+            jtag_write(dm::SBAddress0, word_addr, 0, 1);
+            active_access = 0;
+            active_next_addr = word_addr;
+          end
+          for (int b = 0; b < word_bytes; b++) begin
+            jtag_write(dm::SBData0, {24'b0, word_data[8*b +: 8]}, 0, 1);
+            active_next_addr += 1;
+          end
+          word_data = '0;
+          word_bytes = 0;
+        end
+
         status = $sscanf(line, "@%h", addr);
         if (status != 1) begin
           $fatal(1, "Error: Incorrect address line format in file %s", filename);
         end
         $display("@%t | [JTAG] Writing to memory @%08x ", $time, addr);
-        jtag_dbg.write_dmi(dm::SBAddress0, addr);
+        active_access = -1;
         continue;
       end
 
-      byte_count = 0;
-      data = 32'h0;
-
-      // Loop through the line to read bytes
+      // Keep aligned data on the faster 32-bit SBA path.  Segment starts and
+      // trailing fragments may be unaligned, so those bytes use byte access.
       while (line.len() > 0) begin
         status = $sscanf(line, "%h", byte_data); // Extract one byte
         if (status != 1) begin
           break; // No more data to read on this line
         end
 
-        // Shift in the byte to the correct position in the data word
-        data = {byte_data, data[31:8]}; // Combine bytes into a 32-bit word
-        byte_count++;
-
         // remove the byte from the line (2 numbers + 1 space)
         line = line.substr(3, line.len()-1);
 
-        // write a complete word via jtag
-        if (byte_count == 4) begin
-          jtag_write(dm::SBData0, data);
-          addr += 4;
-          data = 32'h0;
-          byte_count = 0;
+        if (word_bytes == 0 && addr[1:0] != 2'b00) begin
+          if (active_access != 0 || active_next_addr != addr) begin
+            jtag_write(dm::SBCS, byte_sbcs, 0, 1);
+            jtag_write(dm::SBAddress0, addr, 0, 1);
+            active_access = 0;
+            active_next_addr = addr;
+          end
+          jtag_write(dm::SBData0, {24'b0, byte_data}, 0, 1);
+          addr += 1;
+          active_next_addr = addr;
+        end else begin
+          if (word_bytes == 0) word_addr = addr;
+          word_data[8*word_bytes +: 8] = byte_data;
+          word_bytes++;
+          addr += 1;
+
+          if (word_bytes == 4) begin
+            if (active_access != 2 || active_next_addr != word_addr) begin
+              jtag_write(dm::SBCS, word_sbcs, 0, 1);
+              jtag_write(dm::SBAddress0, word_addr, 0, 1);
+              active_access = 2;
+              active_next_addr = word_addr;
+            end
+            jtag_write(dm::SBData0, word_data, 0, 1);
+            active_next_addr = word_addr + 4;
+            word_data = '0;
+            word_bytes = 0;
+          end
         end
       end
+    end
 
-      // Flush any remaining bytes
-      if (byte_count != 0) begin
-        data >>= 8 * (4 - byte_count); // zero-pad remaining bytes
-        jtag_write(dm::SBData0, data);
-        addr += 4;
-        byte_count = 0;
-        data = 32'h0;
+    // Flush a final partial word byte-wise.
+    if (word_bytes != 0) begin
+      if (active_access != 0 || active_next_addr != word_addr) begin
+        jtag_write(dm::SBCS, byte_sbcs, 0, 1);
+        jtag_write(dm::SBAddress0, word_addr, 0, 1);
+        active_access = 0;
+        active_next_addr = word_addr;
+      end
+      for (int b = 0; b < word_bytes; b++) begin
+        jtag_write(dm::SBData0, {24'b0, word_data[8*b +: 8]}, 0, 1);
+        active_next_addr += 1;
       end
     end
+
     jtag_dbg.write_dmi(dm::SBCS, JtagInitSbcs);
     $fclose(file);
   endtask
@@ -271,6 +316,12 @@ module croc_vip #(
       jtag_dbg.read_dmi_exp_backoff(dm::SBData0, exit_code);
     end while (exit_code == 0);
     exit_code >>= 1;
+
+    // CORE_STATUS can be observed just before the UART monitor has consumed
+    // the final stop bit.  Let asynchronous UART output drain before ending
+    // the simulation.
+    #(2 * UartBaudPeriod);
+
     if (exit_code) begin
       logic [31:0] exception_cause;
       logic [31:0] exception_tval;
