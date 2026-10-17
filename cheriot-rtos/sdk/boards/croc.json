@@ -1,0 +1,31 @@
+{
+  "instruction_memory": {
+    "start": 0x10000000,
+    "end": 0x10010000
+  },
+  "heap": {
+  "start": 0x10008000,
+  "end": 0x10010000
+},
+
+  "devices": {
+    "clint": {
+      "start": 0x02040000,
+      "end": 0x02080000
+    },
+    "uart": {
+      "start": 0x03002000,
+      "end": 0x03003000
+    }
+  },
+  "defines": [
+    "IBEX",
+    "CROC"
+  ],
+  "driver_includes": [
+    "${sdk}/include/platform/ibex",
+    "${sdk}/include/platform/generic-riscv"
+  ],
+  "timer_hz": 20000000,
+  "tickrate_hz": 100
+}

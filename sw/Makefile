@@ -55,6 +55,15 @@ CHERIOT_FLAGS    ?= --target=$(CHERIOT_TARGET) -mcpu=$(CHERIOT_CPU) \
 	-mabi=$(CHERIOT_ABI) -mrelax -fshort-wchar \
 	-ffreestanding -fno-builtin -nostdlib
 
+# CHERIoT-RTOS programs are built by xmake in the vendored RTOS tree.  Keep
+# their Croc ELF/HEX outputs separate from the smaller CHERIoT test programs.
+CHERIOT_RTOS_BINDIR       ?= bin/cheriot-rtos
+CHERIOT_RTOS_PROJECT      ?= cheriot-rtos
+CHERIOT_RTOS_BOARD        ?= ../../cheriot-rtos/sdk/boards/croc.json
+CHERIOT_RTOS_HELLO_BUILD  ?= $(CHERIOT_RTOS_PROJECT)/build/cheriot/cheriot/release/hello_world
+CHERIOT_RTOS_HELLO_ELF    := $(CHERIOT_RTOS_BINDIR)/hello_world.elf
+CHERIOT_RTOS_HELLO_HEX    := $(CHERIOT_RTOS_BINDIR)/hello_world.hex
+
 # Collecting source files
 LIB_SOURCES  := $(wildcard $(SRCDIR)/*.[cS])
 TOP_SOURCES  := $(filter-out $(CRT0) $(CHERIOT_ASM_STARTUP) $(CHERIOT_C_STARTUP), $(wildcard *.[cS]))
@@ -134,7 +143,8 @@ $(BINDIR)/%.hex: $(BINDIR)/%.elf
 	$(RISCV_OBJCOPY) -O verilog $< $@
 
 # Phonies
-.PHONY: all clean compile cheriot cheriot-inline
+.PHONY: all clean compile cheriot cheriot-inline cheriot-rtos \
+	cheriot-rtos-build cheriot-rtos-hello
 
 clean:
 	rm -rf $(BINDIR) $(BUILDDIR)
@@ -147,6 +157,26 @@ cheriot: $(CHERIOT_HEX_TARGETS)
 
 # Convenience alias for the first CHERIoT compiler test.
 cheriot-inline: $(CHERIOT_BINDIR)/test_simple_inline.hex
+
+# Build the Croc-owned CHERIoT-RTOS project and convert its ELF into the
+# 32-bit Verilog HEX format expected by the Croc testbench.
+cheriot-rtos: cheriot-rtos-hello
+
+cheriot-rtos-hello: cheriot-rtos-build $(CHERIOT_RTOS_HELLO_HEX)
+
+cheriot-rtos-build:
+	cd $(CHERIOT_RTOS_PROJECT) && xmake config -c \
+		--sdk=/cheriot-tools/ \
+		--board=$(CHERIOT_RTOS_BOARD) && \
+		xmake
+
+$(CHERIOT_RTOS_HELLO_ELF): cheriot-rtos-build
+	mkdir -p $(dir $@)
+	cp $(CHERIOT_RTOS_HELLO_BUILD) $@
+
+$(CHERIOT_RTOS_HELLO_HEX): $(CHERIOT_RTOS_HELLO_ELF)
+	mkdir -p $(dir $@)
+	$(CHERIOT_OBJCOPY) -O verilog $< $@
 
 # CHERIoT startup objects use a separate directory from GCC.
 $(CHERIOT_ASM_STARTUP_OBJ): $(CHERIOT_ASM_STARTUP)

@@ -5,5 +5,5 @@ services:
   pulp-docker:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.cheriot-xmake
     image: croc-iic-osic-tools:2025.12-cheriot

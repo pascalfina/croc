@@ -1,0 +1,16 @@
+# syntax=docker/dockerfile:1
+#
+# Local development overlay. The base image already contains the CHERIoT LLVM
+# toolchain, so this layer only adds the CHERIoT-RTOS build tool.
+
+FROM croc-iic-osic-tools:2025.12-cheriot
+
+USER root
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends software-properties-common \
+    && (apt-get remove -y xmake xmake-data || true) \
+    && add-apt-repository ppa:xmake-io/xmake \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends xmake \
+    && rm -rf /var/lib/apt/lists/*
