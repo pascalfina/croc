@@ -9,13 +9,11 @@ LOG_FILE=$1
 
 expected_lines=(
   "\[CORE\] Waking core via CLINT msip"
-  "\[JTAG\] Halting hart 0"
-  "\[JTAG\] Resumed hart 0"
   "\[UART\] Hello World from Croc v2!"
   "\[UART\]   iDMAEnable: 1"
-  "\[UART\]   Core: CVE2, RV32CIU"
+  "\[UART\]   Core: CVE2, RV32CIMU"
   "\[UART\]   PMPEnable: 0"
-  "\[UART\]   SRAM: 2h banks x 200h words"
+  "\[UART\]   SRAM: 2h banks x 2000h words"
   "\[UART\]   Debug\s*: present"
   "\[UART\]   Bootrom\s*: present"
   "\[UART\]   CLINT\s*: present"

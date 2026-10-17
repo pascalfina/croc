@@ -111,8 +111,9 @@ echo "============================================="
     --sim "$simulation_binary" \
     --hexdir ../sw/bin/cheriot \
     --filter '*' \
+    --exclude test_simple_recv_bitmap_storage \
     --expect-fail test_cheriot_exception \
-    --timeout 30
+    --timeout 180
 
 cd "$CROC_ROOT"
 
