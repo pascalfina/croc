@@ -7,7 +7,7 @@
 # - Philippe Sauter <phsauter@iis.ee.ethz.ch>
 #
 # Two-phase Verilator simulation flow for RTL or post-Yosys netlists:
-#   Phase 1 (default): Run helloworld and print_config
+#   Phase 1 (default): Run helloworld, print_config, and CHERIoT programs
 #   Phase 2 (iDMA on): Run all unit tests
 
 set -euo pipefail
@@ -66,7 +66,8 @@ else
         "$default_netlist" \
         "$idma_netlist" \
         "sw/bin/helloworld.hex" \
-        "sw/bin/test/print_config.hex"; do
+        "sw/bin/test/print_config.hex" \
+        "sw/bin/cheriot-rtos/hello_world.hex"; do
         if [[ ! -f "$required_file" ]]; then
             echo "[ERROR] Missing netlist simulation input: $required_file" >&2
             exit 1
@@ -89,6 +90,7 @@ if [[ "$simulation_mode" == "rtl" ]]; then
     # CHERIoT binaries are built only in the CHERIoT-enabled container. They
     # are kept outside the default GCC build so legacy tests stay independent.
     make -C sw cheriot
+    make -C sw cheriot-rtos
 else
     cp "$default_netlist" yosys/out/netlist_debug.v
 fi
@@ -114,6 +116,17 @@ echo "============================================="
     --exclude test_simple_recv_bitmap_storage \
     --expect-fail test_cheriot_exception \
     --timeout 180
+
+echo ""
+echo "============================================="
+echo "Phase 1c: default config — CHERIoT-RTOS"
+echo "============================================="
+
+"$SCRIPT_DIR/run_tests.sh" \
+    --sim "$simulation_binary" \
+    --hexdir ../sw/bin/cheriot-rtos \
+    --filter '*' \
+    --timeout 300
 
 cd "$CROC_ROOT"
 
