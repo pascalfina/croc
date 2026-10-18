@@ -60,6 +60,7 @@ CHERIOT_FLAGS    ?= --target=$(CHERIOT_TARGET) -mcpu=$(CHERIOT_CPU) \
 # their Croc ELF/HEX outputs separate from the smaller CHERIoT test programs.
 CHERIOT_RTOS_BINDIR       ?= bin/cheriot-rtos
 CHERIOT_RTOS_PROJECT      ?= cheriot-rtos
+CHERIOT_RTOS_XMAKEDIR     ?= $(CHERIOT_RTOS_PROJECT)/.xmake
 CHERIOT_RTOS_BOARD        ?= ../../cheriot-rtos/sdk/boards/croc.json
 CHERIOT_RTOS_HELLO_BUILD  ?= $(CHERIOT_RTOS_PROJECT)/build/cheriot/cheriot/release/hello_world
 CHERIOT_RTOS_HELLO_ELF    := $(CHERIOT_RTOS_BINDIR)/hello_world.elf
@@ -111,7 +112,9 @@ DEPFILES := $(CRT0_OBJ:.o=.d) $(LIB_OBJS:.o=.d) $(PROG_OBJS:.o=.d) \
 	$(CHERIOT_ASM_STARTUP_OBJ) $(CHERIOT_C_STARTUP_OBJ) \
 	$(CHERIOT_ASM_OBJECTS) $(CHERIOT_C_OBJECTS)
 
-all: compile
+# Build every software variant with one command: legacy GCC programs,
+# CHERIoT tests, and the CHERIoT-RTOS hello-world image.
+all: compile cheriot cheriot-rtos
 
 $(BINDIR):
 	mkdir -p $(BINDIR)
@@ -149,8 +152,13 @@ $(BINDIR)/%.hex: $(BINDIR)/%.elf
 	cheriot-rtos-build cheriot-rtos-hello
 
 clean:
-	rm -rf $(BINDIR) $(BUILDDIR) \
-		$(CHERIOT_RTOS_PROJECT)/build $(CHERIOT_RTOS_BINDIR)
+	# Remove every generated artifact from the legacy, CHERIoT, and RTOS builds.
+	rm -rf \
+		$(BINDIR) \
+		$(BUILDDIR) \
+		$(CHERIOT_RTOS_PROJECT)/build \
+		$(CHERIOT_RTOS_XMAKEDIR) \
+		$(CHERIOT_RTOS_BINDIR)
 
 compile: $(BINDIR) $(BUILDDIR) $(ALL_TARGETS)
 

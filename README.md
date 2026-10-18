@@ -147,6 +147,33 @@ If something does not work, refer to the upstream [IIC-OSIC-Tools](https://githu
 
 To stop the VNC server, run the start script again and then select between stopping or stop and remove the running docker container.
 
+#### Building a custom container
+
+The CHERIoT development container is built in two layers: `Dockerfile` adds the
+CHERIoT LLVM toolchain, and `Dockerfile.cheriot-xmake` adds `xmake` for
+CHERIoT-RTOS builds. Build the base image once, then build the local overlay:
+
+```sh
+docker build -f Dockerfile \
+  -t croc-iic-osic-tools:2025.12-cheriot .
+
+./scripts/start_cheriot.sh build
+./scripts/start_cheriot.sh shell
+```
+
+Use `./scripts/start_cheriot.sh rebuild` when the overlay must be rebuilt
+without Docker's build cache. To publish the resulting image to GHCR, use a
+GitHub PAT with `write:packages` and keep the token out of the repository:
+
+```sh
+./scripts/publish_cheriot_image.sh
+```
+
+To create another custom image, add a Dockerfile for the extra tools and a
+Compose override with its image tag. Keep the base `docker-compose.yml`
+unchanged so the normal container and CI configuration continue to use their
+existing images.
+
 #### Native install (hard)
 
 You need to build/install the required tools manually:
