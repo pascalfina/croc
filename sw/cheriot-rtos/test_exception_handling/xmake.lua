@@ -10,7 +10,7 @@ option("board")
 	set_default("sail")
 
 compartment("test_exception")
-	add_deps("freestanding", "debug")
+	add_deps("freestanding", "debug", "unwind_error_handler")
 	add_files("test_exception.cc")
 
 firmware("test_exception_handling")

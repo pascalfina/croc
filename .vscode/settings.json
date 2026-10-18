@@ -16,6 +16,7 @@
     "CROC",
     "IBEX",
     "SIMULATION",
+    "DEVICE_EXISTS_uart",
     "CPU_TIMER_HZ=20000000",
     "TICK_RATE_HZ=100"
   ]

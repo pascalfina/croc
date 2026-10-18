@@ -61,6 +61,7 @@ CHERIOT_FLAGS    ?= --target=$(CHERIOT_TARGET) -mcpu=$(CHERIOT_CPU) \
 CHERIOT_RTOS_PROJECTS      ?= \
 	cheriot-rtos/hello_world \
 	cheriot-rtos/test_exception_handling \
+	cheriot-rtos/test_use_after_free_handling \
 
 
 
