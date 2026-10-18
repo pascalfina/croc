@@ -360,6 +360,9 @@ make -C sw
 # Build all CHERIoT assembly and C programs.
 make -C sw cheriot
 
+# Build all CHERIoT-RTOS programs. This also runs the trusted-stack analysis.
+make -C sw cheriot-rtos
+
 cd verilator
 ./run_verilator.sh --build
 
@@ -377,6 +380,15 @@ cd verilator
   --filter '*' \
   --expect-fail test_cheriot_exception \
   --timeout 30
+
+# CHERIoT-RTOS programs in sw/bin/cheriot-rtos.
+# --show-output keeps the complete RTOS/UART output visible in the CI log.
+../.github/scripts/run_tests.sh \
+  --sim obj_dir_rtl/Vtb_croc_soc \
+  --hexdir ../sw/bin/cheriot-rtos \
+  --filter '*' \
+  --timeout 300 \
+  --show-output
 ```
 
 To simulate the post-Yosys netlist with Verilator instead, first generate the netlist and then use the explicit netlist commands:
