@@ -56,16 +56,24 @@ CHERIOT_FLAGS    ?= --target=$(CHERIOT_TARGET) -mcpu=$(CHERIOT_CPU) \
 	-mabi=$(CHERIOT_ABI) -mrelax -fshort-wchar \
 	-ffreestanding -fno-builtin -nostdlib
 
-# CHERIoT-RTOS programs are built by xmake in the vendored RTOS tree.  Keep
-# their Croc ELF/HEX outputs separate from the smaller CHERIoT test programs.
-CHERIOT_RTOS_BINDIR       ?= bin/cheriot-rtos
-CHERIOT_RTOS_PROJECT      ?= cheriot-rtos
-CHERIOT_RTOS_XMAKEDIR     ?= $(CHERIOT_RTOS_PROJECT)/.xmake
-CHERIOT_RTOS_BOARD        ?= ../../cheriot-rtos/sdk/boards/croc.json
-CHERIOT_RTOS_HELLO_BUILD  ?= $(CHERIOT_RTOS_PROJECT)/build/cheriot/cheriot/release/hello_world
-CHERIOT_RTOS_HELLO_ELF    := $(CHERIOT_RTOS_BINDIR)/hello_world.elf
-CHERIOT_RTOS_HELLO_HEX    := $(CHERIOT_RTOS_BINDIR)/hello_world.hex
-CHERIOT_RTOS_HELLO_DUMP   := $(CHERIOT_RTOS_BINDIR)/hello_world.dump
+# CHERIoT-RTOS applications each live in their own xmake project. Add a new
+# project directory here; its directory name must match its firmware target.
+CHERIOT_RTOS_PROJECTS      ?= \
+	cheriot-rtos/hello_world \
+	cheriot-rtos/test_exception_handling \
+
+
+
+CHERIOT_RTOS_BINDIR        ?= bin/cheriot-rtos
+CHERIOT_RTOS_BUILD_ROOT    ?= $(CURDIR)/build/cheriot-rtos
+CHERIOT_RTOS_LEGACY_PROJECT ?= cheriot-rtos
+CHERIOT_RTOS_BOARD         ?= $(CURDIR)/../cheriot-rtos/sdk/boards/croc.json
+
+CHERIOT_RTOS_NAMES         := $(notdir $(patsubst %/,%,$(CHERIOT_RTOS_PROJECTS)))
+CHERIOT_RTOS_ELFS          := $(CHERIOT_RTOS_NAMES:%=$(CHERIOT_RTOS_BINDIR)/%.elf)
+CHERIOT_RTOS_HEXS          := $(CHERIOT_RTOS_NAMES:%=$(CHERIOT_RTOS_BINDIR)/%.hex)
+CHERIOT_RTOS_DUMPS         := $(CHERIOT_RTOS_NAMES:%=$(CHERIOT_RTOS_BINDIR)/%.dump)
+CHERIOT_RTOS_OUTPUTS       := $(CHERIOT_RTOS_ELFS) $(CHERIOT_RTOS_HEXS) $(CHERIOT_RTOS_DUMPS)
 
 # Collecting source files
 LIB_SOURCES  := $(wildcard $(SRCDIR)/*.[cS])
@@ -156,8 +164,9 @@ clean:
 	rm -rf \
 		$(BINDIR) \
 		$(BUILDDIR) \
-		$(CHERIOT_RTOS_PROJECT)/build \
-		$(CHERIOT_RTOS_XMAKEDIR) \
+		$(CHERIOT_RTOS_BUILD_ROOT) \
+		$(CHERIOT_RTOS_LEGACY_PROJECT)/build \
+		$(CHERIOT_RTOS_LEGACY_PROJECT)/.xmake \
 		$(CHERIOT_RTOS_BINDIR)
 
 compile: $(BINDIR) $(BUILDDIR) $(ALL_TARGETS)
@@ -169,28 +178,36 @@ cheriot: $(CHERIOT_HEX_TARGETS)
 # Convenience alias for the first CHERIoT compiler test.
 cheriot-inline: $(CHERIOT_BINDIR)/test_simple_inline.hex
 
-# Build the Croc-owned CHERIoT-RTOS project and convert its ELF into the
+# Build every listed CHERIoT-RTOS project and convert its ELF into the
 # 32-bit Verilog HEX format expected by the Croc testbench.
-cheriot-rtos: cheriot-rtos-hello
+cheriot-rtos: $(CHERIOT_RTOS_OUTPUTS)
 
-cheriot-rtos-hello: cheriot-rtos-build $(CHERIOT_RTOS_HELLO_HEX) \
-	$(CHERIOT_RTOS_HELLO_DUMP)
+# Backwards-compatible alias for the original single Hello World target.
+cheriot-rtos-hello: cheriot-rtos
 
 cheriot-rtos-build:
-	cd $(CHERIOT_RTOS_PROJECT) && xmake config -c \
-		--sdk=/cheriot-tools/ \
-		--board=$(CHERIOT_RTOS_BOARD) && \
-		xmake
+	@set -e; \
+	for project in $(CHERIOT_RTOS_PROJECTS); do \
+		name=$${project##*/}; \
+		workdir="$(CHERIOT_RTOS_BUILD_ROOT)/$${name}"; \
+		mkdir -p "$${workdir}"; \
+		cd "$${workdir}"; \
+		xmake config -c \
+			-P "$(CURDIR)/$${project}" \
+			--sdk=/cheriot-tools/ \
+			--board="$(CHERIOT_RTOS_BOARD)"; \
+		xmake; \
+	done
 
-$(CHERIOT_RTOS_HELLO_ELF): cheriot-rtos-build
+$(CHERIOT_RTOS_BINDIR)/%.elf: cheriot-rtos-build
 	mkdir -p $(dir $@)
-	cp $(CHERIOT_RTOS_HELLO_BUILD) $@
+	cp $(CHERIOT_RTOS_BUILD_ROOT)/$*/build/cheriot/cheriot/release/$* $@
 
-$(CHERIOT_RTOS_HELLO_HEX): $(CHERIOT_RTOS_HELLO_ELF)
+$(CHERIOT_RTOS_BINDIR)/%.hex: $(CHERIOT_RTOS_BINDIR)/%.elf
 	mkdir -p $(dir $@)
 	$(CHERIOT_OBJCOPY) -O verilog $< $@
 
-$(CHERIOT_RTOS_HELLO_DUMP): $(CHERIOT_RTOS_HELLO_ELF)
+$(CHERIOT_RTOS_BINDIR)/%.dump: $(CHERIOT_RTOS_BINDIR)/%.elf
 	mkdir -p $(dir $@)
 	$(CHERIOT_OBJDUMP) -D -s --print-imm-hex \
 		--start-address=0x10000000 $< > $@

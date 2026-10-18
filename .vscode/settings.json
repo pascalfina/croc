@@ -1,0 +1,22 @@
+{
+  "C_Cpp.intelliSenseEngine": "default",
+  "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+  "C_Cpp.default.intelliSenseMode": "linux-gcc-x64",
+  "C_Cpp.default.includePath": [
+    "${workspaceFolder}/cheriot-rtos/sdk/include",
+    "${workspaceFolder}/cheriot-rtos/sdk/include/c++-config",
+    "${workspaceFolder}/cheriot-rtos/sdk/include/libc++",
+    "${workspaceFolder}/cheriot-rtos/sdk/include/platform/croc",
+    "${workspaceFolder}/cheriot-rtos/sdk/include/platform/ibex",
+    "${workspaceFolder}/cheriot-rtos/sdk/include/platform/generic-riscv",
+    "${workspaceFolder}/sw/cheriot-rtos/hello_world",
+    "${workspaceFolder}/sw/cheriot-rtos/test_exception_handling"
+  ],
+  "C_Cpp.default.defines": [
+    "CROC",
+    "IBEX",
+    "SIMULATION",
+    "CPU_TIMER_HZ=20000000",
+    "TICK_RATE_HZ=100"
+  ]
+}

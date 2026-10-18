@@ -23,7 +23,17 @@ namespace
 		 */
 		void write(char c) override
 		{
-			MMIO_CAPABILITY(Uart, uart)->blocking_write(c);
+			volatile Uart *uart = MMIO_CAPABILITY(Uart, uart);
+#if defined(CROC)
+			// Croc models the UART transmit timing even in simulation.  The
+			// generic simulation fast path can otherwise drop consecutive bytes.
+			while ((uart->LineStatus & (1u << 5)) == 0)
+			{
+			}
+			uart->data = static_cast<uint8_t>(c);
+#else
+			uart->blocking_write(static_cast<uint8_t>(c));
+#endif
 		}
 
 		/**

@@ -61,11 +61,11 @@ class Uart16550
 	 * 0: Receive ready
 	 * 5: Transmit buffer empty
 	 */
-	const RegisterType LineStatus;
+	volatile const RegisterType LineStatus;
 	/**
 	 * Modem status.
 	 */
-	const RegisterType ModemStatus;
+	volatile const RegisterType ModemStatus;
 	/**
 	 * Scratch register.  Unused.
 	 */
@@ -76,13 +76,13 @@ class Uart16550
 	 */
 	__always_inline bool can_write() volatile
 	{
-#ifdef SIMULATION
-		// If we're in a simulator, we're running *much* slower than the thing
-		// handling the UART, so assume that you can always write to the UART.
+	#if defined(SIMULATION) && !defined(CROC)
+		// Most simulators consume UART writes immediately. Croc models the
+		// transmitter timing, so it must use the real status bit below.
 		return true;
-#else
+	#else
 		return LineStatus & (1 << 5);
-#endif
+	#endif
 	}
 
 	/**
