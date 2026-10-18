@@ -69,6 +69,9 @@ CHERIOT_RTOS_BINDIR        ?= bin/cheriot-rtos
 CHERIOT_RTOS_BUILD_ROOT    ?= $(CURDIR)/build/cheriot-rtos
 CHERIOT_RTOS_LEGACY_PROJECT ?= cheriot-rtos
 CHERIOT_RTOS_BOARD         ?= $(CURDIR)/../cheriot-rtos/sdk/boards/croc.json
+CHERIOT_RTOS_ANALYZER     ?= $(CURDIR)/../scripts/analyze_trusted_stack.py
+CHERIOT_RTOS_STACK_RESERVE ?= 1
+CHERIOT_RTOS_ANALYSIS_FLAGS ?= --check
 
 CHERIOT_RTOS_NAMES         := $(notdir $(patsubst %/,%,$(CHERIOT_RTOS_PROJECTS)))
 CHERIOT_RTOS_ELFS          := $(CHERIOT_RTOS_NAMES:%=$(CHERIOT_RTOS_BINDIR)/%.elf)
@@ -198,6 +201,11 @@ cheriot-rtos-build:
 			--sdk=/cheriot-tools/ \
 			--board="$(CHERIOT_RTOS_BOARD)"; \
 		xmake; \
+		python3 "$(CHERIOT_RTOS_ANALYZER)" \
+			"$${workdir}/build/cheriot/cheriot/release/$${name}.json" \
+			--xmake "$(CURDIR)/$${project}/xmake.lua" \
+			--reserve "$(CHERIOT_RTOS_STACK_RESERVE)" \
+			$(CHERIOT_RTOS_ANALYSIS_FLAGS); \
 	done
 
 $(CHERIOT_RTOS_BINDIR)/%.elf: cheriot-rtos-build

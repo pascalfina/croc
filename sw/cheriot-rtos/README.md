@@ -20,3 +20,8 @@ make -C sw cheriot-rtos
 The Xmake working directory, `.xmake` cache, and generated build files are
 kept outside the source tree under `sw/build/cheriot-rtos/hello_world/`.
 The final ELF, HEX, and object dump are written to `sw/bin/cheriot-rtos/`.
+After each project is built, `make` also analyzes the linker-generated JSON
+compartment report with `scripts/analyze_trusted_stack.py`. It uses one extra
+frame as the default safety reserve and warns about dependency cycles. Set
+`CHERIOT_RTOS_ANALYSIS_FLAGS="--check --strict"` to make cycles fail the
+build as well.

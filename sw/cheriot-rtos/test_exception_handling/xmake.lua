@@ -22,7 +22,7 @@ firmware("test_exception_handling")
 				priority = 1,
 				entry_point = "crash_test",
 				stack_size = 0x1000,
-				trusted_stack_frames = 1
+				trusted_stack_frames = 4
 			}
 		}, {expand = false})
 	end)

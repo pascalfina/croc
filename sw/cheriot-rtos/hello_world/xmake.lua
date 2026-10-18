@@ -22,7 +22,7 @@ firmware("hello_world")
 				priority = 1,
 				entry_point = "say_hello",
 				stack_size = 0x200,
-				trusted_stack_frames = 1
+				trusted_stack_frames = 4
 			}
 		}, {expand = false})
 	end)
