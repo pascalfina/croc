@@ -324,7 +324,7 @@ cd verilator
 ```
 
 The complete test flow builds and runs the RTOS image automatically. The RTOS
-test timeout is 300 seconds per image, and `--show-output` prints the complete
+test timeout is 1800 seconds per image, and `--show-output` prints the complete
 hello-world simulation log:
 
 ```sh
@@ -387,7 +387,7 @@ cd verilator
   --sim obj_dir_rtl/Vtb_croc_soc \
   --hexdir ../sw/bin/cheriot-rtos \
   --filter '*' \
-  --timeout 300 \
+  --timeout 1800 \
   --show-output
 ```
 

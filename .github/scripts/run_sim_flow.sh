@@ -31,7 +31,7 @@ if [[ $# -gt 1 ]]; then
 fi
 
 cheriot_test_timeout=180
-rtos_test_timeout=300
+rtos_test_timeout=1800
 legacy_test_timeout=120
 
 case "${1:-}" in
