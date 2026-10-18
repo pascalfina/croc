@@ -10,7 +10,7 @@ option("board")
 	set_default("sail")
 
 compartment("test_use_after_free")
-	add_deps("freestanding", "debug", "stdio")
+	add_deps("freestanding", "debug", "stdio", "unwind_error_handler")
 	add_files("test_use_after_free.cc")
 
 firmware("test_use_after_free_handling")
@@ -22,7 +22,8 @@ firmware("test_use_after_free_handling")
 				priority = 1,
 				entry_point = "use_after_free",
 				stack_size = 0x1000,
-				trusted_stack_frames = 1
+				-- The allocator calls the software revoker across compartments.
+				trusted_stack_frames = 4
 			}
 		}, {expand = false})
 	end)

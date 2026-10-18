@@ -3,36 +3,66 @@
 
 #include <compartment.h>
 #include <debug.hh>
-#include <fail-simulator-on-error.h>
+#include <simulator.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <unwind.h>
+#include <allocator.h>
 
-using Debug = ConditionalDebug<true, "Test use after free:">;
+using Debug        = ConditionalDebug<true, "Test use after free:">;
 
-const char* secret = "secret";
+const char *secret = "secret";
 
-void print_Secret(void* buffer)
-{
-	for (size_t i = 0; i < strlen(secret); i++)
-		printf("scret = %c", *((char*)buffer + i));
+void print_Secret(void *buffer) {
+    for (size_t i = 0; i < strlen(secret); i++) {
+        printf("%c", *((char *)buffer + i));
+    }
 }
 
-int __cheri_compartment("test_use_after_free") use_after_free()
-{
-	
-	char* secret_buffer = (char*)malloc(69 * sizeof(uint8_t));
+int __cheri_compartment("test_use_after_free") use_after_free() {
 
-	strcpy(secret_buffer, secret);
+    char *secret_buffer = (char *)malloc(69 * sizeof(uint8_t));
 
-	print_Secret((void*)secret_buffer);
+    if (secret_buffer == nullptr) {
+        Debug::log("ERROR: allocation failed");
+        simulation_exit(1);
+    }
 
-	Debug::log("Lets get rid of the secret");
+    strcpy(secret_buffer, secret);
 
-	free((void*)secret_buffer);
+    print_Secret((void *)secret_buffer);
 
-	print_Secret((void*)secret_buffer);
+    //Debug::log("After print secret\n\n");
+    int can_free_result = heap_can_free(MALLOC_CAPABILITY, secret_buffer);
+    int free_result     = free(secret_buffer);
 
-	Debug::log("Secret buffer freed");
+    Debug::log("heap_can_free={}, free={}", can_free_result, free_result);
+    // Debug::log("free returned {}", free_result);
 
-	return 0;
+    if (free_result != 0) {
+        Debug::log("ERROR: free failed");
+        simulation_exit(1);
+    }
+
+    Debug::log("Secret buffer freed");
+
+    volatile bool exception_caught = false;
+    CHERIOT_DURING {
+        // should fail otherwise cheriot is useless
+        print_Secret((void *)secret_buffer);
+    }
+    CHERIOT_HANDLER {
+        exception_caught = true;
+        Debug::log("Expected use-after-free exception caught");
+    }
+    CHERIOT_END_HANDLER
+
+    if (!exception_caught) {
+        Debug::log("ERROR: use-after-free was not detected");
+        simulation_exit(1);
+    }
+
+    Debug::log("Use-after-free test passed");
+    return 0;
 }
