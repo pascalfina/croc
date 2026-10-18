@@ -83,9 +83,9 @@ else
     simulation_binary="obj_dir_netlist_yosys/Vtb_croc_soc"
     simulation_log="croc_netlist_yosys.log"
     # Netlist simulation is substantially slower than RTL simulation.
-    cheriot_test_timeout=600
-    rtos_test_timeout=600
-    legacy_test_timeout=600
+    cheriot_test_timeout=7200
+    rtos_test_timeout=7200
+    legacy_test_timeout=7200
 fi
 
 echo "============================================="
