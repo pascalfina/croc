@@ -71,6 +71,8 @@ CHERIOT_RTOS_LEGACY_PROJECT ?= cheriot-rtos
 CHERIOT_RTOS_BOARD         ?= $(CURDIR)/../cheriot-rtos/sdk/boards/croc.json
 CHERIOT_RTOS_ANALYZER     ?= $(CURDIR)/../scripts/analyze_trusted_stack.py
 CHERIOT_RTOS_STACK_RESERVE ?= 1
+# The trusted-stack check is enabled by default. The build fails when the
+# configured frame count is below the analyzer's recommendation.
 CHERIOT_RTOS_ANALYSIS_FLAGS ?= --check
 
 CHERIOT_RTOS_NAMES         := $(notdir $(patsubst %/,%,$(CHERIOT_RTOS_PROJECTS)))
@@ -161,7 +163,7 @@ $(BINDIR)/%.hex: $(BINDIR)/%.elf
 
 # Phonies
 .PHONY: all clean compile cheriot cheriot-inline cheriot-rtos \
-	cheriot-rtos-build cheriot-rtos-hello
+	cheriot-rtos-check cheriot-rtos-build cheriot-rtos-hello
 
 clean:
 	# Remove every generated artifact from the legacy, CHERIoT, and RTOS builds.
@@ -185,6 +187,11 @@ cheriot-inline: $(CHERIOT_BINDIR)/test_simple_inline.hex
 # Build every listed CHERIoT-RTOS project and convert its ELF into the
 # 32-bit Verilog HEX format expected by the Croc testbench.
 cheriot-rtos: $(CHERIOT_RTOS_OUTPUTS)
+
+# Explicit alias for callers that want to make the safety check visible in the
+# command line. The default `cheriot-rtos` target already enables --check.
+cheriot-rtos-check: CHERIOT_RTOS_ANALYSIS_FLAGS=--check
+cheriot-rtos-check: cheriot-rtos
 
 # Backwards-compatible alias for the original single Hello World target.
 cheriot-rtos-hello: cheriot-rtos
