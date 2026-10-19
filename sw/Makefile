@@ -62,7 +62,15 @@ CHERIOT_RTOS_PROJECTS      ?= \
 	cheriot-rtos/hello_world \
 	cheriot-rtos/test_exception_handling \
 	cheriot-rtos/test_use_after_free_handling \
-
+	cheriot-rtos/hello_compartment \
+	cheriot-rtos/hello_safe_compartment \
+	cheriot-rtos/temporal_safety \
+	cheriot-rtos/sealing \
+	cheriot-rtos/producer_consumer \
+	cheriot-rtos/error_handling \
+	cheriot-rtos/memory_safety \
+# 	cheriot-rtos/javascript \
+# 	cheriot-rtos/audit
 
 
 CHERIOT_RTOS_BINDIR        ?= bin/cheriot-rtos
@@ -74,6 +82,50 @@ CHERIOT_RTOS_STACK_RESERVE ?= 1
 # The trusted-stack check is enabled by default. The build fails when the
 # configured frame count is below the analyzer's recommendation.
 CHERIOT_RTOS_ANALYSIS_FLAGS ?= --check
+
+# The upstream CHERIoT-RTOS tests are kept separate from the local demo
+# projects. Build one firmware image per test so each simulation has its own
+# result and object dump for debugging.
+CHERIOT_RTOS_TESTS_PROJECT    ?= ../cheriot-rtos/tests
+CHERIOT_RTOS_TESTS_PREFIX     ?= test-suite
+CHERIOT_RTOS_TESTS_BUILD_ROOT ?= $(CHERIOT_RTOS_BUILD_ROOT)/upstream-tests
+
+# `rust`, `allocator`, and `bigdata` are intentionally omitted. Rust needs a
+# CHERIoT-enabled Rust toolchain; allocator requests a 1 MiB heap quota and
+# bigdata needs more static memory than the Croc board provides.
+CHERIOT_RTOS_UPSTREAM_TESTS ?= \
+	ccompile \
+	extra_compiles \
+	preflight \
+	debug_cxx \
+	debug_c \
+	mmio \
+	unwind_cleanup \
+	softfloat \
+	stdio \
+	static_sealing \
+	crash_recovery \
+	compartment_calls \
+	check_pointer \
+	misc \
+	stack \
+	thread_pool \
+	global_constructors \
+	queue \
+	futex \
+	locks \
+	list \
+	eventgroup \
+	multiwaiter \
+	bitpacks \
+	time
+
+CHERIOT_RTOS_TESTS_OUTPUTS := $(foreach test,$(CHERIOT_RTOS_UPSTREAM_TESTS), \
+	$(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(test).elf \
+	$(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(test).hex \
+	$(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(test).dump)
+CHERIOT_RTOS_TESTS_BUILD_TARGETS := $(foreach test,$(CHERIOT_RTOS_UPSTREAM_TESTS), \
+	cheriot-rtos-test-$(test)-build)
 
 CHERIOT_RTOS_NAMES         := $(notdir $(patsubst %/,%,$(CHERIOT_RTOS_PROJECTS)))
 CHERIOT_RTOS_ELFS          := $(CHERIOT_RTOS_NAMES:%=$(CHERIOT_RTOS_BINDIR)/%.elf)
@@ -128,7 +180,7 @@ DEPFILES := $(CRT0_OBJ:.o=.d) $(LIB_OBJS:.o=.d) $(PROG_OBJS:.o=.d) \
 
 # Build every software variant with one command: legacy GCC programs,
 # CHERIoT tests, and the CHERIoT-RTOS hello-world image.
-all: compile cheriot cheriot-rtos
+all: compile cheriot cheriot-rtos cheriot-rtos-tests
 
 $(BINDIR):
 	mkdir -p $(BINDIR)
@@ -163,7 +215,8 @@ $(BINDIR)/%.hex: $(BINDIR)/%.elf
 
 # Phonies
 .PHONY: all clean compile cheriot cheriot-inline cheriot-rtos \
-	cheriot-rtos-check cheriot-rtos-build cheriot-rtos-hello
+	cheriot-rtos-check cheriot-rtos-build cheriot-rtos-tests \
+	$(CHERIOT_RTOS_TESTS_BUILD_TARGETS) cheriot-rtos-hello
 
 clean:
 	# Remove every generated artifact from the legacy, CHERIoT, and RTOS builds.
@@ -187,6 +240,9 @@ cheriot-inline: $(CHERIOT_BINDIR)/test_simple_inline.hex
 # Build every listed CHERIoT-RTOS project and convert its ELF into the
 # 32-bit Verilog HEX format expected by the Croc testbench.
 cheriot-rtos: $(CHERIOT_RTOS_OUTPUTS)
+
+# Build the upstream CHERIoT-RTOS regression suite as one firmware image.
+cheriot-rtos-tests: $(CHERIOT_RTOS_TESTS_OUTPUTS)
 
 # Explicit alias for callers that want to make the safety check visible in the
 # command line. The default `cheriot-rtos` target already enables --check.
@@ -214,6 +270,41 @@ cheriot-rtos-build:
 			--reserve "$(CHERIOT_RTOS_STACK_RESERVE)" \
 			$(CHERIOT_RTOS_ANALYSIS_FLAGS); \
 	done
+
+define CHERIOT_RTOS_UPSTREAM_TEST_template
+cheriot-rtos-test-$(1)-build:
+	@set -e; \
+	workdir="$(CHERIOT_RTOS_TESTS_BUILD_ROOT)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1)"; \
+	mkdir -p "$$$${workdir}"; \
+	cd "$(CURDIR)/$(CHERIOT_RTOS_TESTS_PROJECT)"; \
+	xmake config -c \
+		--sdk=/cheriot-tools \
+		--board="$(CHERIOT_RTOS_BOARD)" \
+		--builddir="$$$${workdir}/build" \
+		--most-tests=false \
+		--test-$(1)=true; \
+	xmake; \
+	python3 "$(CHERIOT_RTOS_ANALYZER)" \
+		"$$$${workdir}/build/cheriot/cheriot/release/test-suite.json" \
+		--xmake "$(CURDIR)/$(CHERIOT_RTOS_TESTS_PROJECT)/xmake.lua" \
+		--reserve "$(CHERIOT_RTOS_STACK_RESERVE)" \
+		$(CHERIOT_RTOS_ANALYSIS_FLAGS)
+
+$(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).elf: cheriot-rtos-test-$(1)-build
+	mkdir -p "$(CHERIOT_RTOS_BINDIR)"
+	cp $(CHERIOT_RTOS_TESTS_BUILD_ROOT)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1)/build/cheriot/cheriot/release/test-suite $$@
+
+$(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).hex: $(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).elf
+	mkdir -p "$(CHERIOT_RTOS_BINDIR)"
+	$(CHERIOT_OBJCOPY) -O verilog $$< $$@
+
+$(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).dump: $(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).elf
+	mkdir -p "$(CHERIOT_RTOS_BINDIR)"
+	$(CHERIOT_OBJDUMP) -D -s --print-imm-hex \
+		--start-address=0x10000000 $$< > $$@
+endef
+
+$(foreach test,$(CHERIOT_RTOS_UPSTREAM_TESTS),$(eval $(call CHERIOT_RTOS_UPSTREAM_TEST_template,$(test))))
 
 $(CHERIOT_RTOS_BINDIR)/%.elf: cheriot-rtos-build
 	mkdir -p $(dir $@)

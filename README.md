@@ -307,6 +307,31 @@ CHERIoT-enabled Docker image. Build the current RTOS hello-world image with:
 make -C sw cheriot-rtos
 ```
 
+Build the upstream CHERIoT-RTOS regression suite separately. Each upstream
+test gets its own firmware image and is intentionally kept separate from the
+individual demonstration projects:
+
+```sh
+make -C sw cheriot-rtos-tests
+```
+
+The tests use the normal Croc board profile. Splitting them into individual
+images is required because the complete upstream suite does not fit into one
+128 KiB Croc SRAM image.
+
+The suite produces the following additional outputs:
+
+```text
+sw/bin/cheriot-rtos/test-suite-<test>.elf
+sw/bin/cheriot-rtos/test-suite-<test>.hex
+sw/bin/cheriot-rtos/test-suite-<test>.dump
+```
+
+Each image enables exactly one upstream test. The upstream test runner checks
+the test's return values and expected error codes before calling
+`simulation_exit(0)`, so every simulator run has an unambiguous result and a
+matching object dump.
+
 This creates the following Croc-compatible outputs:
 
 ```text
@@ -363,6 +388,9 @@ make -C sw cheriot
 # Build all CHERIoT-RTOS programs. This also runs the trusted-stack analysis.
 make -C sw cheriot-rtos
 
+# Build the upstream CHERIoT-RTOS regression suite.
+make -C sw cheriot-rtos-tests
+
 cd verilator
 ./run_verilator.sh --build
 
@@ -387,6 +415,14 @@ cd verilator
   --sim obj_dir_rtl/Vtb_croc_soc \
   --hexdir ../sw/bin/cheriot-rtos \
   --filter '*' \
+  --timeout 1800 \
+  --show-output
+
+# Upstream CHERIoT-RTOS tests, one firmware image per test.
+../.github/scripts/run_tests.sh \
+  --sim obj_dir_rtl/Vtb_croc_soc \
+  --hexdir ../sw/bin/cheriot-rtos \
+  --filter 'test-suite-*' \
   --timeout 1800 \
   --show-output
 ```

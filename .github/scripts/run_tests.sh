@@ -8,7 +8,7 @@
 # Run unit tests through Verilator simulation.
 # Usage: run_tests.sh [--sim SIM_BINARY] [--hexdir HEX_DIR] [--filter PATTERN]
 #                     [--exclude TEST_NAME] [--expect-fail TEST_NAME]
-#                     [--timeout SECONDS] [--show-output]
+#                     [--timeout SECONDS] [--show-output] [--live-output]
 #
 # Expects to be run from the verilator/ directory (or paths adjusted via flags).
 # Each test writes its own log file.
@@ -23,6 +23,7 @@ TIMEOUT=120
 EXCLUDES=()
 EXPECTED_FAILURES=()
 SHOW_OUTPUT=false
+LIVE_OUTPUT=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -33,8 +34,9 @@ while [[ $# -gt 0 ]]; do
         --expect-fail) EXPECTED_FAILURES+=("$2"); shift 2 ;;
         --timeout) TIMEOUT="$2";   shift 2 ;;
         --show-output) SHOW_OUTPUT=true; shift ;;
+        --live-output) LIVE_OUTPUT=true; SHOW_OUTPUT=true; shift ;;
         -h|--help)
-            echo "Usage: $0 [--sim SIM_BINARY] [--hexdir HEX_DIR] [--filter PATTERN] [--exclude TEST_NAME] [--expect-fail TEST_NAME] [--timeout SECONDS] [--show-output]"
+            echo "Usage: $0 [--sim SIM_BINARY] [--hexdir HEX_DIR] [--filter PATTERN] [--exclude TEST_NAME] [--expect-fail TEST_NAME] [--timeout SECONDS] [--show-output] [--live-output]"
             exit 0
             ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
@@ -90,14 +92,23 @@ for hex in "${hex_files[@]}"; do
 
     printf "Running %-20s ... " "$test_name"
 
-    # Run simulation with timeout, capture log, don't exit on failure
-    if timeout "$TIMEOUT" "$SIM_BINARY" "+binary=$hex" > "$log_file" 2>&1; then
+    # Capture the complete simulator log. With --live-output, stream it while
+    # the test is running and keep the same log for result parsing.
+    if [[ "$LIVE_OUTPUT" == true ]]; then
+        if timeout "$TIMEOUT" stdbuf -oL -eL "$SIM_BINARY" "+binary=$hex" \
+            2>&1 | tee "$log_file"; then
+            pipeline_status=("${PIPESTATUS[@]}")
+        else
+            pipeline_status=("${PIPESTATUS[@]}")
+        fi
+        sim_exit=${pipeline_status[0]}
+    elif timeout "$TIMEOUT" "$SIM_BINARY" "+binary=$hex" > "$log_file" 2>&1; then
         sim_exit=0
     else
         sim_exit=$?
     fi
 
-    if [[ "$SHOW_OUTPUT" == true ]]; then
+    if [[ "$SHOW_OUTPUT" == true && "$LIVE_OUTPUT" == false ]]; then
         echo
         echo "----- ${test_name} output -----"
         cat "$log_file"

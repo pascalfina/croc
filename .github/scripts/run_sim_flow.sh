@@ -78,6 +78,21 @@ else
         fi
     done
 
+    upstream_tests=(
+        ccompile extra_compiles preflight debug_cxx debug_c mmio
+        unwind_cleanup softfloat stdio static_sealing crash_recovery
+        compartment_calls check_pointer misc stack thread_pool
+        global_constructors queue futex locks list eventgroup multiwaiter
+        bitpacks time
+    )
+    for upstream_test in "${upstream_tests[@]}"; do
+        required_file="sw/bin/cheriot-rtos/test-suite-${upstream_test}.hex"
+        if [[ ! -f "$required_file" ]]; then
+            echo "[ERROR] Missing netlist simulation input: $required_file" >&2
+            exit 1
+        fi
+    done
+
     build_option="--build-netlist"
     run_option="--run-netlist"
     simulation_binary="obj_dir_netlist_yosys/Vtb_croc_soc"
@@ -99,6 +114,7 @@ if [[ "$simulation_mode" == "rtl" ]]; then
     # are kept outside the default GCC build so legacy tests stay independent.
     make -C sw cheriot
     make -C sw cheriot-rtos
+    make -C sw cheriot-rtos-tests
 else
     cp "$default_netlist" yosys/out/netlist_debug.v
 fi
@@ -127,7 +143,7 @@ echo "============================================="
 
 echo ""
 echo "============================================="
-echo "Phase 1c: default config — CHERIoT-RTOS"
+echo "Phase 1c: default config — CHERIoT-RTOS programs and regression suite"
 echo "============================================="
 
 "$SCRIPT_DIR/run_tests.sh" \
@@ -135,7 +151,7 @@ echo "============================================="
     --hexdir ../sw/bin/cheriot-rtos \
     --filter '*' \
     --timeout "$rtos_test_timeout" \
-    --show-output
+    --live-output
 
 cd "$CROC_ROOT"
 
