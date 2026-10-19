@@ -315,6 +315,10 @@ individual demonstration projects:
 make -C sw cheriot-rtos-tests
 ```
 
+The `all` target also includes this suite, so `make -C sw all` builds the
+legacy programs, CHERIoT programs, local CHERIoT-RTOS projects, and the
+upstream CHERIoT-RTOS test images.
+
 The tests use the normal Croc board profile. Splitting them into individual
 images is required because the complete upstream suite does not fit into one
 128 KiB Croc SRAM image.
@@ -409,7 +413,7 @@ cd verilator
   --expect-fail test_cheriot_exception \
   --timeout 30
 
-# CHERIoT-RTOS programs in sw/bin/cheriot-rtos.
+# Local CHERIoT-RTOS demonstration programs in sw/bin/cheriot-rtos.
 # --show-output keeps the complete RTOS/UART output visible in the CI log.
 ../.github/scripts/run_tests.sh \
   --sim obj_dir_rtl/Vtb_croc_soc \
@@ -418,13 +422,13 @@ cd verilator
   --timeout 1800 \
   --show-output
 
-# Upstream CHERIoT-RTOS tests, one firmware image per test.
+# Upstream CHERIoT-RTOS test suite, one firmware image per test.
+# This is the recommended RTOS regression suite for CI and RTL simulation.
 ../.github/scripts/run_tests.sh \
   --sim obj_dir_rtl/Vtb_croc_soc \
   --hexdir ../sw/bin/cheriot-rtos \
   --filter 'test-suite-*' \
-  --timeout 1800 \
-  --show-output
+  --timeout 1800
 ```
 
 To simulate the post-Yosys netlist with Verilator instead, first generate the netlist and then use the explicit netlist commands:

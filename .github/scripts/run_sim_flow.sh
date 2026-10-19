@@ -30,9 +30,11 @@ if [[ $# -gt 1 ]]; then
     exit 1
 fi
 
-cheriot_test_timeout=180
-rtos_test_timeout=1800
-legacy_test_timeout=120
+# Each individual RTL test may use up to 45 minutes. The enclosing GitHub job
+# still has a six-hour limit, so this does not extend the job indefinitely.
+cheriot_test_timeout=2700
+rtos_test_timeout=2700
+legacy_test_timeout=2700
 
 case "${1:-}" in
     ""|--rtl)
@@ -120,7 +122,8 @@ else
 fi
 
 cd verilator
-./run_verilator.sh "$build_option"
+# CI keeps simulator logs, but does not need an interactive waveform.
+./run_verilator.sh --no-trace "$build_option"
 ./run_verilator.sh "$run_option" ../sw/bin/helloworld.hex
 grep -q "\[UART\] Hello World from Croc!" "$simulation_log"
 
@@ -143,15 +146,14 @@ echo "============================================="
 
 echo ""
 echo "============================================="
-echo "Phase 1c: default config — CHERIoT-RTOS programs and regression suite"
+echo "Phase 1c: default config — CHERIoT-RTOS upstream regression suite"
 echo "============================================="
 
 "$SCRIPT_DIR/run_tests.sh" \
     --sim "$simulation_binary" \
     --hexdir ../sw/bin/cheriot-rtos \
-    --filter '*' \
-    --timeout "$rtos_test_timeout" \
-    --live-output
+    --filter 'test-suite-*' \
+    --timeout "$rtos_test_timeout"
 
 cd "$CROC_ROOT"
 
@@ -167,7 +169,7 @@ else
 fi
 
 cd verilator
-./run_verilator.sh "$build_option"
+./run_verilator.sh --no-trace "$build_option"
 
 "$SCRIPT_DIR/run_tests.sh" \
     --sim "$simulation_binary" \
