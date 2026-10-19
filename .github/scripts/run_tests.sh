@@ -7,6 +7,7 @@
 
 # Run unit tests through Verilator simulation.
 # Usage: run_tests.sh [--sim SIM_BINARY] [--hexdir HEX_DIR] [--filter PATTERN]
+#                     [--start-from TEST_NAME]
 #                     [--exclude TEST_NAME] [--expect-fail TEST_NAME]
 #                     [--timeout SECONDS] [--show-output] [--live-output]
 #
@@ -19,6 +20,7 @@ set -euo pipefail
 SIM_BINARY="obj_dir/Vtb_croc_soc"
 HEX_DIR="../sw/bin/test"
 FILTER="test_*"
+START_FROM=""
 TIMEOUT=120
 EXCLUDES=()
 EXPECTED_FAILURES=()
@@ -30,13 +32,14 @@ while [[ $# -gt 0 ]]; do
         --sim)     SIM_BINARY="$2"; shift 2 ;;
         --hexdir)  HEX_DIR="$2";   shift 2 ;;
         --filter)  FILTER="$2";    shift 2 ;;
+        --start-from) START_FROM="$2"; shift 2 ;;
         --exclude) EXCLUDES+=("$2"); shift 2 ;;
         --expect-fail) EXPECTED_FAILURES+=("$2"); shift 2 ;;
         --timeout) TIMEOUT="$2";   shift 2 ;;
         --show-output) SHOW_OUTPUT=true; shift ;;
         --live-output) LIVE_OUTPUT=true; SHOW_OUTPUT=true; shift ;;
         -h|--help)
-            echo "Usage: $0 [--sim SIM_BINARY] [--hexdir HEX_DIR] [--filter PATTERN] [--exclude TEST_NAME] [--expect-fail TEST_NAME] [--timeout SECONDS] [--show-output] [--live-output]"
+            echo "Usage: $0 [--sim SIM_BINARY] [--hexdir HEX_DIR] [--filter PATTERN] [--start-from TEST_NAME] [--exclude TEST_NAME] [--expect-fail TEST_NAME] [--timeout SECONDS] [--show-output] [--live-output]"
             exit 0
             ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
@@ -64,9 +67,22 @@ echo "========================================="
 passed=0
 failed=0
 declare -a results=()
+start_reached=$([[ -z "$START_FROM" ]] && echo true || echo false)
+start_found=false
 
 for hex in "${hex_files[@]}"; do
     test_name=$(basename "$hex" .hex)
+
+    if [[ "$start_reached" == false ]]; then
+        if [[ "$test_name" != "$START_FROM" ]]; then
+            echo "Skipping $test_name (before --start-from $START_FROM)"
+            continue
+        fi
+        start_reached=true
+        start_found=true
+    elif [[ -n "$START_FROM" && "$test_name" == "$START_FROM" ]]; then
+        start_found=true
+    fi
 
     skip_test=false
     for excluded_test in "${EXCLUDES[@]}"; do
@@ -155,6 +171,11 @@ for hex in "${hex_files[@]}"; do
         ((failed++)) || true
     fi
 done
+
+if [[ -n "$START_FROM" && "$start_found" == false ]]; then
+    echo "Error: --start-from test not found: $START_FROM" >&2
+    exit 1
+fi
 
 echo "========================================="
 echo "Summary: ${passed} passed, ${failed} failed, $((passed + failed)) total"

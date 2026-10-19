@@ -41,7 +41,7 @@ namespace
 	 * Number of seconds to check expensive time sources.  Defaults to once per
 	 * minute.
 	 */
-	constexpr uint64_t TimeToCheckExpensiveSources = 60ULL * CPU_TIMER_HZ;
+	constexpr uint64_t TimeToCheckExpensiveSources = 60ULL * PLATFORM_TIMER_HZ;
 
 	/**
 	 * A tuple of clock sources.
@@ -70,7 +70,7 @@ int clock_update_wall_clock(TimeoutArgument timeout)
 {
 	static FlagLock updatingLock;
 	auto           &synchronisedTime = *SHARED_OBJECT_WITH_PERMISSIONS(
-	  SynchronisedTime, wall_clock_time, true, true, false, false, false);
+      SynchronisedTime, wall_clock_time, true, true, false, false, false);
 	if (LockGuard g{updatingLock, timeout})
 	{
 		// Error handler to ensure that the lock is released if a clock source

@@ -37,7 +37,8 @@
     "${sdk}/include/platform/ibex",
     "${sdk}/include/platform/generic-riscv"
   ],
-  "timer_hz": 20000000,
+  "cpu_hz": 20000000,
+  "timer_hz": 32768,
   "tickrate_hz": 100,
   "simulation": true
 }

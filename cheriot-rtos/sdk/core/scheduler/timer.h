@@ -5,7 +5,7 @@
 
 #include "common.h"
 #include "thread.h"
-#include <libdivide/libdivide.h>
+#include "tick-conversion.h"
 #include <platform-timer.hh>
 #include <stdint.h>
 #include <tick_macros.h>
@@ -80,10 +80,10 @@ namespace
 		 */
 		static void update()
 		{
-			auto *thread            = Thread::current_get();
-			bool waitingListIsEmpty = ((Thread::waitingList == nullptr) ||
-			                           (Thread::waitingList->expiryTime == -1));
-			bool threadHasNoPeers =
+			auto *thread             = Thread::current_get();
+			bool  waitingListIsEmpty = ((Thread::waitingList == nullptr) ||
+                                       (Thread::waitingList->expiryTime == -1));
+			bool  threadHasNoPeers =
 			  (thread == nullptr) || (!thread->has_priority_peers());
 			if (waitingListIsEmpty && threadHasNoPeers)
 			{
@@ -127,14 +127,8 @@ namespace
 		 */
 		static void expiretimers()
 		{
-			// We compute a branch-free multiplicative inverse at compile time
-			// so that we can guarantee a fixed cycle overhead during
-			// interrupts.
-			constexpr libdivide::divider<uint64_t> FastDivisor(
-			  TIMERCYCLES_PER_TICK);
-
 			uint64_t now           = time();
-			Thread::ticksSinceBoot = (now - zeroTickTime) / FastDivisor;
+			Thread::ticksSinceBoot = timer_ticks_for_cycles(now - zeroTickTime);
 			if (Thread::waitingList == nullptr)
 			{
 				return;
@@ -192,7 +186,6 @@ namespace
 		{
 			return -1;
 		}
-		return Timer::time() +
-		       (static_cast<uint64_t>(timeout) * TIMERCYCLES_PER_TICK);
+		return Timer::time() + timer_cycles_for_ticks(timeout);
 	}
 } // namespace

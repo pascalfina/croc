@@ -49,5 +49,10 @@
  */
 static inline uint64_t rdcycle64()
 {
+#if defined(CROC)
+	// Ordinary Croc compartments may read cycle, but not mcycle.
+	return CSR_READ64(cycle);
+#else
 	return CSR_READ64(mcycle);
+#endif
 }

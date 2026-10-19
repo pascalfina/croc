@@ -33,7 +33,8 @@
 /**
  * Platform-specific hook for reading the current monotonic time.  This should
  * be implemented to return the time that increments with the rate defined by
- * the `CPU_TIMER_HZ` macro and must be the same timer used by the scheduler.
+ * the `PLATFORM_TIMER_HZ` macro and must be the same timer used by the
+ * scheduler.
  */
 __if_c(static) inline uint64_t platform_monotonic_time_read()
 {

@@ -98,10 +98,20 @@ This property is primarily present for benchmarking as all of our targets curren
 Clock configuration
 -------------------
 
-The clock rate is configured by two properties.
-The `timer_hz` field is the number of timer increments per second, typically the clock speed of the chip (the RISC-V timer is defined in terms of cycles).
+The `timer_hz` field is the number of platform timer increments per second and defines `PLATFORM_TIMER_HZ`.
+The scheduler and `platform_monotonic_time_read()` must use this same timebase.
+The optional `cpu_hz` field specifies the CPU cycle-counter frequency and defines `CPU_TIMER_HZ`, used for cycle-based delays and CPU accounting.
+It defaults to `timer_hz` for boards where both counters run at the same frequency.
+For example, Croc uses `cpu_hz: 20000000` and `timer_hz: 32768`.
 The `tickrate_hz` specifies how many scheduler ticks should happen per second.
 See the [timeout documentation](Timeouts.md) for more discussion about ticks.
+
+Before this separation, Croc could still boot and execute normal code because
+CPU execution, context switches, and non-timer interrupts were unaffected.
+However, the scheduler interpreted CLINT `mtime` values using the 20 MHz CPU
+frequency, so timer-based operations such as sleeps, futex timeouts, and `WFI`
+wake-ups could occur much later than intended. The system therefore appeared
+functional while its time-dependent behaviour was incorrect.
 
 Conditional compilation
 -----------------------
