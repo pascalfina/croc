@@ -96,7 +96,6 @@ build_rtl_verilator() {
         --timing \
         --autoflush \
         --trace-fst \
-        --trace-threads 2 \
         --trace-structs \
         --unroll-count 1 \
         --unroll-stmts 1 \
@@ -186,6 +185,9 @@ generate_netlist_flist() {
 }
 
 run_rtl_binary() {
+    # Always start a fresh trace. A partially written FST is not readable by
+    # GTKWave, so never leave an old or interrupted waveform in place.
+    rm -f croc.fst
     run_cmd "echo [INFO][Verilator] Run RTL simulation"
     run_cmd "obj_dir_rtl/Vtb_croc_soc +binary="$1" | tee ${PROJ_NAME}_rtl.log"
 }
