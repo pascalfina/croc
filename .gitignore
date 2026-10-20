@@ -87,3 +87,4 @@
 #yosys
 /yosys/out
 scripts/publish_cheriot_image.sh
+.containers/croc-cheriot.sif
