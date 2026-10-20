@@ -38,7 +38,7 @@
     "${sdk}/include/platform/generic-riscv"
   ],
   "cpu_hz": 20000000,
-  "timer_hz": 32768,
+  "timer_hz": 1000000,
   "tickrate_hz": 100,
   "simulation": true
 }

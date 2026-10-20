@@ -4,5 +4,4 @@
 #include <compartment.h>
 #include <queue.h>
 
-int __cheri_compartment("consumer")
-  set_queue(CHERI_SEALED(struct MessageQueue *) queueHandle);
+int __cheri_compartment("consumer") set_queue(CHERI_SEALED(struct MessageQueue *) queueHandle);

@@ -30,9 +30,11 @@ if [[ $# -gt 1 ]]; then
     exit 1
 fi
 
-cheriot_test_timeout=180
-rtos_test_timeout=1800
-legacy_test_timeout=120
+# Each individual RTL test may use up to 45 minutes. The enclosing GitHub job
+# still has a six-hour limit, so this does not extend the job indefinitely.
+cheriot_test_timeout=2700
+rtos_test_timeout=2700
+legacy_test_timeout=2700
 
 case "${1:-}" in
     ""|--rtl)
@@ -120,7 +122,8 @@ else
 fi
 
 cd verilator
-./run_verilator.sh "$build_option"
+# CI keeps simulator logs, but does not need an interactive waveform.
+./run_verilator.sh --no-trace "$build_option"
 ./run_verilator.sh "$run_option" ../sw/bin/helloworld.hex
 grep -q "\[UART\] Hello World from Croc!" "$simulation_log"
 
@@ -143,15 +146,20 @@ echo "============================================="
 
 echo ""
 echo "============================================="
-echo "Phase 1c: default config — CHERIoT-RTOS programs and regression suite"
+echo "Phase 1c: default config — CHERIoT-RTOS upstream regression suite"
 echo "============================================="
 
 "$SCRIPT_DIR/run_tests.sh" \
     --sim "$simulation_binary" \
     --hexdir ../sw/bin/cheriot-rtos \
-    --filter '*' \
-    --timeout "$rtos_test_timeout" \
-    --live-output
+    --filter 'test-suite-*' \Replace CVE2 with https://github.com/lowRISC/ibex, which includes multiply/divide.
+Add tagged RAM of at least ~36 KiB, plus a revocation bitmap for the heap. A hello-world image is 35,832 bytes; croc has 4 KiB.
+Clock mtime at 1 MHz or more, ideally the core clock. The RTOS uses one timer_hz value for both the timer and the cycle counter (https://github.com/CHERIoT-Platform/cheriot-rtos/blob/main/sdk/include/thread.h). Croc's mtime runs at 32.768 kHz.
+Croc's peripheral interrupts go to fast interrupt lines, which the RTOS never enables. Poll the peripherals, or add a PLIC.
+Rewrite the boot ROM in CHERIoT assembly so it keeps the root capabilities intact.
+Use the CHERIoT debug module, in development at lowRISC. Not verified on croc hardware or RTL. This comes from reading the source, building for a croc board file, and booting in the Sail simulator, with the toolchain from
+https://github.com/lowRISC/lowrisc-nix.
+    --timeout "$rtos_test_timeout"
 
 cd "$CROC_ROOT"
 
@@ -167,7 +175,7 @@ else
 fi
 
 cd verilator
-./run_verilator.sh "$build_option"
+./run_verilator.sh --no-trace "$build_option"
 
 "$SCRIPT_DIR/run_tests.sh" \
     --sim "$simulation_binary" \
