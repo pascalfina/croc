@@ -11,7 +11,7 @@ package tb_croc_pkg;
   // Clocks
   localparam realtime ClkPeriodSys  = 50ns;    // 20 MHz
   localparam realtime ClkPeriodJtag = 10ns;    // 100 MHz
-  localparam realtime ClkPeriodRef  = 30518ns; // 32 KiHz
+  localparam realtime ClkPeriodRef  = 1000ns;  // 1 MHz
 
   // Number of clock cycles the reset is applied
   // for at the beginnig of the simulation

@@ -435,7 +435,18 @@ To simulate the post-Yosys netlist with Verilator instead, first generate the ne
 
 ```sh
 cd yosys && ./run_synthesis.sh --synth
-cd ../verilator && ./run_verilator.sh --build-netlist --run-netlist ../sw/bin/helloworld.hex
+cd ..
+cp yosys/out/croc_yosys_debug.v yosys/out/netlist_debug.v
+
+cd verilator
+./run_verilator.sh --build-netlist
+
+../.github/scripts/run_tests.sh \
+  --sim obj_dir_netlist_yosys/Vtb_croc_soc \
+  --hexdir ../sw/bin/cheriot-rtos \
+  --filter 'test-suite-*' \
+  --timeout 7200 \
+  --live-output
 ```
 
 If you have Questasim/Modelsim, you can also run:

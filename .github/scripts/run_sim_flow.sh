@@ -152,7 +152,13 @@ echo "============================================="
 "$SCRIPT_DIR/run_tests.sh" \
     --sim "$simulation_binary" \
     --hexdir ../sw/bin/cheriot-rtos \
-    --filter 'test-suite-*' \
+    --filter 'test-suite-*' \Replace CVE2 with https://github.com/lowRISC/ibex, which includes multiply/divide.
+Add tagged RAM of at least ~36 KiB, plus a revocation bitmap for the heap. A hello-world image is 35,832 bytes; croc has 4 KiB.
+Clock mtime at 1 MHz or more, ideally the core clock. The RTOS uses one timer_hz value for both the timer and the cycle counter (https://github.com/CHERIoT-Platform/cheriot-rtos/blob/main/sdk/include/thread.h). Croc's mtime runs at 32.768 kHz.
+Croc's peripheral interrupts go to fast interrupt lines, which the RTOS never enables. Poll the peripherals, or add a PLIC.
+Rewrite the boot ROM in CHERIoT assembly so it keeps the root capabilities intact.
+Use the CHERIoT debug module, in development at lowRISC. Not verified on croc hardware or RTL. This comes from reading the source, building for a croc board file, and booting in the Sail simulator, with the toolchain from
+https://github.com/lowRISC/lowrisc-nix.
     --timeout "$rtos_test_timeout"
 
 cd "$CROC_ROOT"
