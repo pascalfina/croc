@@ -7,3 +7,7 @@
 [submodule "ihp13/sg13g2"]
 	path = ihp13/sg13g2
 	url = https://github.com/IHP-GmbH/IHP-Open-PDK
+[submodule "rtl/vendor/hyperbus"]
+	path = rtl/vendor/hyperbus
+	url = git@github.com:pascalfina/hyperbus.git
+	branch = hyperbus-pr-43
