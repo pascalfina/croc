@@ -22,6 +22,7 @@ dependencies:
   obi_peripherals:      { git: "https://github.com/pulp-platform/obi_peripherals.git",      rev: 21ee04d    } # UART
   idma:                 { git: "https://github.com/pulp-platform/idma.git",                 rev: "__deploy__e618e4d__master" } # master with generated files
   ibex:                 { path: "ibex" } # a vendor package (no Bender.yml), see below 
+  hyperbus:             { path: "rtl/vendor/hyperbus" }
 
 
 sources:
