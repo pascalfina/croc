@@ -88,3 +88,4 @@
 /yosys/out
 scripts/publish_cheriot_image.sh
 .containers/croc-cheriot.sif
+infineon-s27kl0641-s27ks0641-verilog-simulationmodels-en.zip

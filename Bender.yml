@@ -54,6 +54,7 @@ sources:
       # Level 2
       - rtl/cheriot/tag_memory.sv
       - rtl/cheriot/revc_bitmap_memory.sv
+      - rtl/obi/obi_to_reg.sv
       - rtl/croc_domain.sv
       - rtl/user_domain.sv
       # add your design files with modules here
@@ -70,11 +71,21 @@ sources:
     files:
       - yosys/out/netlist_debug.v
 
+  # Use simulation pads unless tech_cells_generic supplies the Xilinx pads.
+  - target: all(any(simulation, verilator), not(all(any(fpga, tech_cells_generic_include_xilinx_xpm), not(tech_cells_generic_exclude_xilinx_xpm))))
+    files:
+      - rtl/test/pad_functional_pd.sv
+
   - target: any(simulation, verilator)
     files:
       - rtl/test/tb_croc_pkg.sv
       - rtl/test/croc_vip.sv
       - rtl/test/tb_croc_soc.sv
+
+  # External HyperRAM model used by the RTL and post-synthesis testbenches.
+  - target: any(simulation, verilator)
+    files:
+      - rtl/vendor/hyperbus/models/s27ks0641/s27ks0641.v
 
   - target: any(genesys2, basys3)
     files:

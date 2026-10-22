@@ -66,6 +66,7 @@ module tb_croc_soc #(
   // - prints UART output to console (you can also write via uart_write_byte)
   // - internal GPIO loopback for helloworld test
 
+
   croc_vip #(
     .GpioCount ( GpioCount )
   ) i_vip (
@@ -95,22 +96,105 @@ module tb_croc_soc #(
     .GpioCount ( GpioCount )
   ) i_croc_soc (
   `endif
-    .clk_i         ( sys_clk     ),
-    .rst_ni        ( rst_n       ),
-    .ref_clk_i     ( ref_clk     ),
-    .testmode_i    ( 1'b0        ),
-    .status_o      (             ),
-    .jtag_tck_i    ( jtag_tck    ),
-    .jtag_tdi_i    ( jtag_tdi    ),
-    .jtag_tdo_o    ( jtag_tdo    ),
-    .jtag_tms_i    ( jtag_tms    ),
-    .jtag_trst_ni  ( jtag_trst_n ),
-    .uart_rx_i     ( uart_rx     ),
-    .uart_tx_o     ( uart_tx     ),
-    .gpio_i        ( gpio_in     ),
-    .gpio_o        ( gpio_out    ),
-    .gpio_out_en_o ( gpio_out_en )
+    .clk_i                  ( sys_clk     ),
+    .rst_ni                 ( rst_n       ),
+    .ref_clk_i              ( ref_clk     ),
+    .testmode_i             ( 1'b0        ),
+    .status_o               (             ),
+    .jtag_tck_i             ( jtag_tck    ),
+    .jtag_tdi_i             ( jtag_tdi    ),
+    .jtag_tdo_o             ( jtag_tdo    ),
+    .jtag_tms_i             ( jtag_tms    ),
+    .jtag_trst_ni           ( jtag_trst_n ),
+    .uart_rx_i              ( uart_rx     ),
+    .uart_tx_o              ( uart_tx     ),
+    .gpio_i                 ( gpio_in     ),
+    .gpio_o                 ( gpio_out    ),
+    .gpio_out_en_o          ( gpio_out_en ),
+    .hyper_cs_no            ( hyper_cs_n_wire    ),
+    .hyper_ck_o             ( hyper_ck_wire      ),
+    .hyper_ck_no            ( hyper_ck_n_wire    ),
+    .hyper_rwds_o           ( hyper_rwds_o       ),
+    .hyper_rwds_i           ( hyper_rwds_i       ),
+    .hyper_rwds_oe_o        ( hyper_rwds_oe      ),
+    .hyper_dq_i             ( hyper_dq_i         ),
+    .hyper_dq_o             ( hyper_dq_o         ),
+    .hyper_dq_oe_o          ( hyper_dq_oe        ),
+    .hyper_reset_no         ( hyper_reset_n_wire )
   );
+
+  /////////////////
+  // Hyper-Dram  //
+  /////////////////
+
+  // from rtl/vendor/hyperbus/test/fixture_hyperbus.sv
+
+  localparam int unsigned NumPhys = 2; // 2 groups each has its own crtl signals
+  localparam int unsigned NumConnectedChips = 1; // one hyperam module per group
+
+  logic [NumPhys-1:0][hyperbus_pkg::HyperNumChips-1:0] hyper_cs_n_wire;
+  logic [NumPhys-1:0]               hyper_ck_wire;
+  logic [NumPhys-1:0]               hyper_ck_n_wire;
+  logic [NumPhys-1:0]               hyper_rwds_o;
+  logic [NumPhys-1:0]               hyper_rwds_i;
+  logic [NumPhys-1:0]               hyper_rwds_oe;
+  logic [NumPhys-1:0][7:0]          hyper_dq_i;
+  logic [NumPhys-1:0][7:0]          hyper_dq_o;
+  logic [NumPhys-1:0]               hyper_dq_oe;
+  logic [NumPhys-1:0]               hyper_reset_n_wire;
+            
+  wire  [NumPhys-1:0][NumConnectedChips-1:0] pad_hyper_csn;
+  wire  [NumPhys-1:0]                pad_hyper_ck;
+  wire  [NumPhys-1:0]                pad_hyper_ckn;
+  wire  [NumPhys-1:0]                pad_hyper_rwds;
+  wire  [NumPhys-1:0]                pad_hyper_reset;
+  wire  [NumPhys-1:0][7:0]           pad_hyper_dq;
+
+ 
+  generate
+       for (genvar i=0; i<NumPhys; i++) begin : hyperrams
+          for (genvar j=0; j<NumConnectedChips; j++) begin : chips
+
+             s27ks0641 #(
+               /*.mem_file_name ( "s27ks0641.mem"    ),*/
+               .TimingModel   ( "S27KS0641DPBHI020"    )
+             ) dut (
+               .DQ7           ( pad_hyper_dq[i][7]  ),
+               .DQ6           ( pad_hyper_dq[i][6]  ),
+               .DQ5           ( pad_hyper_dq[i][5]  ),
+               .DQ4           ( pad_hyper_dq[i][4]  ),
+               .DQ3           ( pad_hyper_dq[i][3]  ),
+               .DQ2           ( pad_hyper_dq[i][2]  ),
+               .DQ1           ( pad_hyper_dq[i][1]  ),
+               .DQ0           ( pad_hyper_dq[i][0]  ),
+               .RWDS          ( pad_hyper_rwds[i]   ),
+               .CSNeg         ( pad_hyper_csn[i][0] /*j instead of 0 prob better*/ ),
+               .CK            ( pad_hyper_ck[i]     ),
+               .CKNeg         ( pad_hyper_ckn[i]    ),
+               .RESETNeg      ( pad_hyper_reset[i]  )
+             );
+          end // block: chips
+       end // block: hyperrams
+  endgenerate
+
+
+  for (genvar i = 0 ; i<NumPhys; i++) begin: pad_gen
+    for (genvar j = 0; j<NumConnectedChips; j++) begin
+       pad_functional_pd padinst_hyper_csno   (.OEN( 1'b0            ), .I( hyper_cs_n_wire[i][j] ), .O(                  ), .PAD( pad_hyper_csn[i][j] ), .PEN( 1'b0 ));
+    end
+    pad_functional_pd padinst_hyper_ck     (.OEN( 1'b0            ), .I( hyper_ck_wire[i]      ), .O(                  ), .PAD( pad_hyper_ck[i]     ), .PEN( 1'b0 ) );
+    pad_functional_pd padinst_hyper_ckno   (.OEN( 1'b0            ), .I( hyper_ck_n_wire[i]    ), .O(                  ), .PAD( pad_hyper_ckn[i]    ), .PEN( 1'b0 ) );
+    pad_functional_pd padinst_hyper_rwds   (.OEN(~hyper_rwds_oe[i]), .I( hyper_rwds_o[i]       ), .O( hyper_rwds_i[i]  ), .PAD( pad_hyper_rwds[i]   ), .PEN( 1'b0 ) );
+    pad_functional_pd padinst_hyper_resetn (.OEN( 1'b0            ), .I( hyper_reset_n_wire[i] ), .O(                  ), .PAD( pad_hyper_reset[i]  ), .PEN( 1'b0 ) );
+    pad_functional_pd padinst_hyper_dqio0  (.OEN(~hyper_dq_oe[i]  ), .I( hyper_dq_o[i][0]      ), .O( hyper_dq_i[i][0] ), .PAD( pad_hyper_dq[i][0]  ), .PEN( 1'b0 ) );
+    pad_functional_pd padinst_hyper_dqio1  (.OEN(~hyper_dq_oe[i]  ), .I( hyper_dq_o[i][1]      ), .O( hyper_dq_i[i][1] ), .PAD( pad_hyper_dq[i][1]  ), .PEN( 1'b0 ) );
+    pad_functional_pd padinst_hyper_dqio2  (.OEN(~hyper_dq_oe[i]  ), .I( hyper_dq_o[i][2]      ), .O( hyper_dq_i[i][2] ), .PAD( pad_hyper_dq[i][2]  ), .PEN( 1'b0 ) );
+    pad_functional_pd padinst_hyper_dqio3  (.OEN(~hyper_dq_oe[i]  ), .I( hyper_dq_o[i][3]      ), .O( hyper_dq_i[i][3] ), .PAD( pad_hyper_dq[i][3]  ), .PEN( 1'b0 ) );
+    pad_functional_pd padinst_hyper_dqio4  (.OEN(~hyper_dq_oe[i]  ), .I( hyper_dq_o[i][4]      ), .O( hyper_dq_i[i][4] ), .PAD( pad_hyper_dq[i][4]  ), .PEN( 1'b0 ) );
+    pad_functional_pd padinst_hyper_dqio5  (.OEN(~hyper_dq_oe[i]  ), .I( hyper_dq_o[i][5]      ), .O( hyper_dq_i[i][5] ), .PAD( pad_hyper_dq[i][5]  ), .PEN( 1'b0 ) );
+    pad_functional_pd padinst_hyper_dqio6  (.OEN(~hyper_dq_oe[i]  ), .I( hyper_dq_o[i][6]      ), .O( hyper_dq_i[i][6] ), .PAD( pad_hyper_dq[i][6]  ), .PEN( 1'b0 ) );
+    pad_functional_pd padinst_hyper_dqio7  (.OEN(~hyper_dq_oe[i]  ), .I( hyper_dq_o[i][7]      ), .O( hyper_dq_i[i][7] ), .PAD( pad_hyper_dq[i][7]  ), .PEN( 1'b0 ) );
+  end
 
   /////////////////
   //  Testbench  //

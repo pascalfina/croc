@@ -5,9 +5,12 @@
 // Authors:
 // - Philippe Sauter <phsauter@iis.ee.ethz.ch>
 
+`include "register_interface/typedef.svh"
+
 module croc_domain import croc_pkg::*; #(
   parameter int unsigned GpioCount = 16,
-  parameter int unsigned NumExternalIrqs = 4
+  parameter int unsigned NumExternalIrqs = 4, 
+  parameter int unsigned NumPhys   = 2 
 ) (
   input  logic      clk_i,
   input  logic      rst_ni,
@@ -40,7 +43,18 @@ module croc_domain import croc_pkg::*; #(
   output mgr_obi_rsp_t user_mgr_obi_rsp_o,
 
   input  logic [NumExternalIrqs-1:0] interrupts_i,
-  output logic core_busy_o
+  output logic core_busy_o, 
+
+  output logic [NumPhys-1:0][hyperbus_pkg::HyperNumChips-1:0] hyper_cs_no,
+  output logic [NumPhys-1:0]               hyper_ck_o,
+  output logic [NumPhys-1:0]               hyper_ck_no,
+  output logic [NumPhys-1:0]               hyper_rwds_o,
+  input  logic [NumPhys-1:0]               hyper_rwds_i,
+  output logic [NumPhys-1:0]               hyper_rwds_oe_o,
+  input  logic [NumPhys-1:0][7:0]          hyper_dq_i,
+  output logic [NumPhys-1:0][7:0]          hyper_dq_o,
+  output logic [NumPhys-1:0]               hyper_dq_oe_o,
+  output logic [NumPhys-1:0]               hyper_reset_no
 );
 
   // -----------------
@@ -569,6 +583,95 @@ module croc_domain import croc_pkg::*; #(
     .trvk_revbm_err_o(trvk_err)
 
   );
+
+  // obi adapter for hyperbus controller
+
+  `REG_BUS_TYPEDEF_ALL(
+  hyperbus_reg,
+  logic [31:0],
+  logic [31:0],
+  logic [3:0]
+)
+
+  sbr_obi_req_t hyperbus_reg_obi_req;
+  sbr_obi_rsp_t hyperbus_reg_obi_rsp;
+
+  hyperbus_reg_req_t hyperbus_reg_req;
+  hyperbus_reg_rsp_t hyperbus_reg_rsp;
+
+  
+assign hyperbus_reg_obi_req = all_periph_obi_req[PeriphHyperbusCrtl];
+assign all_periph_obi_rsp[PeriphHyperbusCrtl]  = hyperbus_reg_obi_rsp;
+
+obi_to_reg #(
+    .obi_req_t(sbr_obi_req_t),
+    .obi_rsp_t(sbr_obi_rsp_t),
+    .reg_req_t(hyperbus_reg_req_t),
+    .reg_rsp_t(hyperbus_reg_rsp_t),
+    .ObiAddrWidth(SbrObiCfg.AddrWidth),
+    .ObiDataWidth(SbrObiCfg.DataWidth),
+    .ObiIdWidth(SbrObiCfg.IdWidth),
+    .RegBaseAddr(32'h0300_C000)
+) i_obi_to_reg (
+    .clk_i(clk_i),
+    .rst_ni(rst_ni),
+    .obi_req_i(hyperbus_reg_obi_req),
+    .obi_rsp_o(hyperbus_reg_obi_rsp),
+
+    .reg_req_o(hyperbus_reg_req),
+    .reg_rsp_i(hyperbus_reg_rsp)
+);
+
+
+// hyperbus subordinate
+
+sbr_obi_req_t hyperbus_obi_req;
+sbr_obi_rsp_t hyperbus_obi_rsp;
+
+assign hyperbus_obi_req = all_sbr_obi_req[XbarHyperbus];
+assign all_sbr_obi_rsp[XbarHyperbus] = hyperbus_obi_rsp;
+
+
+  hyperbus_synchronous #(
+    .NumPhys(NumPhys),
+    .ObiAddrWidth(SbrObiCfg.AddrWidth),
+    .ObiDataWidth(SbrObiCfg.DataWidth),
+    .ObiIdWidth(SbrObiCfg.IdWidth),
+    .obi_req_t(sbr_obi_req_t),
+    .obi_rsp_t(sbr_obi_rsp_t),
+    .RegDataWidth(32),
+    .RegAddrWidth(32),
+    .reg_req_t(hyperbus_reg_req_t),
+    .reg_rsp_t(hyperbus_reg_rsp_t),
+    .rule_t(addr_map_rule_t),
+    .HostWriteBufferBytes(64),
+    .PhyStartupCycles(300 * 200),
+    .SyncStages(2)
+) i_hyperbus_synchronous(
+    .clk_sys_i(clk_i),
+    .rst_sys_ni(rst_ni),
+`ifdef TARGET_XILINX
+    .clk_ref200_i(),
+`endif
+    .test_mode_i(testmode_i),
+
+    .obi_req_i(hyperbus_obi_req),
+    .obi_rsp_o(hyperbus_obi_rsp),
+
+    .reg_req_i(hyperbus_reg_req),
+    .reg_rsp_o(hyperbus_reg_rsp),
+
+    .hyper_cs_no            ( hyper_cs_no),
+    .hyper_ck_o             ( hyper_ck_o),
+    .hyper_ck_no            ( hyper_ck_no),
+    .hyper_rwds_o           ( hyper_rwds_o),
+    .hyper_rwds_i           ( hyper_rwds_i),
+    .hyper_rwds_oe_o        ( hyper_rwds_oe_o),
+    .hyper_dq_i             ( hyper_dq_i),
+    .hyper_dq_o             ( hyper_dq_o),
+    .hyper_dq_oe_o          ( hyper_dq_oe_o),
+    .hyper_reset_no         ( hyper_reset_no )
+);
 
 
 

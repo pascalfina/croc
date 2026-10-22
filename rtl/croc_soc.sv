@@ -6,7 +6,9 @@
 // - Philippe Sauter <phsauter@iis.ee.ethz.ch>
 
 module croc_soc import croc_pkg::*; #(
-  parameter int unsigned GpioCount = 16
+  parameter int unsigned GpioCount = 16, 
+  parameter int unsigned NumPhys   = 2 
+
 ) (
   input  logic clk_i,
   input  logic rst_ni,
@@ -25,7 +27,19 @@ module croc_soc import croc_pkg::*; #(
 
   input  logic [GpioCount-1:0] gpio_i,       // Input from GPIO pins
   output logic [GpioCount-1:0] gpio_o,       // Output to GPIO pins
-  output logic [GpioCount-1:0] gpio_out_en_o // Output enable signal; 0 -> input, 1 -> output
+  output logic [GpioCount-1:0] gpio_out_en_o, // Output enable signal; 0 -> input, 1 -> output
+
+  output logic [NumPhys-1:0][hyperbus_pkg::HyperNumChips-1:0] hyper_cs_no,
+  output logic [NumPhys-1:0]               hyper_ck_o,
+  output logic [NumPhys-1:0]               hyper_ck_no,
+  output logic [NumPhys-1:0]               hyper_rwds_o,
+  input  logic [NumPhys-1:0]               hyper_rwds_i,
+  output logic [NumPhys-1:0]               hyper_rwds_oe_o,
+  input  logic [NumPhys-1:0][7:0]          hyper_dq_i,
+  output logic [NumPhys-1:0][7:0]          hyper_dq_o,
+  output logic [NumPhys-1:0]               hyper_dq_oe_o,
+  output logic [NumPhys-1:0]               hyper_reset_no       
+
 );
 
   logic synced_rst_n;
@@ -52,7 +66,8 @@ logic [      GpioCount-1:0] gpio_in_sync;
 
 croc_domain #(
   .GpioCount       ( GpioCount       ),
-  .NumExternalIrqs ( NumExternalIrqs )
+  .NumExternalIrqs ( NumExternalIrqs ),
+  .NumPhys        ( NumPhys         )
 ) i_croc (
   .clk_i,
   .rst_ni ( synced_rst_n ),
@@ -81,7 +96,19 @@ croc_domain #(
   .user_mgr_obi_rsp_o  ( user_mgr_obi_rsp ),
 
   .interrupts_i ( interrupts ),
-  .core_busy_o  ( status_o   )
+  .core_busy_o  ( status_o   ), 
+
+  .hyper_cs_no            ( hyper_cs_no),
+  .hyper_ck_o             ( hyper_ck_o),
+  .hyper_ck_no            ( hyper_ck_no),
+  .hyper_rwds_o           ( hyper_rwds_o),
+  .hyper_rwds_i           ( hyper_rwds_i),
+  .hyper_rwds_oe_o        ( hyper_rwds_oe_o),
+  .hyper_dq_i             ( hyper_dq_i),
+  .hyper_dq_o             ( hyper_dq_o),
+  .hyper_dq_oe_o          ( hyper_dq_oe_o),
+  .hyper_reset_no         ( hyper_reset_no )
+
 );
 
 user_domain #(
