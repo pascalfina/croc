@@ -136,7 +136,7 @@ CHERIOT_RTOS_OUTPUTS       := $(CHERIOT_RTOS_ELFS) $(CHERIOT_RTOS_HEXS) $(CHERIO
 # Collecting source files
 LIB_SOURCES  := $(wildcard $(SRCDIR)/*.[cS])
 TOP_SOURCES  := $(filter-out $(CRT0) $(CHERIOT_ASM_STARTUP) $(CHERIOT_C_STARTUP), $(wildcard *.[cS]))
-TEST_SOURCES := $(wildcard test/*.[cS])
+TEST_SOURCES := $(wildcard test/*.[cS] hyperam_tests/*.[cS])
 PROG_SOURCES := $(TOP_SOURCES) $(TEST_SOURCES)
 
 PROG_NAMES   := $(basename $(PROG_SOURCES))

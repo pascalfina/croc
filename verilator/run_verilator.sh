@@ -147,6 +147,7 @@ build_netlist_verilator() {
 }
 
 generate_rtl_flist() {
+    run_cmd "bash \"${CROC_ROOT}/scripts/prepare_hyperram_model.sh\""
     run_cmd "echo [INFO][Bender] Generate croc_rtl.f"
     run_cmd "bender \
         script flist-plus \
@@ -168,6 +169,7 @@ generate_rtl_flist() {
 }
 
 generate_netlist_flist() {
+    run_cmd "bash \"${CROC_ROOT}/scripts/prepare_hyperram_model.sh\""
     run_cmd "echo [INFO][Bender] Generate croc_netlist_yosys.f"
     run_cmd "bender \
         script flist-plus \

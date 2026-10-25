@@ -1,0 +1,302 @@
+# Copyright 2026 ETH Zurich and University of Bologna.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+# Patch instructions only; the vendor model remains separately licensed.
+
+--- s27ks0641.v
++++ s27ks0641_verilator.v
+@@ -156,8 +156,10 @@
+     reg glitch_rwdsR = 1'b0;
+     reg Viol = 1'b0;
+ 
+-    reg [7:0] Dout_zd = 8'bzzzzzzzz;
+-    reg RWDSout_zd = 1'bz;
++    // Store {drive_enable, data}; only the continuous pin drivers use Z.
++    // Procedural Z state makes Verilator split assignments into stale drivers.
++    reg [8:0] Dout_zd = 9'b0;
++    reg [1:0] RWDSout_zd = 2'b0;
+ 
+     wire  DQ7_zd   ;
+     wire  DQ6_zd   ;
+@@ -175,23 +177,23 @@
+             DQ3_zd,
+             DQ2_zd,
+             DQ1_zd,
+-            DQ0_zd  } = Dout_zd;
++            DQ0_zd  } = Dout_zd[8] ? Dout_zd[7:0] : 8'bzzzzzzzz;
+ 
+     wire RWDS_zd;
+-    assign RWDS_zd = RWDSout_zd;
++    assign RWDS_zd = RWDSout_zd[1] ? RWDSout_zd[0] : 1'bz;
+ 
+-    reg [7:0] Dout_zd_tmp = 8'bzzzzzzzz;
+-    reg RWDSout_zd_tmp = 1'bz;
++    reg [8:0] Dout_zd_tmp = 9'b0;
++    reg [1:0] RWDSout_zd_tmp = 2'b0;
+ 
+-    reg [7:0] Dout_zd_latchH ;
+-    reg [7:0] Dout_zd_latchL ;
+-    reg RWDS_zd_latchH ;
+-    reg RWDS_zd_latchL ;
++    reg [8:0] Dout_zd_latchH ;
++    reg [8:0] Dout_zd_latchL ;
++    reg [1:0] RWDS_zd_latchH ;
++    reg [1:0] RWDS_zd_latchL ;
+ 
+     wire RESETNeg_pullup;
+-    assign RESETNeg_pullup = (RESETNeg === 1'bZ) ? 1 : RESETNeg;
++    assign RESETNeg_pullup = RESETNeg;
+ 
+-    reg CKDiff = 1'bz ;
++    reg CKDiff = 1'b0 ;
+     reg RW     = 0;
+ 
+     reg REFCOLL = 0;
+@@ -245,10 +247,10 @@
+     nmos   (RWDS ,  RWDS_zd , 1);
+ 
+     wire Dout_Z;
+-    assign Dout_Z = Dout_zd==8'bzzzzzzzz;
++    assign Dout_Z = !Dout_zd[8];
+ 
+     wire RWDSout_Z;
+-    assign RWDSout_Z = RWDSout_zd==1'bz & RW == 0;
++    assign RWDSout_Z = !RWDSout_zd[1] & (RW == 0);
+ 
+     wire tRWR_CHK;
+     assign tRWR_CHK = t_RWR_CHK;
+@@ -529,6 +531,7 @@
+     // Row Refresh inteval timer. Generate refresh start event periodically at
+     // Arrea refresh interval / 8192
+     always @(self_refresh_en or rising_edge_self_refresh_en or posedge RFH_out)
++    fork
+     begin: RefreshTime
+         if (rising_edge_self_refresh_en == 1'b1)
+             RFH_in = 1'b1;
+@@ -545,6 +548,7 @@
+             RFH_in = 1'b0;
+         end
+     end
++    join
+ 
+     // Do not refresh during memory access. Thus we need to delay refreshing.
+     always @(rising_edge_CSNeg)
+@@ -938,17 +942,17 @@
+                     if (Config_reg_0[3] == 1'b1)// fixed latency
+                     begin
+                         REFCOLL_ACTIV = 1'b1;
+-                        RWDSout_zd_tmp = 1'b1;
++                        RWDSout_zd_tmp = 2'b11;
+                     end
+                     else if (Config_reg_0[3] == 1'b0)// variable latency
+                     begin
+                         if (REFCOLL_ACTIV == 1'b1)
+                         begin
+-                            RWDSout_zd_tmp = 1'b1;
++                            RWDSout_zd_tmp = 2'b11;
+                         end
+                         else
+                         begin
+-                            RWDSout_zd_tmp = 1'b0;
++                            RWDSout_zd_tmp = 2'b10;
+                         end
+                     end
+                 end
+@@ -1001,10 +1005,10 @@
+                 begin
+ 
+                     if (RW == 1'b1) // read
+-                        RWDSout_zd_tmp = 1'b0;
++                        RWDSout_zd_tmp = 2'b10;
+                     else  // write
+                     begin
+-                        RWDSout_zd_tmp = 1'bz;
++                        RWDSout_zd_tmp = 2'b00;
+                         WR_CFReg1 = ca_in[0];
+                     end
+ 
+@@ -1043,31 +1047,31 @@
+                     begin
+                         glitch_rwds = 1'b1;
+                         glitch_rwdsR = 1'b1;
+-                        RWDSout_zd_tmp = 1'b1;
++                        RWDSout_zd_tmp = 2'b11;
+                         if (Target == 0) // mem
+                         begin
+                             if (Mem[Address][15:8]==-1)
+-                                Dout_zd_tmp = 8'bxxxxxxxx;
++                                Dout_zd_tmp = 9'b1xxxxxxxx;
+                             else
+-                                Dout_zd_tmp=Mem[Address][15:8];
++                                Dout_zd_tmp = {1'b1, Mem[Address][15:8]};
+                         end
+                         else // reg
+                         begin
+                             if (ca_in[31:24] == 8'b00000001)
+                             begin
+                                 if (ca_in[0] == 1'b0)
+-                                    Dout_zd_tmp = Config_reg_0[15:8];
++                                    Dout_zd_tmp = {1'b1, Config_reg_0[15:8]};
+                                 else // if ca_in[0] == 1'b1
+-                                    Dout_zd_tmp = Config_reg_1[15:8];
++                                    Dout_zd_tmp = {1'b1, Config_reg_1[15:8]};
+                             end
+                             else
+                             begin
+                                 if (ca_in[31:24] == 8'b00000000)
+                                 begin
+                                     if (ca_in[0] == 1'b0)
+-                                        Dout_zd_tmp = ID_Register_0[15:8];
++                                        Dout_zd_tmp = {1'b1, ID_Register_0[15:8]};
+                                     else // if ca_in[0] == 1'b1
+-                                        Dout_zd_tmp = ID_Register_1[15:8];
++                                        Dout_zd_tmp = {1'b1, ID_Register_1[15:8]};
+                                 end
+                             end
+                         end
+@@ -1123,31 +1127,31 @@
+                         begin
+                             if (RW == 1) // read
+                             begin
+-                                RWDSout_zd_tmp = 1'b0;
++                                RWDSout_zd_tmp = 2'b10;
+                                 if (Target == 0) // mem
+                                 begin
+                                     if (Mem[Address][7:0]==-1)
+-                                        Dout_zd_tmp = 8'bxxxxxxxx;
++                                        Dout_zd_tmp = 9'b1xxxxxxxx;
+                                     else
+-                                        Dout_zd_tmp = Mem[Address][7:0];
++                                        Dout_zd_tmp = {1'b1, Mem[Address][7:0]};
+                                 end
+                                 else // reg
+                                 begin
+                                     if (ca_in[31:24] == 8'b00000001)
+                                     begin
+                                         if (ca_in[0] == 1'b0)
+-                                            Dout_zd_tmp = Config_reg_0[7:0];
++                                            Dout_zd_tmp = {1'b1, Config_reg_0[7:0]};
+                                         else // if ca_in[0] == 1'b1
+-                                            Dout_zd_tmp = Config_reg_1[7:0];
++                                            Dout_zd_tmp = {1'b1, Config_reg_1[7:0]};
+                                     end
+                                     else
+                                     begin
+                                         if (ca_in[31:24] == 8'b00000000)
+                                         begin
+                                             if (ca_in[0] == 1'b0)
+-                                                Dout_zd_tmp = ID_Register_0[7:0];
++                                                Dout_zd_tmp = {1'b1, ID_Register_0[7:0]};
+                                             else // if ca_in[0] == 1'b1
+-                                                Dout_zd_tmp = ID_Register_1[7:0];
++                                                Dout_zd_tmp = {1'b1, ID_Register_1[7:0]};
+                                         end
+                                     end
+                                 end
+@@ -1222,17 +1226,17 @@
+         if (falling_edge_CSNeg)
+         begin
+             if (Config_reg_0[3] == 1'b1)// fixed latency
+-                RWDSout_zd = 1'b1;
++                RWDSout_zd = 2'b11;
+             else
+             begin
+                 if (RowRefreshing == 1'b1)
+                 begin
+-                    RWDSout_zd    = 1'b1;
++                    RWDSout_zd    = 2'b11;
+                     REFCOLL_ACTIV = 1'b1;
+                 end
+                 else
+                 begin
+-                    RWDSout_zd    = 1'b0;
++                    RWDSout_zd    = 2'b10;
+                     REFCOLL_ACTIV = 1'b0;
+                 end
+             end
+@@ -1241,10 +1245,10 @@
+         if (rising_edge_CSNeg || falling_edge_RESETNeg)
+         begin
+             bus_cycle_state = STAND_BY;
+-            Dout_zd_tmp = 8'bzzzzzzzz;
+-            RWDSout_zd_tmp = 1'bz;
+-            Dout_zd = 8'bzzzzzzzz;
+-            RWDSout_zd = 1'bz;
++            Dout_zd_tmp = 9'b0;
++            RWDSout_zd_tmp = 2'b00;
++            Dout_zd = 9'b0;
++            RWDSout_zd = 2'b00;
+             glitch_rwds = 1'b0;
+             glitch_rwdsR = 1'b0;
+             REFCOLL_ACTIV = 1'b0;
+@@ -1451,6 +1455,7 @@
+     end
+ 
+  always @(rising_edge_CKDiff)
++    fork
+     begin: read_process_dq1
+         if (~CSNeg_ipd)
+         begin
+@@ -1465,8 +1470,10 @@
+             end
+         end
+     end
++    join
+ 
+  always @(falling_edge_CKDiff)
++    fork
+     begin: read_process_dq2
+         if (~CSNeg_ipd)
+         begin
+@@ -1481,8 +1488,10 @@
+             end
+         end
+     end
++    join
+ 
+     always @(rising_edge_CKDiff)
++    fork
+     begin: read_process_rwds1
+         if (~CSNeg_ipd)
+         begin
+@@ -1497,8 +1506,10 @@
+             end
+         end
+     end
++    join
+ 
+     always @(falling_edge_CKDiff)
++    fork
+     begin: read_process_rwds2
+         if (~CSNeg_ipd)
+         begin
+@@ -1513,8 +1524,10 @@
+             end
+         end
+     end
++    join
+ 
+     always @(rising_edge_CKDiff)
++    fork
+     begin: read_process_rwdsR1
+         if (~CSNeg_ipd)
+         begin
+@@ -1529,8 +1542,10 @@
+             end
+         end
+     end
++    join
+ 
+     always @(falling_edge_CKDiff)
++    fork
+     begin: read_process_rwdsR2
+         if (~CSNeg_ipd)
+         begin
+@@ -1545,6 +1560,7 @@
+             end
+         end
+     end
++    join
+ 
+     reg  BuffInDQ;
+     wire BuffOutDQ;

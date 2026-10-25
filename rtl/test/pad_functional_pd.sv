@@ -12,7 +12,8 @@ module pad_functional_pd (
 
   // Output and pull-down enables are active low.
   assign PAD = OEN ? 1'bz : I;
-  assign (pull0, highz1) PAD = PEN ? 1'bz : 1'b0;
+  // This driver only produces 0 or Z; data drivers remain stronger than the pull.
+  assign (pull0, pull1) PAD = PEN ? 1'bz : 1'b0;
   assign O = PAD;
 
 endmodule
