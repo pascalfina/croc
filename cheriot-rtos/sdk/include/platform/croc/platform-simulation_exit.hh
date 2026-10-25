@@ -12,7 +12,7 @@
 #	include <stdint.h>
 #   include <stdint.h>
 
-uint32_t numb_nops = 5000;
+// uint32_t numb_nops = 50000;
 
 static void platform_simulation_exit(uint32_t code)
 {
@@ -22,10 +22,10 @@ static void platform_simulation_exit(uint32_t code)
 	{
 	}
 
-	for (volatile uint32_t i = 0; i < numb_nops; i++)
-	{
-		__asm__ volatile("nop");
-	}
+	// for (volatile uint32_t i = 0; i < numb_nops; i++)
+	// {
+	// 	__asm__ volatile("nop");
+	// }
 
 	// write to core status
 	MMIO_CAPABILITY(uint32_t, core_status)[0] = 1u | (code << 1);

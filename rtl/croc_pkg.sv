@@ -83,16 +83,18 @@ package croc_pkg;
     XbarPeriph = 1,
     XbarUser   = 2,
     XbarBank0  = 3, 
-    XbarRevBitmap = 5
+    XbarRevBitmap = 5,
+    XbarHyperbus = 6
   } croc_xbar_outputs_e;
 
   /// Address map given to the main crossbar
-  localparam addr_map_rule_t [4:0] CrocAddrMap = '{
+  localparam addr_map_rule_t [5:0] CrocAddrMap = '{
     '{ idx: XbarPeriph,  start_addr: 32'h0000_0000, end_addr: 32'h1000_0000 },
     '{ idx: XbarUser,    start_addr: 32'h2000_0000, end_addr: 32'h8000_0000 },
     '{ idx: XbarBank0,   start_addr: 32'h1000_0000, end_addr: 32'h1001_0000 },
     '{ idx: XbarBank0+1, start_addr: 32'h1001_0000, end_addr: 32'h1002_0000 },
-    '{ idx: XbarRevBitmap,start_addr: 32'h1002_0000,end_addr:   32'h1002_0400 }
+    '{ idx: XbarRevBitmap,start_addr: 32'h1002_0000,end_addr:   32'h1002_0400 },
+    '{ idx: XbarHyperbus,  start_addr: 32'h8000_0000, end_addr: 32'h9000_0000 }
   };
 
   // +1 for additional OBI error
@@ -140,11 +142,12 @@ package croc_pkg;
     PeriphUart     = 5,
     PeriphGpio     = 6,
     PeriphTimer    = 7,
-    PeriphiDMA     = 8
+    PeriphiDMA     = 8,
+    PeriphHyperbusCrtl = 9
   } periph_outputs_e;
 
   /// Address map given to the peripheral mux
-  localparam addr_map_rule_t [7:0] PeriphAddrMap = '{
+  localparam addr_map_rule_t [8:0] PeriphAddrMap = '{
     '{ idx: PeriphDebug,   start_addr: 32'h0000_0000, end_addr: 32'h0004_0000 },
     '{ idx: PeriphBootrom, start_addr: 32'h0200_0000, end_addr: 32'h0200_4000 },
     '{ idx: PeriphClint,   start_addr: 32'h0204_0000, end_addr: 32'h0208_0000 },
@@ -152,7 +155,9 @@ package croc_pkg;
     '{ idx: PeriphUart,    start_addr: 32'h0300_2000, end_addr: 32'h0300_3000 },
     '{ idx: PeriphGpio,    start_addr: 32'h0300_5000, end_addr: 32'h0300_6000 },
     '{ idx: PeriphTimer,   start_addr: 32'h0300_A000, end_addr: 32'h0300_B000 },
-    '{ idx: PeriphiDMA,    start_addr: 32'h0300_B000, end_addr: 32'h0300_C000 }
+    '{ idx: PeriphiDMA,    start_addr: 32'h0300_B000, end_addr: 32'h0300_C000 },
+    '{ idx: PeriphHyperbusCrtl,start_addr: 32'h0300_C000, end_addr: 32'h0300_D000 }
+
   };
 
   // +1 for additional OBI error

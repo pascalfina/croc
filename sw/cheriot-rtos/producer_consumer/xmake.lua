@@ -1,0 +1,43 @@
+-- Copyright Microsoft and CHERIoT Contributors.
+-- SPDX-License-Identifier: MIT
+
+set_project("Croc CHERIoT Producer Consumer")
+sdkdir = path.join(os.scriptdir(), "../../../cheriot-rtos/sdk")
+includes(sdkdir)
+set_toolchains("cheriot-clang")
+
+option("board")
+    set_default("sail")
+
+compartment("producer")
+    add_files("producer.cc")
+
+compartment("consumer")
+    add_files("consumer.cc")
+
+-- Firmware image for the example.
+firmware("producer_consumer")
+    -- Both compartments need memcpy and the message queue compartment.
+    add_deps("freestanding", "message_queue", "debug")
+    add_deps("producer", "consumer")
+    -- Note that the stacks here are larger than they need to be in a release
+    -- build, but if scheduler debugging is enabled then the log messages use
+    -- quite a lot of stack and so we run out.
+    on_load(function(target)
+        target:values_set("threads", {
+            {
+                compartment = "producer",
+                priority = 1,
+                entry_point = "run",
+                stack_size = 0x500,
+                trusted_stack_frames = 6
+            },
+            {
+                compartment = "consumer",
+                priority = 1,
+                entry_point = "run",
+                stack_size = 0x500,
+                trusted_stack_frames = 4
+            }
+        }, {expand = false})
+    end)

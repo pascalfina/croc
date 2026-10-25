@@ -49,7 +49,7 @@ namespace
 		Debug::log(
 		  "Elapsed cycles {} (elapsed seconds: {}) (now: {}, timestamp: {})",
 		  static_cast<int64_t>(elapsed),
-		  static_cast<int>(elapsed / CPU_TIMER_HZ),
+		  static_cast<int>(elapsed / PLATFORM_TIMER_HZ),
 		  static_cast<int64_t>(now),
 		  static_cast<int64_t>(monotonicTime));
 		return wallClockTime + elapsed;
@@ -59,25 +59,27 @@ namespace
 int gettimeofday(struct timeval *tp, void *)
 {
 	clock_t now        = wall_clock_time_get();
-	tp->tv_sec         = now / CPU_TIMER_HZ;
-	clock_t subseconds = now % CPU_TIMER_HZ;
+	tp->tv_sec         = now / PLATFORM_TIMER_HZ;
+	clock_t subseconds = now % PLATFORM_TIMER_HZ;
 	// Avoid integer rounding errors by *first* multiplying and then dividing.
-	// This is equivalent to subseconds /= (CPU_TIMER_HZ / 1'000'000).
+	// This is equivalent to subseconds /= (PLATFORM_TIMER_HZ / 1'000'000).
 	subseconds *= 1'000'000;
-	subseconds /= CPU_TIMER_HZ;
+	subseconds /= PLATFORM_TIMER_HZ;
 	tp->tv_usec = subseconds;
 	return 0;
 }
 
 int clock_gettime(clockid_t clockID, struct timespec *tp)
 {
-	clock_t now = 0;
+	clock_t  now            = 0;
+	uint64_t clockFrequency = PLATFORM_TIMER_HZ;
 	switch (clockID)
 	{
 		case CLOCK_THREAD_CPUTIME_ID:
 			// Fall back to monotonic time if scheduler accounting is disabled.
 #if SCHEDULER_ACCOUNTING == true
-			now = thread_elapsed_cycles_current();
+			now            = thread_elapsed_cycles_current();
+			clockFrequency = CPU_TIMER_HZ;
 			break;
 #else
 			[[fallthrough]];
@@ -91,13 +93,13 @@ int clock_gettime(clockid_t clockID, struct timespec *tp)
 		default:
 			return -1;
 	}
-	tp->tv_sec         = now / CPU_TIMER_HZ;
-	clock_t subseconds = now % CPU_TIMER_HZ;
+	tp->tv_sec         = now / clockFrequency;
+	clock_t subseconds = now % clockFrequency;
 	// Avoid integer rounding errors by *first* multiplying and then dividing.
-	// This is equivalent to subseconds /= (CPU_TIMER_HZ / 1'000'000'000).  Note
-	// that tv_usec is a 32-bit value (nanoseconds in
+	// This is equivalent to subseconds /= (clockFrequency / 1'000'000'000).
+	// Note that tv_usec is a 32-bit value (nanoseconds in
 	subseconds *= 1'000'000'000;
-	subseconds /= CPU_TIMER_HZ;
+	subseconds /= clockFrequency;
 	tp->tv_nsec = static_cast<long>(subseconds);
 	return 0;
 }
@@ -105,7 +107,7 @@ int clock_gettime(clockid_t clockID, struct timespec *tp)
 time_t time(time_t *tloc)
 {
 	clock_t now        = wall_clock_time_get();
-	time_t  nowSeconds = now / CPU_TIMER_HZ;
+	time_t  nowSeconds = now / PLATFORM_TIMER_HZ;
 	if (tloc != NULL)
 	{
 		*tloc = nowSeconds;

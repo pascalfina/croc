@@ -181,6 +181,7 @@ test("thread_pool", { name = "Thread pool" })
 -- Test our support for global constructors
 test("global_constructors", { compartment = false } )
     add_files("global_constructors-test.cc")
+    add_deps("cxxrt")
 
 -- Test queues
 test("queue", { name = "Queue" })

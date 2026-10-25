@@ -24,6 +24,8 @@ if ! [[ "$VERILATOR_JOBS" =~ ^[1-9][0-9]*$ ]]; then
     exit 1
 fi
 
+VERILATOR_TRACE_ARGS="--trace-fst --trace-structs"
+
 ################
 # Setup
 ################
@@ -46,6 +48,7 @@ Options:
     --help, -h          Show this help message
     --dry-run, -n       Only print commands instead of executing
     --verbose, -v       Print commands while executing
+    --no-trace           Build without FST waveform tracing
     --flist             Regenerate RTL and Yosys-netlist file lists
     --flist-rtl         Regenerate croc_rtl.f
     --flist-netlist     Regenerate croc_netlist_yosys.f
@@ -95,9 +98,7 @@ build_rtl_verilator() {
         -j $VERILATOR_JOBS \
         --timing \
         --autoflush \
-        --trace-fst \
-        --trace-threads 2 \
-        --trace-structs \
+        $VERILATOR_TRACE_ARGS \
         --unroll-count 1 \
         --unroll-stmts 1 \
         --x-assign fast \
@@ -146,6 +147,7 @@ build_netlist_verilator() {
 }
 
 generate_rtl_flist() {
+    run_cmd "bash \"${CROC_ROOT}/scripts/prepare_hyperram_model.sh\""
     run_cmd "echo [INFO][Bender] Generate croc_rtl.f"
     run_cmd "bender \
         script flist-plus \
@@ -167,6 +169,7 @@ generate_rtl_flist() {
 }
 
 generate_netlist_flist() {
+    run_cmd "bash \"${CROC_ROOT}/scripts/prepare_hyperram_model.sh\""
     run_cmd "echo [INFO][Bender] Generate croc_netlist_yosys.f"
     run_cmd "bender \
         script flist-plus \
@@ -186,6 +189,9 @@ generate_netlist_flist() {
 }
 
 run_rtl_binary() {
+    # Always start a fresh trace. A partially written FST is not readable by
+    # GTKWave, so never leave an old or interrupted waveform in place.
+    rm -f croc.fst
     run_cmd "echo [INFO][Verilator] Run RTL simulation"
     run_cmd "obj_dir_rtl/Vtb_croc_soc +binary="$1" | tee ${PROJ_NAME}_rtl.log"
 }
@@ -224,6 +230,10 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --dry-run|-n)
+            shift
+            ;;
+        --no-trace)
+            VERILATOR_TRACE_ARGS=""
             shift
             ;;
         # script-specific commands

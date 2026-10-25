@@ -23,7 +23,9 @@
   `define IHP_IOPAD_IOVSS   sg13g2_IOPadIOVss
 `endif
 
-module croc_chip import croc_pkg::*; #() (
+module croc_chip import croc_pkg::*; #(
+  parameter int unsigned NumPhys = 2
+) (
   input  wire clk_i,
   input  wire rst_ni,
   input  wire ref_clk_i,
@@ -77,6 +79,13 @@ module croc_chip import croc_pkg::*; #() (
   output wire unused2_o,
   output wire unused3_o,
 
+  output wire [NumPhys-1:0][hyperbus_pkg::HyperNumChips-1:0] hyper_cs_no,
+  output wire [NumPhys-1:0] hyper_ck_o,
+  output wire [NumPhys-1:0] hyper_ck_no,
+  output wire [NumPhys-1:0] hyper_reset_no,
+  inout  wire [NumPhys-1:0] hyper_rwds_io,
+  inout  wire [NumPhys-1:0][7:0] hyper_dq_io,
+
   inout wire VDD,
   inout wire VSS,
   inout wire VDDIO,
@@ -100,6 +109,17 @@ module croc_chip import croc_pkg::*; #() (
     logic [GpioCount-1:0] soc_gpio_i;
     logic [GpioCount-1:0] soc_gpio_o;
     logic [GpioCount-1:0] soc_gpio_out_en_o; // Output enable signal; 0 -> input, 1 -> output
+
+    logic [NumPhys-1:0][hyperbus_pkg::HyperNumChips-1:0] soc_hyper_cs_no;
+    logic [NumPhys-1:0] soc_hyper_ck_o;
+    logic [NumPhys-1:0] soc_hyper_ck_no;
+    logic [NumPhys-1:0] soc_hyper_reset_no;
+    logic [NumPhys-1:0] soc_hyper_rwds_i;
+    logic [NumPhys-1:0] soc_hyper_rwds_o;
+    logic [NumPhys-1:0] soc_hyper_rwds_oe_o;
+    logic [NumPhys-1:0][7:0] soc_hyper_dq_i;
+    logic [NumPhys-1:0][7:0] soc_hyper_dq_o;
+    logic [NumPhys-1:0] soc_hyper_dq_oe_o;
 
     `IHP_IOPAD_IN      pad_clk_i        (.pad(clk_i),        .p2c(soc_clk_i));
     `IHP_IOPAD_IN      pad_rst_ni       (.pad(rst_ni),       .p2c(soc_rst_ni));
@@ -153,6 +173,43 @@ module croc_chip import croc_pkg::*; #() (
     `IHP_IOPAD_OUT16   pad_unused2_o    (.pad(unused2_o), .c2p(soc_status_o));
     `IHP_IOPAD_OUT16   pad_unused3_o    (.pad(unused3_o), .c2p(soc_status_o));
 
+    for (genvar phy = 0; phy < NumPhys; phy++) begin : gen_hyper_pads
+      for (genvar chip = 0; chip < hyperbus_pkg::HyperNumChips; chip++) begin : gen_cs
+        `IHP_IOPAD_OUT16 pad_cs_no (
+          .pad ( hyper_cs_no[phy][chip]     ),
+          .c2p ( soc_hyper_cs_no[phy][chip] )
+        );
+      end
+
+      `IHP_IOPAD_OUT16 pad_ck_o (
+        .pad ( hyper_ck_o[phy]     ),
+        .c2p ( soc_hyper_ck_o[phy] )
+      );
+      `IHP_IOPAD_OUT16 pad_ck_no (
+        .pad ( hyper_ck_no[phy]     ),
+        .c2p ( soc_hyper_ck_no[phy] )
+      );
+      `IHP_IOPAD_OUT16 pad_reset_no (
+        .pad ( hyper_reset_no[phy]     ),
+        .c2p ( soc_hyper_reset_no[phy] )
+      );
+      `IHP_IOPAD_INOUT30 pad_rwds_io (
+        .pad    ( hyper_rwds_io[phy]       ),
+        .c2p    ( soc_hyper_rwds_o[phy]    ),
+        .p2c    ( soc_hyper_rwds_i[phy]    ),
+        .c2p_en ( soc_hyper_rwds_oe_o[phy] )
+      );
+
+      for (genvar bit_idx = 0; bit_idx < 8; bit_idx++) begin : gen_dq
+        `IHP_IOPAD_INOUT30 pad_dq_io (
+          .pad    ( hyper_dq_io[phy][bit_idx]    ),
+          .c2p    ( soc_hyper_dq_o[phy][bit_idx] ),
+          .p2c    ( soc_hyper_dq_i[phy][bit_idx] ),
+          .c2p_en ( soc_hyper_dq_oe_o[phy]       )
+        );
+      end
+    end
+
     (* dont_touch = "true" *) `IHP_IOPAD_VDD   pad_vdd0();
     (* dont_touch = "true" *) `IHP_IOPAD_VDD   pad_vdd1();
     (* dont_touch = "true" *) `IHP_IOPAD_VDD   pad_vdd2();
@@ -174,7 +231,8 @@ module croc_chip import croc_pkg::*; #() (
     (* dont_touch = "true" *) `IHP_IOPAD_IOVSS pad_vssio3();
 
   croc_soc #(
-    .GpioCount( GpioCount )
+    .GpioCount( GpioCount ),
+    .NumPhys  ( NumPhys   )
   )
   i_croc_soc (
     .clk_i          ( soc_clk_i      ),
@@ -194,7 +252,18 @@ module croc_chip import croc_pkg::*; #() (
 
     .gpio_i         ( soc_gpio_i        ),
     .gpio_o         ( soc_gpio_o        ),
-    .gpio_out_en_o  ( soc_gpio_out_en_o )
+    .gpio_out_en_o  ( soc_gpio_out_en_o ),
+
+    .hyper_cs_no      ( soc_hyper_cs_no     ),
+    .hyper_ck_o       ( soc_hyper_ck_o      ),
+    .hyper_ck_no      ( soc_hyper_ck_no     ),
+    .hyper_rwds_o     ( soc_hyper_rwds_o    ),
+    .hyper_rwds_i     ( soc_hyper_rwds_i    ),
+    .hyper_rwds_oe_o  ( soc_hyper_rwds_oe_o ),
+    .hyper_dq_i       ( soc_hyper_dq_i      ),
+    .hyper_dq_o       ( soc_hyper_dq_o      ),
+    .hyper_dq_oe_o    ( soc_hyper_dq_oe_o   ),
+    .hyper_reset_no   ( soc_hyper_reset_no  )
   );
 
 endmodule

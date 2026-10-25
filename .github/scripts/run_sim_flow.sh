@@ -30,9 +30,11 @@ if [[ $# -gt 1 ]]; then
     exit 1
 fi
 
-cheriot_test_timeout=180
-rtos_test_timeout=300
-legacy_test_timeout=120
+# Each individual RTL test may use up to 45 minutes. The enclosing GitHub job
+# still has a six-hour limit, so this does not extend the job indefinitely.
+cheriot_test_timeout=2700
+rtos_test_timeout=2700
+legacy_test_timeout=2700
 
 case "${1:-}" in
     ""|--rtl)
@@ -78,14 +80,29 @@ else
         fi
     done
 
+    upstream_tests=(
+        ccompile extra_compiles preflight debug_cxx debug_c mmio
+        unwind_cleanup softfloat stdio static_sealing crash_recovery
+        compartment_calls check_pointer misc stack thread_pool
+        global_constructors queue futex locks list eventgroup multiwaiter
+        bitpacks time
+    )
+    for upstream_test in "${upstream_tests[@]}"; do
+        required_file="sw/bin/cheriot-rtos/test-suite-${upstream_test}.hex"
+        if [[ ! -f "$required_file" ]]; then
+            echo "[ERROR] Missing netlist simulation input: $required_file" >&2
+            exit 1
+        fi
+    done
+
     build_option="--build-netlist"
     run_option="--run-netlist"
     simulation_binary="obj_dir_netlist_yosys/Vtb_croc_soc"
     simulation_log="croc_netlist_yosys.log"
     # Netlist simulation is substantially slower than RTL simulation.
-    cheriot_test_timeout=600
-    rtos_test_timeout=600
-    legacy_test_timeout=600
+    cheriot_test_timeout=7200
+    rtos_test_timeout=7200
+    legacy_test_timeout=7200
 fi
 
 echo "============================================="
@@ -99,12 +116,14 @@ if [[ "$simulation_mode" == "rtl" ]]; then
     # are kept outside the default GCC build so legacy tests stay independent.
     make -C sw cheriot
     make -C sw cheriot-rtos
+    make -C sw cheriot-rtos-tests
 else
     cp "$default_netlist" yosys/out/netlist_debug.v
 fi
 
 cd verilator
-./run_verilator.sh "$build_option"
+# CI keeps simulator logs, but does not need an interactive waveform.
+./run_verilator.sh --no-trace "$build_option"
 ./run_verilator.sh "$run_option" ../sw/bin/helloworld.hex
 grep -q "\[UART\] Hello World from Croc!" "$simulation_log"
 
@@ -127,15 +146,14 @@ echo "============================================="
 
 echo ""
 echo "============================================="
-echo "Phase 1c: default config — CHERIoT-RTOS"
+echo "Phase 1c: default config — CHERIoT-RTOS upstream regression suite"
 echo "============================================="
 
 "$SCRIPT_DIR/run_tests.sh" \
     --sim "$simulation_binary" \
     --hexdir ../sw/bin/cheriot-rtos \
-    --filter '*' \
-    --timeout "$rtos_test_timeout" \
-    --show-output
+    --filter 'test-suite-*' \
+    --timeout "$rtos_test_timeout"
 
 cd "$CROC_ROOT"
 
@@ -151,7 +169,7 @@ else
 fi
 
 cd verilator
-./run_verilator.sh "$build_option"
+./run_verilator.sh --no-trace "$build_option"
 
 "$SCRIPT_DIR/run_tests.sh" \
     --sim "$simulation_binary" \

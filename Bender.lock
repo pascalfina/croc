@@ -6,6 +6,15 @@ packages:
       Path: rtl/apb
     dependencies:
     - common_cells
+  axi:
+    revision: fccffb5953ec8564218ba05e20adbedec845e014
+    version: 0.39.1
+    source:
+      Git: https://github.com/pulp-platform/axi.git
+    dependencies:
+    - common_cells
+    - common_verification
+    - tech_cells_generic
   common_cells:
     revision: null
     version: null
@@ -20,6 +29,16 @@ packages:
     source:
       Path: rtl/common_verification
     dependencies: []
+  hyperbus:
+    revision: null
+    version: null
+    source:
+      Path: rtl/vendor/hyperbus
+    dependencies:
+    - axi
+    - common_cells
+    - register_interface
+    - tech_cells_generic
   ibex:
     revision: null
     version: null
@@ -51,6 +70,15 @@ packages:
     dependencies:
     - common_cells
     - obi
+  register_interface:
+    revision: 146501d80052b61475cdc333d3aab4cd769fd5dc
+    version: 0.3.9
+    source:
+      Git: https://github.com/pulp-platform/register_interface.git
+    dependencies:
+    - apb
+    - axi
+    - common_cells
   riscv-dbg:
     revision: null
     version: null

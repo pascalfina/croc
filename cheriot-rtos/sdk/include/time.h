@@ -53,7 +53,11 @@ typedef enum __clockid_t
 /**
  * The number of ticks on the monotonic clock per second.
  */
-#define CLOCKS_PER_SEC ((clock_t)CPU_TIMER_HZ)
+#if SCHEDULER_ACCOUNTING == true
+#	define CLOCKS_PER_SEC ((clock_t)CPU_TIMER_HZ)
+#else
+#	define CLOCKS_PER_SEC ((clock_t)PLATFORM_TIMER_HZ)
+#endif
 
 /**
  * Flag to indicate that a timespec should be treated as an absolute, rather

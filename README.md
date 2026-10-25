@@ -147,6 +147,33 @@ If something does not work, refer to the upstream [IIC-OSIC-Tools](https://githu
 
 To stop the VNC server, run the start script again and then select between stopping or stop and remove the running docker container.
 
+#### Building a custom container
+
+The CHERIoT development container is built in two layers: `Dockerfile` adds the
+CHERIoT LLVM toolchain, and `Dockerfile.cheriot-xmake` adds `xmake` for
+CHERIoT-RTOS builds. Build the base image once, then build the local overlay:
+
+```sh
+docker build -f Dockerfile \
+  -t croc-iic-osic-tools:2025.12-cheriot .
+
+./scripts/start_cheriot.sh build
+./scripts/start_cheriot.sh shell
+```
+
+Use `./scripts/start_cheriot.sh rebuild` when the overlay must be rebuilt
+without Docker's build cache. To publish the resulting image to GHCR, use a
+GitHub PAT with `write:packages` and keep the token out of the repository:
+
+```sh
+./scripts/publish_cheriot_image.sh
+```
+
+To create another custom image, add a Dockerfile for the extra tools and a
+Compose override with its image tag. Keep the base `docker-compose.yml`
+unchanged so the normal container and CI configuration continue to use their
+existing images.
+
 #### Native install (hard)
 
 You need to build/install the required tools manually:
@@ -280,6 +307,35 @@ CHERIoT-enabled Docker image. Build the current RTOS hello-world image with:
 make -C sw cheriot-rtos
 ```
 
+Build the upstream CHERIoT-RTOS regression suite separately. Each upstream
+test gets its own firmware image and is intentionally kept separate from the
+individual demonstration projects:
+
+```sh
+make -C sw cheriot-rtos-tests
+```
+
+The `all` target also includes this suite, so `make -C sw all` builds the
+legacy programs, CHERIoT programs, local CHERIoT-RTOS projects, and the
+upstream CHERIoT-RTOS test images.
+
+The tests use the normal Croc board profile. Splitting them into individual
+images is required because the complete upstream suite does not fit into one
+128 KiB Croc SRAM image.
+
+The suite produces the following additional outputs:
+
+```text
+sw/bin/cheriot-rtos/test-suite-<test>.elf
+sw/bin/cheriot-rtos/test-suite-<test>.hex
+sw/bin/cheriot-rtos/test-suite-<test>.dump
+```
+
+Each image enables exactly one upstream test. The upstream test runner checks
+the test's return values and expected error codes before calling
+`simulation_exit(0)`, so every simulator run has an unambiguous result and a
+matching object dump.
+
 This creates the following Croc-compatible outputs:
 
 ```text
@@ -297,7 +353,7 @@ cd verilator
 ```
 
 The complete test flow builds and runs the RTOS image automatically. The RTOS
-test timeout is 300 seconds per image, and `--show-output` prints the complete
+test timeout is 1800 seconds per image, and `--show-output` prints the complete
 hello-world simulation log:
 
 ```sh
@@ -333,6 +389,12 @@ make -C sw
 # Build all CHERIoT assembly and C programs.
 make -C sw cheriot
 
+# Build all CHERIoT-RTOS programs. This also runs the trusted-stack analysis.
+make -C sw cheriot-rtos
+
+# Build the upstream CHERIoT-RTOS regression suite.
+make -C sw cheriot-rtos-tests
+
 cd verilator
 ./run_verilator.sh --build
 
@@ -350,13 +412,41 @@ cd verilator
   --filter '*' \
   --expect-fail test_cheriot_exception \
   --timeout 30
+
+# Local CHERIoT-RTOS demonstration programs in sw/bin/cheriot-rtos.
+# --show-output keeps the complete RTOS/UART output visible in the CI log.
+../.github/scripts/run_tests.sh \
+  --sim obj_dir_rtl/Vtb_croc_soc \
+  --hexdir ../sw/bin/cheriot-rtos \
+  --filter '*' \
+  --timeout 1800 \
+  --show-output
+
+# Upstream CHERIoT-RTOS test suite, one firmware image per test.
+# This is the recommended RTOS regression suite for CI and RTL simulation.
+../.github/scripts/run_tests.sh \
+  --sim obj_dir_rtl/Vtb_croc_soc \
+  --hexdir ../sw/bin/cheriot-rtos \
+  --filter 'test-suite-*' \
+  --timeout 1800
 ```
 
 To simulate the post-Yosys netlist with Verilator instead, first generate the netlist and then use the explicit netlist commands:
 
 ```sh
 cd yosys && ./run_synthesis.sh --synth
-cd ../verilator && ./run_verilator.sh --build-netlist --run-netlist ../sw/bin/helloworld.hex
+cd ..
+cp yosys/out/croc_yosys_debug.v yosys/out/netlist_debug.v
+
+cd verilator
+./run_verilator.sh --build-netlist
+
+../.github/scripts/run_tests.sh \
+  --sim obj_dir_netlist_yosys/Vtb_croc_soc \
+  --hexdir ../sw/bin/cheriot-rtos \
+  --filter 'test-suite-*' \
+  --timeout 7200 \
+  --live-output
 ```
 
 If you have Questasim/Modelsim, you can also run:

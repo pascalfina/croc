@@ -878,7 +878,11 @@ rule("cheriot.board.targets.conf")
 			add_cxflags(board.cxflags)
 		end
 
-		add_defines_each_dependency("CPU_TIMER_HZ=" .. math.floor(board.timer_hz))
+		-- CPU cycles and the platform timer may have different frequencies.  Keep
+		-- CPU_TIMER_HZ backwards-compatible for boards whose timer is cycle-based.
+		local cpu_hz = board.cpu_hz or board.timer_hz
+		add_defines_each_dependency("CPU_TIMER_HZ=" .. math.floor(cpu_hz))
+		add_defines_each_dependency("PLATFORM_TIMER_HZ=" .. math.floor(board.timer_hz))
 		add_defines_each_dependency("TICK_RATE_HZ=" .. math.floor(board.tickrate_hz))
 
 		if board.simulation then

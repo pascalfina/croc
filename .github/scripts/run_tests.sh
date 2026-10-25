@@ -7,8 +7,9 @@
 
 # Run unit tests through Verilator simulation.
 # Usage: run_tests.sh [--sim SIM_BINARY] [--hexdir HEX_DIR] [--filter PATTERN]
+#                     [--start-from TEST_NAME]
 #                     [--exclude TEST_NAME] [--expect-fail TEST_NAME]
-#                     [--timeout SECONDS] [--show-output]
+#                     [--timeout SECONDS] [--show-output] [--live-output]
 #
 # Expects to be run from the verilator/ directory (or paths adjusted via flags).
 # Each test writes its own log file.
@@ -19,22 +20,26 @@ set -euo pipefail
 SIM_BINARY="obj_dir/Vtb_croc_soc"
 HEX_DIR="../sw/bin/test"
 FILTER="test_*"
+START_FROM=""
 TIMEOUT=120
 EXCLUDES=()
 EXPECTED_FAILURES=()
 SHOW_OUTPUT=false
+LIVE_OUTPUT=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --sim)     SIM_BINARY="$2"; shift 2 ;;
         --hexdir)  HEX_DIR="$2";   shift 2 ;;
         --filter)  FILTER="$2";    shift 2 ;;
+        --start-from) START_FROM="$2"; shift 2 ;;
         --exclude) EXCLUDES+=("$2"); shift 2 ;;
         --expect-fail) EXPECTED_FAILURES+=("$2"); shift 2 ;;
         --timeout) TIMEOUT="$2";   shift 2 ;;
         --show-output) SHOW_OUTPUT=true; shift ;;
+        --live-output) LIVE_OUTPUT=true; SHOW_OUTPUT=true; shift ;;
         -h|--help)
-            echo "Usage: $0 [--sim SIM_BINARY] [--hexdir HEX_DIR] [--filter PATTERN] [--exclude TEST_NAME] [--expect-fail TEST_NAME] [--timeout SECONDS] [--show-output]"
+            echo "Usage: $0 [--sim SIM_BINARY] [--hexdir HEX_DIR] [--filter PATTERN] [--start-from TEST_NAME] [--exclude TEST_NAME] [--expect-fail TEST_NAME] [--timeout SECONDS] [--show-output] [--live-output]"
             exit 0
             ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
@@ -62,9 +67,22 @@ echo "========================================="
 passed=0
 failed=0
 declare -a results=()
+start_reached=$([[ -z "$START_FROM" ]] && echo true || echo false)
+start_found=false
 
 for hex in "${hex_files[@]}"; do
     test_name=$(basename "$hex" .hex)
+
+    if [[ "$start_reached" == false ]]; then
+        if [[ "$test_name" != "$START_FROM" ]]; then
+            echo "Skipping $test_name (before --start-from $START_FROM)"
+            continue
+        fi
+        start_reached=true
+        start_found=true
+    elif [[ -n "$START_FROM" && "$test_name" == "$START_FROM" ]]; then
+        start_found=true
+    fi
 
     skip_test=false
     for excluded_test in "${EXCLUDES[@]}"; do
@@ -90,14 +108,23 @@ for hex in "${hex_files[@]}"; do
 
     printf "Running %-20s ... " "$test_name"
 
-    # Run simulation with timeout, capture log, don't exit on failure
-    if timeout "$TIMEOUT" "$SIM_BINARY" "+binary=$hex" > "$log_file" 2>&1; then
+    # Capture the complete simulator log. With --live-output, stream it while
+    # the test is running and keep the same log for result parsing.
+    if [[ "$LIVE_OUTPUT" == true ]]; then
+        if timeout "$TIMEOUT" stdbuf -oL -eL "$SIM_BINARY" "+binary=$hex" \
+            2>&1 | tee "$log_file"; then
+            pipeline_status=("${PIPESTATUS[@]}")
+        else
+            pipeline_status=("${PIPESTATUS[@]}")
+        fi
+        sim_exit=${pipeline_status[0]}
+    elif timeout "$TIMEOUT" "$SIM_BINARY" "+binary=$hex" > "$log_file" 2>&1; then
         sim_exit=0
     else
         sim_exit=$?
     fi
 
-    if [[ "$SHOW_OUTPUT" == true ]]; then
+    if [[ "$SHOW_OUTPUT" == true && "$LIVE_OUTPUT" == false ]]; then
         echo
         echo "----- ${test_name} output -----"
         cat "$log_file"
@@ -144,6 +171,11 @@ for hex in "${hex_files[@]}"; do
         ((failed++)) || true
     fi
 done
+
+if [[ -n "$START_FROM" && "$start_found" == false ]]; then
+    echo "Error: --start-from test not found: $START_FROM" >&2
+    exit 1
+fi
 
 echo "========================================="
 echo "Summary: ${passed} passed, ${failed} failed, $((passed + failed)) total"

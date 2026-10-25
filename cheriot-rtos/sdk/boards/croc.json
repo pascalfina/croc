@@ -7,6 +7,8 @@
   "start": 0x10010000,
   "end": 0x10020000
 },
+  "revokable_memory_start": 0x10010000,
+  "revoker": "software",
 
   "devices": {
     "clint": {
@@ -20,6 +22,10 @@
     "core_status": {
       "start": 0x03000008,
       "end": 0x0300000c
+    },
+    "shadow": {
+      "start": 0x10020000,
+      "end": 0x10020400
     }
   },
   "defines": [
@@ -31,7 +37,8 @@
     "${sdk}/include/platform/ibex",
     "${sdk}/include/platform/generic-riscv"
   ],
-  "timer_hz": 20000000,
+  "cpu_hz": 20000000,
+  "timer_hz": 1000000,
   "tickrate_hz": 100,
   "simulation": true
 }

@@ -131,14 +131,14 @@ static inline uint64_t thread_microsecond_spin(uint32_t microseconds)
 	uint64_t start = rdcycle64();
 	// Convert the microseconds to a number of cycles.  This does the multiply
 	// first so that we don't end up with zero as a result of the division.
-	uint32_t cycles = microseconds * CyclesPerMicrosecond;
+	uint64_t cycles = (uint64_t)microseconds * CyclesPerMicrosecond;
 	uint64_t end    = start + cycles;
 	uint64_t current;
 	do
 	{
 		current = rdcycle64();
 	} while (current < end);
-	return (current - start) * CyclesPerMicrosecond;
+	return (current - start) / CyclesPerMicrosecond;
 #endif
 }
 
@@ -162,13 +162,13 @@ static inline uint64_t thread_millisecond_wait(uint32_t milliseconds)
 	static const uint32_t CyclesPerTick        = CPU_TIMER_HZ / TICK_RATE_HZ;
 	__if_cxx(
 	  static_assert(CyclesPerMillisecond > 0, "CPU_TIMER_HZ is too low"););
-	uint32_t cycles  = milliseconds * CyclesPerMillisecond;
+	uint64_t cycles  = (uint64_t)milliseconds * CyclesPerMillisecond;
 	uint64_t start   = rdcycle64();
 	uint64_t end     = start + cycles;
 	uint64_t current = start;
-	while ((end > current) && (end - current > MS_PER_TICK))
+	while ((end > current) && (end - current > CyclesPerTick))
 	{
-		Timeout t = {0, ((uint32_t)(end - current)) / CyclesPerTick};
+		Timeout t = {0, (uint32_t)((end - current) / CyclesPerTick)};
 		(void)thread_sleep(&t, ThreadSleepNoEarlyWake);
 		current = rdcycle64();
 	}
