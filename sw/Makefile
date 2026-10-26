@@ -199,6 +199,12 @@ $(BUILDDIR)/%.o: %.c
 	$(RISCV_CC) $(RISCV_CCFLAGS) -MMD -MP -c $< -o $@
 
 # Linking
+# The HyperRAM regression needs room for its SRAM reference arrays and code.
+# Give only this image a larger layout; keep all other legacy images unchanged.
+$(BINDIR)/hyperam_tests/test_hyperram.elf: $(BUILDDIR)/hyperam_tests/test_hyperram.o $(CRT0_OBJ) $(LIB_OBJS) hyperam_tests/link.ld
+	mkdir -p $(dir $@)
+	$(RISCV_CC) -o $@ $(filter-out hyperam_tests/link.ld, $^) $(RISCV_LDFLAGS) -Thyperam_tests/link.ld
+
 $(BINDIR)/%.elf: $(BUILDDIR)/%.o $(CRT0_OBJ) $(LIB_OBJS) $(LINK)
 	mkdir -p $(dir $@)
 	$(RISCV_CC) -o $@ $(filter-out $(LINK), $^) $(RISCV_LDFLAGS) -T$(LINK)
