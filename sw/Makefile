@@ -56,6 +56,15 @@ CHERIOT_FLAGS    ?= --target=$(CHERIOT_TARGET) -mcpu=$(CHERIOT_CPU) \
 	-mabi=$(CHERIOT_ABI) -mrelax -fshort-wchar \
 	-ffreestanding -fno-builtin -nostdlib
 
+# Standalone HyperRAM/tag-SRAM test; kept separate from the SRAM images.
+CHERIOT_TAG_SRAM_BUILDDIR ?= $(BUILDDIR)/cheriot_tag_sram
+CHERIOT_TAG_SRAM_BINDIR   ?= $(BINDIR)/cheriot_tag_sram
+CHERIOT_TAG_SRAM_OBJS     := $(CHERIOT_TAG_SRAM_BUILDDIR)/crt0.o \
+	$(CHERIOT_TAG_SRAM_BUILDDIR)/test_tag_sram.o
+CHERIOT_TAG_SRAM_ELF      := $(CHERIOT_TAG_SRAM_BINDIR)/test_tag_sram.elf
+CHERIOT_TAG_SRAM_OUTPUTS  := $(CHERIOT_TAG_SRAM_ELF) \
+	$(CHERIOT_TAG_SRAM_ELF:.elf=.hex) $(CHERIOT_TAG_SRAM_ELF:.elf=.dump)
+
 # CHERIoT-RTOS applications each live in their own xmake project. Add a new
 # project directory here; its directory name must match its firmware target.
 CHERIOT_RTOS_PROJECTS      ?= \
@@ -171,7 +180,8 @@ CHERIOT_HEX_TARGETS       := $(CHERIOT_ASM_ELFS:.elf=.hex) $(CHERIOT_C_ELFS:.elf
 # Dependency files for automatic rebuilds
 DEPFILES := $(CRT0_OBJ:.o=.d) $(LIB_OBJS:.o=.d) $(PROG_OBJS:.o=.d) \
 	$(CHERIOT_ASM_STARTUP_OBJ:.o=.d) $(CHERIOT_C_STARTUP_OBJ:.o=.d) \
-	$(CHERIOT_ASM_OBJECTS:.o=.d) $(CHERIOT_C_OBJECTS:.o=.d)
+	$(CHERIOT_ASM_OBJECTS:.o=.d) $(CHERIOT_C_OBJECTS:.o=.d) \
+	$(CHERIOT_TAG_SRAM_OBJS:.o=.d)
 
 # Ensure intermediate object files are not deleted after linking
 .SECONDARY: $(CRT0_OBJ) $(LIB_OBJS) $(PROG_OBJS) \
@@ -220,7 +230,7 @@ $(BINDIR)/%.hex: $(BINDIR)/%.elf
 	$(RISCV_OBJCOPY) -O verilog $< $@
 
 # Phonies
-.PHONY: all clean compile cheriot cheriot-inline cheriot-rtos \
+.PHONY: all clean compile cheriot cheriot-inline cheriot-tag-sram cheriot-rtos \
 	cheriot-rtos-check cheriot-rtos-build cheriot-rtos-tests \
 	$(CHERIOT_RTOS_TESTS_BUILD_TARGETS) cheriot-rtos-hello
 
@@ -242,6 +252,8 @@ cheriot: $(CHERIOT_HEX_TARGETS)
 
 # Convenience alias for the first CHERIoT compiler test.
 cheriot-inline: $(CHERIOT_BINDIR)/test_simple_inline.hex
+
+cheriot-tag-sram: $(CHERIOT_TAG_SRAM_OUTPUTS)
 
 # Build every listed CHERIoT-RTOS project and convert its ELF into the
 # 32-bit Verilog HEX format expected by the Croc testbench.
@@ -324,6 +336,29 @@ $(CHERIOT_RTOS_BINDIR)/%.dump: $(CHERIOT_RTOS_BINDIR)/%.elf
 	mkdir -p $(dir $@)
 	$(CHERIOT_OBJDUMP) -D -s --print-imm-hex \
 		--start-address=0x10000000 $< > $@
+
+# The HyperRAM C test has its own startup and linker layout.
+$(CHERIOT_TAG_SRAM_BUILDDIR)/crt0.o: cheriot_tag_sram/crt0.S config.h
+	mkdir -p $(dir $@)
+	$(CHERIOT_CC) $(CHERIOT_FLAGS) -I$(CURDIR) -MMD -MP -c $< -o $@
+
+$(CHERIOT_TAG_SRAM_BUILDDIR)/test_tag_sram.o: cheriot_tag_sram/test_tag_sram.c config.h
+	mkdir -p $(dir $@)
+	$(CHERIOT_CC) $(CHERIOT_FLAGS) -std=gnu11 -Os -fno-strict-aliasing \
+		-I$(CURDIR) -I$(CURDIR)/../cheriot-rtos/sdk/include -MMD -MP -c $< -o $@
+
+$(CHERIOT_TAG_SRAM_ELF): $(CHERIOT_TAG_SRAM_OBJS) cheriot_tag_sram/link.ld
+	mkdir -p $(dir $@)
+	$(CHERIOT_CC) $(CHERIOT_FLAGS) -fuse-ld=lld -nostartfiles \
+		-Tcheriot_tag_sram/link.ld $(CHERIOT_TAG_SRAM_OBJS) -o $@
+
+$(CHERIOT_TAG_SRAM_BINDIR)/%.hex: $(CHERIOT_TAG_SRAM_BINDIR)/%.elf
+	mkdir -p $(dir $@)
+	$(CHERIOT_OBJCOPY) -O verilog $< $@
+
+$(CHERIOT_TAG_SRAM_BINDIR)/%.dump: $(CHERIOT_TAG_SRAM_BINDIR)/%.elf
+	mkdir -p $(dir $@)
+	$(CHERIOT_OBJDUMP) -D -s --print-imm-hex --start-address=0x80000000 $< >$@
 
 # CHERIoT startup objects use a separate directory from GCC.
 $(CHERIOT_ASM_STARTUP_OBJ): $(CHERIOT_ASM_STARTUP)

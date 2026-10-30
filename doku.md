@@ -82,6 +82,55 @@ entry per trap cause. This separate vector-table adjustment was not needed
 for the original CVE2 integration, whose direct trap-entry behavior matched
 the old bootrom flow.
 
+### Branch control during memory stalls
+
+HyperRAM/tag-SRAM bring-up exposed a pre-existing Ibex branch-control bug in
+`ibex/rtl/ibex_id_stage.sv`. Croc uses `WritebackStage = 1` and
+`BranchTargetALU = 0`: a taken conditional branch first compares its operands,
+then reuses the main arithmetic unit to calculate the destination address.
+If a previous memory operation is still awaiting its response, the next
+instruction can be present in decode while `instr_executing = 0` prevents
+its execution. The ID state machine (`id_fsm_q`) correctly waits, but the
+old code updated `branch_set_raw_q` unconditionally. The branch request
+could therefore reach instruction fetch before the target-calculation phase.
+
+In the failing trace, `csc` stored a 64-bit capability through two 32-bit OBI
+transfers. While the second response was pending, the following instruction
+at `0x800003b6` was `bne a0, a1, -26`, with operands 1 and 15. The premature
+branch used the comparison's subtraction result, `1 - 15 = -14`
+(`0xfffffff2`), instead of the intended destination `0x8000039c`. Fetching
+from that invalid address raised an instruction access fault (`mcause = 1`).
+The source capability's tag was valid; this failure was not a detected tag
+loss or a CHERIoT bounds violation.
+
+The fix updates `branch_set_raw_q` only when `instr_executing` is asserted,
+matching the enable condition of `id_fsm_q`. The registered branch request
+and the comparison/target-calculation phases consequently advance together.
+
+This bug is not exclusive to CHERIoT. Capability stores make the relevant
+overlap possible through their two transfers, and HyperRAM plus serialized
+tag handling adds response latency. The previous SRAM path returned each
+accepted access after one cycle, making it possible for a memory operation
+to finish before the next branch reached decode. Instruction order, fetch
+timing and intervening register dependencies also affect whether the bug is
+exposed. Earlier passing tests therefore do not establish correctness for
+longer memory stalls; without their traces, the exact reason each earlier
+test avoided the failing overlap remains unverified.
+
+The standalone decode-stage regression reproduces the failure in the old
+code and passes all 40 scenarios with the fix. It covers taken and non-taken
+branches, delayed load/store completion, consecutive branches, and both
+legacy and CHERIoT modes with fixed-time execution enabled and disabled.
+Run it from the repository root in the Verilator tool environment:
+
+```sh
+./scripts/tests/run_ibex_branch_stall.sh
+```
+
+The regression drives pending-memory conditions at the decode-stage interface;
+it is not a complete capability-store or HyperRAM simulation. The full
+HyperRAM/tag-SRAM test must also be rerun with a rebuilt RTL simulator.
+
 ### Tags and revocation bitmap
 
 `tag_memory.sv` stores one tag bit for every 32-bit SRAM word. The tag memory

@@ -772,9 +772,8 @@ module ibex_id_stage import ibex_cheriot_pkg::*; #(
     always_ff @(posedge clk_i or negedge rst_ni) begin
       if (!rst_ni) begin
         branch_set_raw_q <= 1'b0;
-    // bug here (see the 07082022 report). should qualify this with instr_executing
-    // (same as id_fsm_q). let's wait for now and fix later QQQ
-      end else begin
+      end else if (instr_executing) begin
+        // Advance with id_fsm_q so a stalled comparison cannot trigger a branch.
         branch_set_raw_q <= branch_set_raw_d;
       end
     end
