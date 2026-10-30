@@ -154,7 +154,8 @@ module croc_vip #(
   );
     automatic dm::sbcs_t sbcs = dm::sbcs_t'{sbreadonaddr: 1'b1, sbaccess: 2, default: '0};
     jtag_write(dm::SBCS, sbcs, 0, 1);
-    jtag_write(dm::SBAddress0, addr[31:0]);
+    // Writing the address starts the read; poll until its bus response arrives.
+    jtag_write(dm::SBAddress0, addr[31:0], 0, 1);
     jtag_dbg.wait_idle(idle_cycles);
     jtag_dbg.read_dmi_exp_backoff(dm::SBData0, data);
     $display("@%t | [JTAG] Read 0x%h from 0x%h", $time, data, addr);
@@ -171,7 +172,8 @@ module croc_vip #(
     $display("@%t | [JTAG] Writing 0x%h to 0x%h", $time, data, addr);
     jtag_write(dm::SBCS, sbcs, 0, 1);
     jtag_write(dm::SBAddress0, addr);
-    jtag_write(dm::SBData0, data);
+    // Writing the data starts the write; complete it before readback or reconfiguration.
+    jtag_write(dm::SBData0, data, 0, 1);
     jtag_dbg.wait_idle(idle_cycles);
     if (check_write) begin
       logic [31:0] rdata;

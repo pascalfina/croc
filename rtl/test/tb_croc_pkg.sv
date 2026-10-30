@@ -21,8 +21,8 @@ package tb_croc_pkg;
   localparam int unsigned UartBaudRate  = 115200;
   localparam int unsigned UartParityEna = 0;
 
-  // Base address of the SRAM banks
-  localparam bit [31:0] SramBaseAddr = croc_pkg::get_croc_start_addr(croc_pkg::XbarBank0);
+  // Base address of HyperRAM
+localparam bit [31:0] HyperRamBaseAddr = croc_pkg::get_croc_start_addr(croc_pkg::XbarHyperbus);
 
   // Soc control registers addresses
   localparam bit [31:0] SocCtrlBaseAddr = croc_pkg::get_periph_start_addr(croc_pkg::PeriphSocCtrl);

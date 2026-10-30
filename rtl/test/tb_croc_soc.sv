@@ -200,6 +200,54 @@ module tb_croc_soc #(
   //  Testbench  //
   /////////////////
 
+  localparam logic [31:0] HyperbusCfgBaseAddr =
+      croc_pkg::get_periph_start_addr(croc_pkg::PeriphHyperbusCrtl);
+
+  task automatic hyperbus_wait_ready();
+    logic [31:0] status;
+
+    for (int unsigned attempt = 0; attempt < 1000; attempt++) begin
+      i_vip.jtag_read_reg32(HyperbusCfgBaseAddr + 32'h010, status);
+
+      if (status[0] === 1'b1)
+        $fatal(1, "HyperBus decode error: STATUS=0x%08h", status);
+
+      // Decode error, configuration busy, and dirty must all be clear.
+      if (status[2:0] === 3'b000)
+        return;
+    end
+
+    $fatal(1, "HyperBus configuration timeout: STATUS=0x%08h", status);
+  endtask
+
+  task automatic hyperbus_init();
+    // Clear a previous decode error and wait for initial configuration.
+    i_vip.jtag_write_reg32(HyperbusCfgBaseAddr + 32'h010, 32'h1);
+    hyperbus_wait_ready();
+
+    i_vip.jtag_write_reg32(HyperbusCfgBaseAddr + 32'h100, 32'h1, 1'b1);
+
+    // Disable unused chip selects.
+    for (int unsigned chip = 1; chip < hyperbus_pkg::HyperNumChips; chip++) begin
+      i_vip.jtag_write_reg32(
+          HyperbusCfgBaseAddr + 32'h408 + chip * 32'h40, 32'h0, 1'b1);
+    end
+
+    // CS0 exposes only the 4 MiB covered by the tag SRAM.
+    i_vip.jtag_write_reg32(
+        HyperbusCfgBaseAddr + 32'h400, HyperRamBaseAddr, 1'b1);
+    i_vip.jtag_write_reg32(
+        HyperbusCfgBaseAddr + 32'h404, HyperRamBaseAddr + 32'h0040_0000, 1'b1);
+    i_vip.jtag_write_reg32(
+        HyperbusCfgBaseAddr + 32'h408, 32'h0001_1800, 1'b1);
+
+    // APPLY activates the staged configuration.
+    i_vip.jtag_write_reg32(HyperbusCfgBaseAddr + 32'h00c, 32'h2);
+    hyperbus_wait_ready();
+
+    $display("@%t | [HyperBus] Configuration applied", $time);
+  endtask
+
   logic [31:0] tb_data;
 
   initial begin
@@ -215,11 +263,12 @@ module tb_croc_soc #(
 
     // init jtag
     i_vip.jtag_init();
+    hyperbus_init();
 
-    // write test value to sram
-    i_vip.jtag_write_reg32(SramBaseAddr, 32'h1234_5678, 1'b1);
+    // write test value to hyperram
+    i_vip.jtag_write_reg32(HyperRamBaseAddr, 32'h1234_5678, 1'b1);
 
-    // load binary to sram
+    // Load the program image after HyperBus configuration.
     i_vip.jtag_load_hex(binary_path);
 
     // wake core from WFI by writing to CLINT msip

@@ -143,8 +143,8 @@ module croc_domain import croc_pkg::*; #(
   // user bus defined in module port
 
   // mem bank buses
-  sbr_obi_req_t [NumSramBanks-1:0] xbar_mem_bank_obi_req;
-  sbr_obi_rsp_t [NumSramBanks-1:0] xbar_mem_bank_obi_rsp;
+  // sbr_obi_req_t [NumSramBanks-1:0] xbar_mem_bank_obi_req;
+  // sbr_obi_rsp_t [NumSramBanks-1:0] xbar_mem_bank_obi_rsp;
 
   // periph bus
   sbr_obi_req_t xbar_periph_obi_req;
@@ -160,10 +160,10 @@ module croc_domain import croc_pkg::*; #(
   assign xbar_periph_obi_req         = all_sbr_obi_req[XbarPeriph];
   assign all_sbr_obi_rsp[XbarPeriph] = xbar_periph_obi_rsp;
 
-  for (genvar i = 0; i < NumSramBanks; i++) begin : gen_xbar_sbr_connect
-    assign xbar_mem_bank_obi_req[i]     = all_sbr_obi_req[XbarBank0+i];
-    assign all_sbr_obi_rsp[XbarBank0+i] = xbar_mem_bank_obi_rsp[i];
-  end
+  // for (genvar i = 0; i < NumSramBanks; i++) begin : gen_xbar_sbr_connect
+  //   assign xbar_mem_bank_obi_req[i]     = all_sbr_obi_req[XbarBank0+i];
+  //   assign all_sbr_obi_rsp[XbarBank0+i] = xbar_mem_bank_obi_rsp[i];
+  // end
 
   assign user_sbr_obi_req_o          = all_sbr_obi_req[XbarUser];
   assign all_sbr_obi_rsp[XbarUser]   = user_sbr_obi_rsp_i;
@@ -470,44 +470,117 @@ module croc_domain import croc_pkg::*; #(
     .default_idx_i    ( '0 )
   );
 
+  // tag controller for sram 
+
+  // hyperbus signals
+  logic frontend_access;
+  logic [31:0] frontend_addr;
+  logic frontend_we;
+  logic frontend_write_tag;
+  logic frontend_data_done;
+  logic frontend_data_error;
+
+  logic tag_crtl_ready;
+
+  logic tag_crtl_read_tag;
+  logic tag_crtl_read_tag_valid;
+  logic tag_crtl_tag_error;
+  logic tag_crtl_tag_ready;
+
+  // sram signals
+
+  logic tag_sram_req;
+  logic tag_sram_we;
+  logic [31:0] tag_sram_addr;
+  logic [31:0] tag_sram_wdata;
+  logic [3:0] tag_sram_be;
+  logic [31:0] tag_sram_rdata;
+
+  logic [NumSramBanks-1:0][31:0] tag_bank_rdata;
+
+  
+
+  tag_sram_crtl #(
+    .DataBaseAddr     ( get_croc_start_addr(XbarHyperbus) ),
+    .DataSizeBytes    ( 4 * 1024 * 1024 ),
+    .DataAddrWidth    ( SbrObiCfg.AddrWidth ),
+    .DataWordWidth    ( SbrObiCfg.DataWidth ),
+    .TagSramDataWidth ( 32 ),
+    .TagSramNumWords  ( NumSramBanks * SramBankNumWords ),
+    .SramReadLatency  ( 1 )
+
+  ) i_tag_sram_crtl (
+    .clk_i(clk_i),
+    .rst_ni(rst_ni),
+
+    // signals from hyperbus frontend
+    .access_i(frontend_access),
+    .write_tag_i(frontend_write_tag),
+    .addr_i(frontend_addr),
+    .we_i(frontend_we),
+    .data_done_i(frontend_data_done),
+    .data_error_i(frontend_data_error),
+    //
+
+    .ready_o(tag_crtl_ready),
+    .read_tag_o(tag_crtl_read_tag),
+    .read_tag_valid_o(tag_crtl_read_tag_valid),
+    .tag_error_o(tag_crtl_tag_error), 
+
+    .tag_ready_o(tag_crtl_tag_ready), //tell hyperbus we are ready
+
+    .tag_sram_req_o(tag_sram_req),
+    .tag_sram_we_o(tag_sram_we),
+    .tag_sram_addr_o(tag_sram_addr),
+    .tag_sram_wdata_o(tag_sram_wdata),
+    .tag_sram_be_o(tag_sram_be),
+    .tag_sram_rdata_i(tag_sram_rdata)
+
+  );
+
+  logic tag_bank_sel;
+
+  assign tag_bank_sel   = tag_sram_addr[14];
+  assign tag_sram_rdata = tag_bank_rdata[tag_bank_sel];
+
+  // tag controller for sram 
+
   // -----------------
   // Memories
   // -----------------
   localparam int unsigned SramBankAddrWidth = cf_math_pkg::idx_width(SramBankNumWords);
 
   for (genvar i = 0; i < NumSramBanks; i++) begin : gen_sram_bank
-    logic bank_req, bank_we, bank_gnt, bank_single_err;
-    logic [SbrObiCfg.AddrWidth-1:0] bank_byte_addr;
+    logic bank_req;
     logic [SramBankAddrWidth-1:0] bank_word_addr;
-    logic [SbrObiCfg.DataWidth-1:0] bank_wdata, bank_rdata;
-    logic [SbrObiCfg.DataWidth/8-1:0] bank_be;
-    logic bank_tag_rdata;
-    localparam logic [31:0] BankBaseAddr = BootAddr + i * SramBankNumWords * 4;
+    
 
-    obi_sram_shim #(
-      .ObiCfg    ( SbrObiCfg     ),
-      .obi_req_t ( sbr_obi_req_t ),
-      .obi_rsp_t ( sbr_obi_rsp_t )
-    ) i_sram_shim (
-      .clk_i,
-      .rst_ni,
+    // obi_sram_shim #(
+    //   .ObiCfg    ( SbrObiCfg     ),
+    //   .obi_req_t ( sbr_obi_req_t ),
+    //   .obi_rsp_t ( sbr_obi_rsp_t )
+    // ) i_sram_shim (
+    //   .clk_i,
+    //   .rst_ni,
 
-      .obi_req_i ( xbar_mem_bank_obi_req[i] ),
-      .obi_rsp_o ( xbar_mem_bank_obi_rsp[i] ),
+    //   .obi_req_i ( xbar_mem_bank_obi_req[i] ),
+    //   .obi_rsp_o ( xbar_mem_bank_obi_rsp[i] ),
 
-      .req_o   ( bank_req       ),
-      .we_o    ( bank_we        ),
-      .addr_o  ( bank_byte_addr ),
-      .wdata_o ( bank_wdata     ),
-      .be_o    ( bank_be        ),
+    //   .req_o   ( bank_req       ),
+    //   .we_o    ( bank_we        ),
+    //   .addr_o  ( bank_byte_addr ),
+    //   .wdata_o ( bank_wdata     ),
+    //   .be_o    ( bank_be        ),
 
-      .gnt_i   ( bank_gnt   ),
-      .rdata_i ( bank_rdata ),
-      .tag_rdata_i(bank_tag_rdata)
-    );
+    //   .gnt_i   ( bank_gnt   ),
+    //   .rdata_i ( bank_rdata ),
+    //   .tag_rdata_i(bank_tag_rdata)
+    // );
 
-    assign bank_word_addr = bank_byte_addr[SbrObiCfg.AddrWidth-1:2];
+    assign bank_req = tag_sram_req && (tag_bank_sel == 1'(i));
+    assign bank_word_addr = tag_sram_addr[SramBankAddrWidth-1:0];
 
+  
     tc_sram_impl #(
       .NumWords  ( SramBankNumWords ),
       .DataWidth ( 32 ),
@@ -521,30 +594,32 @@ module croc_domain import croc_pkg::*; #(
       .impl_o  (),
 
       .req_i   ( bank_req       ),
-      .we_i    ( bank_we        ),
-      .addr_i  ( bank_word_addr ),
+      .we_i    ( tag_sram_we    ),
+      .addr_i  ( bank_word_addr  ),
 
-      .wdata_i ( bank_wdata ),
-      .be_i    ( bank_be    ),
-      .rdata_o ( bank_rdata )
+      .wdata_i ( tag_sram_wdata ),
+      .be_i    ( tag_sram_be    ),
+      .rdata_o ( tag_bank_rdata[i] )
     );
 
-    assign bank_gnt = 1'b1; // always ready for request
+    //assign bank_gnt = 1'b1; // always ready for request
     // cheriot tag memory 
-    tag_memory #(
-      .SRAM_OFFSET(BankBaseAddr),
-      .TAG_WIDTH(SramBankNumWords)
-    ) i_tag_mem (
-      .clk_i(clk_i),
-      .rst_ni(rst_ni),
-      .data_req_i(bank_req),
-      .data_addr_i(bank_byte_addr),
-      .data_tag_i(xbar_mem_bank_obi_req[i].a.a_optional),
-      .data_we_i(bank_we),
-      .data_tag_o(bank_tag_rdata)
-    );
+    // tag_memory #(
+    //   .SRAM_OFFSET(BankBaseAddr),
+    //   .TAG_WIDTH(SramBankNumWords)
+    // ) i_tag_mem (
+    //   .clk_i(clk_i),
+    //   .rst_ni(rst_ni),
+    //   .data_req_i(bank_req),
+    //   .data_addr_i(bank_byte_addr),
+    //   .data_tag_i(xbar_mem_bank_obi_req[i].a.a_optional),
+    //   .data_we_i(bank_we),
+    //   .data_tag_o(bank_tag_rdata)
+    // );
 
   end
+
+  
 
 
   // cheriot revocation bit map 
@@ -670,7 +745,26 @@ assign all_sbr_obi_rsp[XbarHyperbus] = hyperbus_obi_rsp;
     .hyper_dq_i             ( hyper_dq_i),
     .hyper_dq_o             ( hyper_dq_o),
     .hyper_dq_oe_o          ( hyper_dq_oe_o),
-    .hyper_reset_no         ( hyper_reset_no )
+    .hyper_reset_no         ( hyper_reset_no ),
+
+
+    .tag_req_ready_i(tag_crtl_ready),
+    .tag_ready_i(tag_crtl_tag_ready), 
+    .tag_error_i(tag_crtl_tag_error),
+    .read_tag_i(tag_crtl_read_tag),
+    .read_tag_valid_i(tag_crtl_read_tag_valid),
+
+
+    .tag_access_o(frontend_access), 
+    .tag_addr_o(frontend_addr),
+    .tag_we_o(frontend_we),
+    .tag_write_tag_o(frontend_write_tag),
+    .data_done_o(frontend_data_done), 
+    .data_error_o(frontend_data_error)
+
+
+
+
 );
 
 

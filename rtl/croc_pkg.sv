@@ -81,18 +81,15 @@ package croc_pkg;
   typedef enum bit [3:0] {
     XbarError  = 0,
     XbarPeriph = 1,
-    XbarUser   = 2,
-    XbarBank0  = 3, 
-    XbarRevBitmap = 5,
-    XbarHyperbus = 6
+    XbarUser   = 2, 
+    XbarRevBitmap = 3,
+    XbarHyperbus = 4
   } croc_xbar_outputs_e;
 
   /// Address map given to the main crossbar
-  localparam addr_map_rule_t [5:0] CrocAddrMap = '{
+  localparam addr_map_rule_t [3:0] CrocAddrMap = '{
     '{ idx: XbarPeriph,  start_addr: 32'h0000_0000, end_addr: 32'h1000_0000 },
     '{ idx: XbarUser,    start_addr: 32'h2000_0000, end_addr: 32'h8000_0000 },
-    '{ idx: XbarBank0,   start_addr: 32'h1000_0000, end_addr: 32'h1001_0000 },
-    '{ idx: XbarBank0+1, start_addr: 32'h1001_0000, end_addr: 32'h1002_0000 },
     '{ idx: XbarRevBitmap,start_addr: 32'h1002_0000,end_addr:   32'h1002_0400 },
     '{ idx: XbarHyperbus,  start_addr: 32'h8000_0000, end_addr: 32'h9000_0000 }
   };
@@ -126,7 +123,7 @@ package croc_pkg;
 
   // For convenience get most used base addresses
   localparam bit [31:0] UserBaseAddr = get_croc_start_addr(XbarUser); // use as base for your IPs
-  localparam bit [31:0] BootAddr     = get_croc_start_addr(XbarBank0); // start of SRAM banks
+  localparam bit [31:0] BootAddr = get_croc_start_addr(XbarHyperbus); // Program entry in HyperRAM
 
 
   ////////////////////////////////

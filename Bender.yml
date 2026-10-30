@@ -53,6 +53,7 @@ sources:
       - rtl/obi_timer/obi_timer.sv
       # Level 2
       - rtl/cheriot/tag_memory.sv
+      - rtl/cheriot/tag_sram_crtl.sv
       - rtl/cheriot/revc_bitmap_memory.sv
       - rtl/obi/obi_to_reg.sv
       - rtl/croc_domain.sv
