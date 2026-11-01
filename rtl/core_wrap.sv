@@ -118,10 +118,11 @@ module core_wrap
   //   end
   // end
 
-  localparam logic [31:0] HeapBaseAddr = 32'h1001_0000;
+  // Match the 64 KiB heap after the RTOS image in sdk/boards/croc.json.
+  localparam logic [31:0] HeapBaseAddr = get_croc_start_addr(XbarHyperbus) + 32'h0001_0000;
   localparam logic [31:0] RevBitmapBaseAddr = 32'h1002_0000;
-  // The Croc address map exposes 8 bytes for the revocation bitmap.
-  localparam int unsigned RevBitmapAddrWidth = 10;  // 2^3 bytes
+  // A 1 KiB bitmap covers the 64 KiB heap at one revocation bit per 8 bytes.
+  localparam int unsigned RevBitmapAddrWidth = 10;
 
   /// ibex integration 
 

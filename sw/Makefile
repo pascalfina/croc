@@ -86,6 +86,10 @@ CHERIOT_RTOS_BINDIR        ?= bin/cheriot-rtos
 CHERIOT_RTOS_BUILD_ROOT    ?= $(CURDIR)/build/cheriot-rtos
 CHERIOT_RTOS_LEGACY_PROJECT ?= cheriot-rtos
 CHERIOT_RTOS_BOARD         ?= $(CURDIR)/../cheriot-rtos/sdk/boards/croc.json
+# The SDK puts compartment BSS in *_globals sections. Materialize their zeros
+# in HEX files: JTAG does not clear omitted NOBITS ranges, and HyperRAM is not
+# guaranteed to start at zero. This also includes trailing BSS sections.
+CHERIOT_RTOS_HEX_FLAGS     ?= --set-section-flags '*_globals=alloc,load,contents'
 CHERIOT_RTOS_ANALYZER     ?= $(CURDIR)/../scripts/analyze_trusted_stack.py
 CHERIOT_RTOS_STACK_RESERVE ?= 1
 # The trusted-stack check is enabled by default. The build fails when the
@@ -312,9 +316,9 @@ $(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).elf: cheriot-rtos-test-
 	mkdir -p "$(CHERIOT_RTOS_BINDIR)"
 	cp $(CHERIOT_RTOS_TESTS_BUILD_ROOT)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1)/build/cheriot/cheriot/release/test-suite $$@
 
-$(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).hex: $(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).elf
+$(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).hex: $(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).elf Makefile
 	mkdir -p "$(CHERIOT_RTOS_BINDIR)"
-	$(CHERIOT_OBJCOPY) -O verilog $$< $$@
+	$(CHERIOT_OBJCOPY) $(CHERIOT_RTOS_HEX_FLAGS) -O verilog $$< $$@
 
 $(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).dump: $(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).elf
 	mkdir -p "$(CHERIOT_RTOS_BINDIR)"
@@ -328,9 +332,9 @@ $(CHERIOT_RTOS_BINDIR)/%.elf: cheriot-rtos-build
 	mkdir -p $(dir $@)
 	cp $(CHERIOT_RTOS_BUILD_ROOT)/$*/build/cheriot/cheriot/release/$* $@
 
-$(CHERIOT_RTOS_BINDIR)/%.hex: $(CHERIOT_RTOS_BINDIR)/%.elf
+$(CHERIOT_RTOS_BINDIR)/%.hex: $(CHERIOT_RTOS_BINDIR)/%.elf Makefile
 	mkdir -p $(dir $@)
-	$(CHERIOT_OBJCOPY) -O verilog $< $@
+	$(CHERIOT_OBJCOPY) $(CHERIOT_RTOS_HEX_FLAGS) -O verilog $< $@
 
 $(CHERIOT_RTOS_BINDIR)/%.dump: $(CHERIOT_RTOS_BINDIR)/%.elf
 	mkdir -p $(dir $@)

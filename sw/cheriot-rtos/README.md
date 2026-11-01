@@ -20,6 +20,14 @@ make -C sw cheriot-rtos
 The Xmake working directory, `.xmake` cache, and generated build files are
 kept outside the source tree under `sw/build/cheriot-rtos/hello_world/`.
 The final ELF, HEX, and object dump are written to `sw/bin/cheriot-rtos/`.
+RTOS HEX conversion explicitly includes zero-filled `*_globals` sections,
+including sections marked `NOBITS` in the ELF. The JTAG loader only writes
+bytes present in the HEX file, so omitting those sections would leave C/C++
+zero-initialized globals with the HyperRAM's power-up contents. This applies
+to both local programs and the upstream test suite; it does not change the ELF
+or the HyperRAM model. The conversion regression test is
+`python3 scripts/tests/test_rtos_hex_bss.py` (from the repository root).
+
 After each project is built, `make` also analyzes the linker-generated JSON
 compartment report with `scripts/analyze_trusted_stack.py`. It uses one extra
 frame as the default safety reserve and warns about dependency cycles. Set
