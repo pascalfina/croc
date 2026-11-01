@@ -6,9 +6,13 @@
 # Authors:
 # - Philippe Sauter <phsauter@iis.ee.ethz.ch>
 #
-# Two-phase Verilator simulation flow for RTL or post-Yosys netlists:
-#   Phase 1 (default): Run helloworld, print_config, and CHERIoT programs
-#   Phase 2 (iDMA on): Run all unit tests
+# Verilator simulation flow for RTL or post-Yosys netlists. Programs now run
+# from HyperRAM; the SRAM only stores capability tags and is no longer mapped
+# at 0x1000_0000. Only HyperRAM-linked programs are therefore simulated:
+#   - CHERIoT tag-SRAM test
+#   - CHERIoT-RTOS upstream regression suite
+# The SRAM-linked programs (helloworld, print_config, sw/test, sw/cheriot) are
+# still compiled but not simulated until they are ported to HyperRAM.
 
 set -euo pipefail
 
@@ -34,7 +38,6 @@ fi
 # still has a six-hour limit, so this does not extend the job indefinitely.
 cheriot_test_timeout=2700
 rtos_test_timeout=2700
-legacy_test_timeout=2700
 
 case "${1:-}" in
     ""|--rtl)
@@ -62,18 +65,13 @@ if [[ "$simulation_mode" == "rtl" ]]; then
     build_option="--build"
     run_option="--run"
     simulation_binary="obj_dir_rtl/Vtb_croc_soc"
-    simulation_log="croc_rtl.log"
 else
     export CROC_PDK=sg13cmos5l
 
     default_netlist="yosys/out/croc_yosys_debug.v"
-    idma_netlist="yosys/out/croc_idma_yosys_debug.v"
     for required_file in \
         "$default_netlist" \
-        "$idma_netlist" \
-        "sw/bin/helloworld.hex" \
-        "sw/bin/test/print_config.hex" \
-        "sw/bin/cheriot-rtos/hello_world.hex"; do
+        "sw/bin/cheriot_tag_sram/test_tag_sram.hex"; do
         if [[ ! -f "$required_file" ]]; then
             echo "[ERROR] Missing netlist simulation input: $required_file" >&2
             exit 1
@@ -98,23 +96,23 @@ else
     build_option="--build-netlist"
     run_option="--run-netlist"
     simulation_binary="obj_dir_netlist_yosys/Vtb_croc_soc"
-    simulation_log="croc_netlist_yosys.log"
     # Netlist simulation is substantially slower than RTL simulation.
     cheriot_test_timeout=7200
     rtos_test_timeout=7200
-    legacy_test_timeout=7200
 fi
 
 echo "============================================="
-echo "Phase 1: default config — helloworld"
+echo "Build"
 echo "============================================="
 
 if [[ "$simulation_mode" == "rtl" ]]; then
     "$SCRIPT_DIR/set_croc_config.sh"
+    # SRAM-linked programs are still compiled to catch build regressions.
     make -C sw
     # CHERIoT binaries are built only in the CHERIoT-enabled container. They
     # are kept outside the default GCC build so legacy tests stay independent.
     make -C sw cheriot
+    make -C sw cheriot-tag-sram
     make -C sw cheriot-rtos
     make -C sw cheriot-rtos-tests
 else
@@ -124,29 +122,21 @@ fi
 cd verilator
 # CI keeps simulator logs, but does not need an interactive waveform.
 ./run_verilator.sh --no-trace "$build_option"
-./run_verilator.sh "$run_option" ../sw/bin/helloworld.hex
-grep -q "\[UART\] Hello World from Croc!" "$simulation_log"
-
-./run_verilator.sh "$run_option" ../sw/bin/test/print_config.hex
-"$SCRIPT_DIR/check_sim.sh" "$simulation_log"
-grep -q "\[JTAG\] Simulation finished: SUCCESS" "$simulation_log"
 
 echo ""
 echo "============================================="
-echo "Phase 1b: default config — CHERIoT programs"
+echo "CHERIoT tag-SRAM test"
 echo "============================================="
 
 "$SCRIPT_DIR/run_tests.sh" \
     --sim "$simulation_binary" \
-    --hexdir ../sw/bin/cheriot \
-    --filter '*' \
-    --exclude test_simple_recv_bitmap_storage \
-    --expect-fail test_cheriot_exception \
+    --hexdir ../sw/bin/cheriot_tag_sram \
+    --filter 'test_tag_sram' \
     --timeout "$cheriot_test_timeout"
 
 echo ""
 echo "============================================="
-echo "Phase 1c: default config — CHERIoT-RTOS upstream regression suite"
+echo "CHERIoT-RTOS upstream regression suite"
 echo "============================================="
 
 "$SCRIPT_DIR/run_tests.sh" \
@@ -155,25 +145,6 @@ echo "============================================="
     --filter 'test-suite-*' \
     --timeout "$rtos_test_timeout"
 
-cd "$CROC_ROOT"
-
-echo ""
-echo "============================================="
-echo "Phase 2: iDMA enabled — unit tests"
-echo "============================================="
-
-if [[ "$simulation_mode" == "rtl" ]]; then
-    "$SCRIPT_DIR/set_croc_config.sh" iDMAEnable=1
-else
-    cp "$idma_netlist" yosys/out/netlist_debug.v
-fi
-
-cd verilator
-./run_verilator.sh --no-trace "$build_option"
-
-"$SCRIPT_DIR/run_tests.sh" \
-    --sim "$simulation_binary" \
-    --timeout "$legacy_test_timeout"
 cd "$CROC_ROOT"
 
 echo ""

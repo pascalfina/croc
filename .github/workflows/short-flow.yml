@@ -71,16 +71,18 @@ jobs:
           name: croc-sw
           path: sw/bin
       - name: Upload simulation output
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: simulation-output
           path: |
             verilator/croc_rtl.log
       - name: Upload test logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-logs
-          path: verilator/test_*.log
+          path: verilator/test*.log
 
   synthesis:
     runs-on: ubuntu-latest
@@ -134,9 +136,10 @@ jobs:
         with:
           cmd: ".github/scripts/run_sim_flow.sh --netlist"
       - name: Upload netlist simulation logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: netlist-simulation-logs
           path: |
             verilator/croc_netlist_yosys.log
-            verilator/test_*.log
+            verilator/test*.log
