@@ -1,0 +1,45 @@
+# Copyright (c) 2026 ETH Zurich and University of Bologna.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+name: 'Install HyperRAM Model'
+description: 'Installs the separately licensed Infineon S27KS0641 model from a private repository'
+
+inputs:
+  ssh-key:
+    description: 'Read-only deploy key of the private model repository'
+    required: true
+  repository:
+    description: 'Private repository holding the unmodified Infineon download (.zip)'
+    required: false
+    default: '${{ github.repository_owner }}/hyperram_private'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout private model repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository }}
+        ssh-key: ${{ inputs.ssh-key }}
+        path: .hyperram-model-src
+        persist-credentials: false
+
+    # The vendor download is a zip containing a self-extracting zip per device.
+    # Only the model sources are kept; the download itself is removed so that
+    # it can never end up in an uploaded artifact.
+    - name: Extract S27KS0641 model
+      shell: bash
+      run: |
+        set -euo pipefail
+        model_dir=rtl/vendor/hyperbus/models/s27ks0641
+        tmp_dir="$(mktemp -d)"
+        trap 'rm -rf -- "$tmp_dir" .hyperram-model-src' EXIT
+
+        unzip -q .hyperram-model-src/*.zip -d "$tmp_dir/download"
+        unzip -q "$tmp_dir/download/S27KL0641 S27KS0641/S27ks0641.exe" -d "$tmp_dir/exe"
+
+        mkdir -p "$model_dir"
+        cp "$tmp_dir/exe/S27ks0641/model/s27ks0641.v" "$model_dir/s27ks0641.v"
+        cp "$tmp_dir/exe/S27ks0641/model/s27ks0641_verilog.sdf" "$model_dir/s27ks0641.sdf"
+        echo "[INFO][HyperRAM] Installed vendor model into $model_dir"

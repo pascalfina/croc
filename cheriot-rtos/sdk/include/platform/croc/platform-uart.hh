@@ -8,7 +8,8 @@ struct CrocUart : public Uart16550<uint32_t>
 {
 	void init() volatile
 	{
-		Uart16550<uint32_t>::init(10);
+		// Divisor 2: 625,000 baud at 20 MHz; must match tb_croc_pkg.
+		Uart16550<uint32_t>::init(2);
 	}
 
 	// Croc's UART has a finite TX FIFO.  The generic simulation shortcut

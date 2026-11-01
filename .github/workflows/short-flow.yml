@@ -13,7 +13,29 @@ on:
   pull_request:
 
 jobs:
+  # The HyperRAM simulation model is proprietary and not part of this public
+  # repository. Without the deploy key (e.g. pull requests from forks) every
+  # simulation job is skipped instead of failing on the missing model.
+  hyperram-model:
+    runs-on: ubuntu-latest
+    outputs:
+      available: ${{ steps.check.outputs.available }}
+    steps:
+      - name: Check for HyperRAM model access
+        id: check
+        env:
+          HYPERRAM_MODEL_SSH_KEY: ${{ secrets.HYPERRAM_MODEL_SSH_KEY }}
+        run: |
+          if [ -n "$HYPERRAM_MODEL_SSH_KEY" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::HYPERRAM_MODEL_SSH_KEY is not available; skipping simulation jobs."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
   simulation:
+    needs: hyperram-model
+    if: needs.hyperram-model.outputs.available == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     permissions:
@@ -29,6 +51,10 @@ jobs:
           submodules: true
       - name: Free disk space
         uses: ./.github/actions/free-space
+      - name: Install HyperRAM model
+        uses: ./.github/actions/hyperram-model
+        with:
+          ssh-key: ${{ secrets.HYPERRAM_MODEL_SSH_KEY }}
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -89,6 +115,10 @@ jobs:
           submodules: true
       - name: Free disk space
         uses: ./.github/actions/free-space
+      - name: Install HyperRAM model
+        uses: ./.github/actions/hyperram-model
+        with:
+          ssh-key: ${{ secrets.HYPERRAM_MODEL_SSH_KEY }}
       - name: Download built software
         uses: actions/download-artifact@v4
         with:

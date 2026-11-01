@@ -214,7 +214,8 @@ The Croc UART was initially incompatible with the generic CHERIoT-RTOS UART
 initialisation. Its baud-rate calculation did not match Croc's UART baud
 generator, so the RTOS could remain blocked while waiting for UART progress.
 The Croc platform UART now programs the fixed divisor for the 20 MHz Croc
-clock and 125,000 baud, and polls the transmitter-empty status before writing.
+clock and 625,000 baud (divisor 2, the smallest valid value), and polls the
+transmitter-empty status before writing.
 
 ### Trusted stack and nested compartment calls
 

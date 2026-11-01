@@ -20,7 +20,7 @@
 
 // Frequencies
 #define TB_FREQUENCY        20000000
-#define TB_BAUDRATE         115200
+#define TB_BAUDRATE         625000 // UART divisor 2 at 20 MHz; must match tb_croc_pkg
 
 // Peripheral configs
 // UART

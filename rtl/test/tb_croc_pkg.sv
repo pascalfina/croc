@@ -18,7 +18,7 @@ package tb_croc_pkg;
   localparam int unsigned RstCycles = 1;
 
   // UART
-  localparam int unsigned UartBaudRate  = 115200;
+  localparam int unsigned UartBaudRate  = 625000;  // divisor 2 at 20 MHz (1 is invalid)
   localparam int unsigned UartParityEna = 0;
 
   // Base address of HyperRAM
