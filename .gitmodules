@@ -15,3 +15,7 @@
 	path = ibex
 	url = git@github.com:pascalfina/ibex.git
 	branch = croc
+[submodule "cheriot-rtos"]
+	path = cheriot-rtos
+	url = git@github.com:pascalfina/cheriot-rtos.git
+	branch = croc
