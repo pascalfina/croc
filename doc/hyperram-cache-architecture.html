@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Croc - Cached HyperRAM Architecture Proposal</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #182633; background: #e9edf0; font: 16px/1.55 Arial, Helvetica, sans-serif; }
+    main { max-width: 1540px; margin: 28px auto; }
+    section { padding: 32px 40px; margin-bottom: 24px; background: white; }
+    h1 { margin: 0 0 8px; font-size: 30px; }
+    h2 { margin: 0 0 12px; font-size: 25px; }
+    h3 { margin: 22px 0 6px; font-size: 19px; }
+    p { margin: 8px 0 14px; }
+    a { color: #1769a0; }
+    code { font-family: monospace; font-size: 0.95em; }
+    .status { border-left: 4px solid #1769a0; padding-left: 14px; color: #435667; }
+    .diagram { display: block; width: 100%; height: auto; }
+    .caption { margin: 10px 0 0; color: #52616f; font-size: 14px; }
+    .spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 38px; }
+    table { border-collapse: collapse; width: 100%; font-size: 15px; }
+    th, td { padding: 9px 11px; text-align: left; border-bottom: 1px solid #d9e0e6; }
+    th { background: #edf3f7; }
+    ul, ol { padding-left: 23px; margin-top: 8px; }
+    li { margin-bottom: 9px; }
+    .record { display: grid; grid-template-columns: 2fr 2fr 1fr; margin: 16px 0 10px; border: 2px solid #1769a0; }
+    .record div { padding: 14px 8px; text-align: center; border-right: 1px solid #1769a0; }
+    .record div:last-child { border-right: 0; background: #eef6fc; }
+    .record strong, .record span { display: block; }
+    .record span { font-size: 13px; }
+    .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #d9e0e6; color: #52616f; font-size: 13px; }
+    @media (max-width: 760px) { main { margin: 0; } section { padding: 20px 16px; } .spec-grid { grid-template-columns: 1fr; gap: 12px; } }
+    @page { size: A3 landscape; margin: 10mm; }
+    @media print {
+      body { background: white; font-size: 11pt; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      main { max-width: none; margin: 0; }
+      section { padding: 0; margin: 0; break-after: page; }
+      section:last-child { break-after: auto; }
+      section:not(.diagram-page) { font-size: 10pt; line-height: 1.45; }
+      .diagram-page { height: 275mm; display: flex; flex-direction: column; align-items: center; }
+      .diagram-page .diagram { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
+      .diagram-page .caption { flex: none; font-size: 10pt; text-align: center; }
+      .spec-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
+      h1 { font-size: 25pt; }
+      h2 { font-size: 19pt; }
+      h3 { font-size: 13pt; margin-top: 12px; }
+      table { font-size: 10.5pt; }
+      th, td { padding: 6px 8px; }
+      li { margin-bottom: 6px; }
+      .record div { padding: 10px 6px; }
+      a { text-decoration: none; }
+      .footer { font-size: 9pt; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="diagram-page" aria-label="System overview">
+      <img class="diagram" src="hyperram-cache-overview.svg" alt="System block diagram of the proposed Croc architecture with an Ibex instruction cache, a shared data cache and ECC-protected HyperRAM.">
+      <p class="caption">Overview. Double-headed links represent requests and their matching responses, not two physical buses. Dashed magenta links are control/status. Peripheral interrupts, clock/reset distribution and user-domain details are omitted.</p>
+    </section>
+    <section class="diagram-page" aria-label="Memory subsystem detail">
+      <img class="diagram" src="hyperram-cache-memory.svg" alt="Detailed proposed memory path showing OBI classification, capability adapter, D-cache probe, D-cache, memory arbiter, ECC controller and HyperBus transport.">
+      <p class="caption">Memory detail. I-cache hits stay inside Ibex. D-cache hits stay in the cache. Only probe misses, refills, write-backs and initialization reach HyperRAM. The proposed probe must wait for conflicting accepted writes.</p>
+    </section>
+    <section aria-label="Architecture decisions and constraints">
+      <h1>Architecture contract</h1>
+      <p class="status"><strong>Design proposal / 2 November 2026.</strong> These diagrams describe the intended next architecture, not implemented or verified RTL. Initial sizes and the physical record layout are candidates for implementation and measurement, not established optima.</p>
+      <div class="spec-grid">
+        <div>
+          <h2>Starting configuration</h2>
+          <table>
+            <thead><tr><th>Property</th><th>I-cache</th><th>D-cache</th></tr></thead>
+            <tbody>
+              <tr><td>Usable data capacity</td><td>4 KiB</td><td>8 KiB</td></tr>
+              <tr><td>Line length</td><td>16 bytes</td><td>16 bytes</td></tr>
+              <tr><td>Associativity</td><td>2 ways</td><td>2 ways</td></tr>
+              <tr><td>Write policy</td><td>Read-only</td><td>Write-back / write-allocate</td></tr>
+              <tr><td>Capability tags</td><td>Not needed for fetch</td><td>1 per 8 data bytes</td></tr>
+              <tr><td>Local memory protection</td><td>Existing Ibex ECC</td><td>Data + tags; metadata separately</td></tr>
+            </tbody>
+          </table>
+          <p>The existing Ibex configuration has 8-byte lines; 16-byte lines are a proposed change. Its cache sizes currently live in <code>ibex_pkg.sv</code>. A central build configuration must propagate supported geometries consistently before parameter sweeps.</p>
+          <h3>Backing storage with ECC from the start</h3>
+          <p>Each aligned 8-byte region has <strong>64 data bits + 1 capability tag</strong>. An extended Hamming SECDED code adds 8 check bits, producing a 73-bit codeword. The tag participates in error correction; it is not an unprotected extra bit.</p>
+          <div class="record">
+            <div><strong>Data 0</strong><span>64 bits</span></div>
+            <div><strong>Data 1</strong><span>64 bits</span></div>
+            <div><strong>Metadata</strong><span>32 bits</span></div>
+          </div>
+          <p>One physical record represents <strong>16 logical bytes in 20 physical bytes</strong>. Metadata contains two tags, sixteen ECC bits and fourteen padding bits. All five words are 32-bit aligned. Relative physical record address: <code>20 * (logical_offset / 16)</code>, with the integer record index.</p>
+          <p>The usable address range must account for the <strong>25% storage overhead</strong>. Raw metadata addresses are private to the controller. Changing cache sizes must not change this backing format.</p>
+          <h3>First transport implementation</h3>
+          <p>A full-record read or write uses five separate, single-beat 32-bit HyperBus host commands. Retain the existing configuration frontend, midend and PHY. Replace the current OBI/tag-SRAM transaction FSM with the new subsystem; reuse its host-handshake logic where appropriate. Later, transfer adjacent physical words with bursts without changing the CPU-visible interface.</p>
+        </div>
+        <div>
+          <h2>Required correctness rules</h2>
+          <ol>
+            <li><strong>Split capabilities:</strong> retain requester identity and address while assembling paired transfers. Do not publish tag 1 for a partially updated capability. The first word must be acknowledged without waiting for a second word that the core may issue only after that acknowledgement. Define cancellation, conflicting-access and eviction rules before implementation.</li>
+            <li><strong>Consistent reads:</strong> both returned halves and their tags must describe one consistent capability. Scalar writes to any byte clear the shared tag; update local ECC from corrected data after applying byte enables.</li>
+            <li><strong>Local and backing ECC:</strong> checking only HyperRAM is insufficient. Check cache data, capability tags and cache address/valid/dirty metadata. Correct single-bit errors and repair storage. Ibex's I-cache instead invalidates/refetches on a local ECC error. Initially treat uncorrectable D-cache/metadata errors and uncertain write-backs as fatal; never discard dirty state silently.</li>
+            <li><strong>Instruction/data consistency:</strong> instruction misses probe the D-cache without allocating an additional D-cache line. A hit supplies ECC-checked current data, including dirty data. Writes also invalidate matching instruction-adapter buffer contents. Combined with the existing I-cache invalidation on <code>FENCE.I</code>, this avoids fetching stale data after code changes.</li>
+            <li><strong>All masters:</strong> JTAG and DMA use the same data-cache path. Their ordinary writes clear capability tags. No uncoordinated direct-HyperRAM bypass. Debug/DMA code modifications also need instruction-cache synchronization; writes during a probe or pending capability pair must be ordered.</li>
+            <li><strong>Boot and maintenance:</strong> configure HyperBus, initialize complete valid data/tag/ECC records, and only then perform ordinary reads or read-modify-writes. The loader must not read uninitialized ECC records to merge its first partial writes. Expose protected initialization, cache clean/drain and ECC diagnostics; define restart after a partial backing write.</li>
+            <li><strong>Revocation:</strong> keep the current bitmap path outside the cache subsystem. The core's existing revocation filter still applies to capability loads on cache hits. This proposal does not yet add ECC to the bitmap or protect OBI address/control wires.</li>
+          </ol>
+          <h3>Area, performance and verification</h3>
+          <p>Map both cache data arrays and their metadata to suitable SRAM macros; usable capacity excludes ECC, address metadata and macro padding. Enabling Ibex's generic cache RAM model alone is not an ASIC macro integration.</p>
+          <p>Start with one active backing operation and a block buffer. Measure hit/miss counts, CPU stalls, physical bytes, write-backs, HyperBus commands and ECC events. Larger lines do not amortize HyperBus command latency until bursts are implemented. Inject single- and double-bit faults in data, capability tags, ECC and cache metadata.</p>
+          <p><strong>Implementation order:</strong> freeze interfaces and layout; verify the uncached protected-memory controller; integrate the I-cache; integrate and verify the D-cache and consistency paths; then sweep geometry and add bursts.</p>
+        </div>
+      </div>
+      <p class="footer">Sources: local <code>rtl/core_wrap.sv</code>, <code>ibex/rtl/ibex_icache.sv</code>, <code>rtl/common_cells/ecc_{encode,decode}.sv</code>, <code>rtl/vendor/hyperbus/src/hyperbus_synchronous.sv</code>; <a href="https://ibex-core.readthedocs.io/en/latest/03_reference/icache.html">Ibex cache documentation</a>; <a href="https://docs.riscv.org/reference/isa/v20260120/unpriv/zifencei.html">RISC-V FENCE.I specification</a>. Diagrams intentionally show responsibilities, not a finalized cycle-level protocol or a verified RTL module hierarchy.</p>
+    </section>
+  </main>
+</body>
+</html>

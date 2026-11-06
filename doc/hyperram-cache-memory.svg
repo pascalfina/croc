@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1680" viewBox="0 0 1600 1680" role="img" aria-labelledby="title description">
+  <title id="title">Croc: cached HyperRAM subsystem detail</title>
+  <desc id="description">Detailed proposed memory subsystem. HyperRAM-directed OBI requests are classified by source. Instruction cache misses use a read adapter and a read-only probe of the data cache. A probe hit supplies current corrected data, while a miss requests a backing-memory read. Other requests pass through a capability transaction adapter into a write-back data cache. Cache refills and writebacks share one protected-memory controller with ECC and address mapping, followed by a single-beat HyperBus host engine, the existing midend and PHY, and external HyperRAM. The data-cache arrays have independent local ECC. Peripherals and the revocation bitmap are not on this path.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 Z" fill="#263442"/></marker>
+    <marker id="probe-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 Z" fill="#9a277e"/></marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #182633; }
+      .title { font-size: 34px; font-weight: 700; }
+      .subtitle { font-size: 20px; fill: #52616f; }
+      .block { font-size: 27px; font-weight: 700; text-anchor: middle; fill: white; }
+      .sub { font-size: 20px; text-anchor: middle; fill: white; }
+      .dark { font-size: 23px; font-weight: 700; text-anchor: middle; }
+      .small { font-size: 18px; fill: #52616f; }
+      .label { font-size: 20px; font-weight: 700; }
+      .link { fill: none; stroke: #263442; stroke-width: 3; marker-start: url(#arrow); marker-end: url(#arrow); stroke-linejoin: round; }
+      .request { fill: none; stroke: #263442; stroke-width: 3; marker-end: url(#arrow); stroke-linejoin: round; }
+      .probe { fill: none; stroke: #9a277e; stroke-width: 3; marker-end: url(#probe-arrow); stroke-linejoin: round; }
+    </style>
+  </defs>
+  <rect width="1600" height="1680" fill="white"/>
+  <text x="45" y="49" class="title">Inside the cached HyperRAM subsystem</text>
+  <text x="45" y="82" class="subtitle">Logical responsibilities and interfaces - proposed blocks, not module names already implemented</text>
+  <rect x="1270" y="28" width="285" height="52" fill="#eef6fc" stroke="#1769a0" stroke-width="2"/>
+  <text x="1412" y="61" font-size="20" font-weight="700" text-anchor="middle" fill="#1769a0">02 / MEMORY DATAPATH</text>
+
+  <rect x="400" y="130" width="800" height="75" fill="#168443"/>
+  <text x="800" y="161" class="block">HyperRAM-facing OBI crossbar port</text>
+  <text x="800" y="190" class="sub">32-bit address / data + byte enables + ID + capability sideband</text>
+  <rect x="400" y="265" width="800" height="90" fill="#1769a0"/>
+  <text x="800" y="300" class="block">OBI ingress / request classification</text>
+  <text x="800" y="331" class="sub">capture request; retain source, ID and response ordering</text>
+  <path d="M 800 205 V 265" class="link"/>
+
+  <rect x="100" y="440" width="540" height="130" fill="#1769a0"/>
+  <text x="370" y="478" class="block">Instruction read adapter</text>
+  <text x="370" y="512" class="sub">group word requests in a 16-byte buffer</text>
+  <text x="370" y="542" class="sub">return 32-bit words; no capability tag to I-cache</text>
+  <rect x="920" y="440" width="560" height="130" fill="#1769a0"/>
+  <text x="1200" y="478" class="block">Capability transaction adapter</text>
+  <text x="1200" y="512" class="sub">pair split capability transfers by source + address</text>
+  <text x="1200" y="542" class="sub">consistent reads / safe tag commit on writes</text>
+  <path d="M 600 355 V 396 H 370 V 440" class="link"/>
+  <path d="M 1000 355 V 396 H 1200 V 440" class="link"/>
+  <text x="105" y="408" class="label">I-cache miss</text>
+  <text x="1219" y="408" class="label">data / JTAG / DMA</text>
+
+  <rect x="100" y="665" width="540" height="145" fill="#f8eef5" stroke="#9a277e" stroke-width="2"/>
+  <text x="370" y="706" class="dark">Read-only D-cache probe</text>
+  <text x="370" y="742" font-size="20" text-anchor="middle">Hit: use current ECC-checked cache data.</text>
+  <text x="370" y="774" font-size="20" text-anchor="middle">Miss: read HyperRAM; do not allocate in D-cache.</text>
+  <path d="M 370 570 V 665" class="link"/>
+
+  <rect x="920" y="640" width="560" height="200" fill="#1769a0"/>
+  <text x="1200" y="678" class="block">D-cache</text>
+  <text x="1200" y="712" class="sub">8 KiB data / 2 ways / 16-byte lines</text>
+  <rect x="944" y="735" width="238" height="79" fill="white"/>
+  <text x="1063" y="766" font-size="20" font-weight="700" text-anchor="middle">Data + capability tags</text>
+  <text x="1063" y="794" font-size="19" text-anchor="middle">local ECC / 8-byte granule</text>
+  <rect x="1200" y="735" width="256" height="79" fill="white"/>
+  <text x="1328" y="766" font-size="20" font-weight="700" text-anchor="middle">Address / valid / dirty</text>
+  <text x="1328" y="794" font-size="19" text-anchor="middle">separate metadata ECC</text>
+  <path d="M 1200 570 V 640" class="link"/>
+  <path d="M 920 654 H 865 V 535 H 640" class="probe"/>
+  <text x="758" y="516" class="small" text-anchor="middle">buffer invalidation</text>
+  <path d="M 640 704 H 920" class="probe"/>
+  <text x="780" y="686" class="small" text-anchor="middle">lookup request</text>
+  <path d="M 920 784 H 640" class="probe"/>
+  <text x="780" y="816" class="small" text-anchor="middle">hit / miss + corrected data</text>
+
+  <rect x="100" y="935" width="1380" height="85" fill="#e8edf2" stroke="#687b8d" stroke-width="2"/>
+  <text x="790" y="969" class="dark">Memory-operation arbiter</text>
+  <text x="790" y="1001" font-size="20" text-anchor="middle">one active backing operation / fair selection / no overlapping updates to the same physical block</text>
+  <path d="M 370 810 V 935" class="link"/>
+  <text x="396" y="882" class="label">probe miss only</text>
+  <path d="M 1200 840 V 935" class="link"/>
+  <text x="1226" y="882" class="label">refill / write-back</text>
+
+  <rect x="100" y="1095" width="1380" height="160" fill="#eef6fc" stroke="#1769a0" stroke-width="3"/>
+  <text x="790" y="1130" class="dark">Protected memory controller</text>
+  <rect x="122" y="1152" width="398" height="79" fill="#1769a0"/>
+  <text x="321" y="1185" class="sub" style="font-weight:700">16-byte block buffer</text>
+  <text x="321" y="1214" class="sub">128 data bits + 2 capability tags</text>
+  <rect x="548" y="1152" width="405" height="79" fill="#1769a0"/>
+  <text x="750" y="1185" class="sub" style="font-weight:700">ECC encode / check / correct</text>
+  <text x="750" y="1214" class="sub">65 protected bits -> 73-bit codeword</text>
+  <rect x="981" y="1152" width="477" height="79" fill="#1769a0"/>
+  <text x="1219" y="1185" class="sub" style="font-weight:700">Private physical address mapping</text>
+  <text x="1219" y="1214" class="sub">16 logical bytes -> 20 physical bytes</text>
+  <path d="M 790 1020 V 1095" class="link"/>
+  <text x="820" y="1065" class="label">block request / response + tags + error status</text>
+
+  <rect x="100" y="1320" width="1380" height="75" fill="#1769a0"/>
+  <text x="790" y="1351" class="block">HyperBus word-command engine</text>
+  <text x="790" y="1379" class="sub">first version: five separate 32-bit host commands per complete 16-byte block / no bursts</text>
+  <path d="M 790 1255 V 1320" class="link"/>
+  <rect x="100" y="1450" width="1380" height="70" fill="#25736d"/>
+  <text x="790" y="1494" class="block">Existing HyperBus midend + PHY</text>
+  <path d="M 790 1395 V 1450" class="link"/>
+  <rect x="460" y="1575" width="660" height="65" fill="#1769a0"/>
+  <text x="790" y="1617" class="block">External HyperRAM</text>
+  <path d="M 790 1520 V 1575" class="link"/>
+  <text x="1150" y="1604" class="small">No CPU-visible raw tag/ECC access.</text>
+  <text x="1150" y="1631" class="small">Control/status path is in diagram 01.</text>
+</svg>

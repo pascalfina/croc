@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1380" viewBox="0 0 1600 1380" role="img" aria-labelledby="title description">
+  <title id="title">Croc: proposed cached HyperRAM architecture</title>
+  <desc id="description">System overview. An Ibex instruction cache and the core data path connect through the existing OBI crossbar. HyperRAM traffic enters a new cached memory subsystem with a data cache, capability adapter, ECC and physical address mapping. Peripherals and the revocation bitmap keep their separate paths. Existing HyperBus configuration, midend and PHY connect to two external HyperRAM chips. All double-headed connections carry requests and their corresponding responses.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 Z" fill="#263442"/></marker>
+    <marker id="control-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 Z" fill="#9a277e"/></marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #182633; }
+      .title { font-size: 34px; font-weight: 700; }
+      .subtitle { font-size: 20px; fill: #52616f; }
+      .group { font-size: 23px; font-weight: 700; }
+      .block { font-size: 27px; font-weight: 700; text-anchor: middle; fill: white; }
+      .sub { font-size: 19px; text-anchor: middle; fill: white; }
+      .small { font-size: 18px; fill: #52616f; }
+      .label { font-size: 19px; font-weight: 700; }
+      .link { fill: none; stroke: #263442; stroke-width: 3; marker-start: url(#arrow); marker-end: url(#arrow); stroke-linejoin: round; }
+      .control { fill: none; stroke: #9a277e; stroke-width: 3; stroke-dasharray: 9 6; marker-end: url(#control-arrow); stroke-linejoin: round; }
+      .proposed { fill: #eef6fc; stroke: #1769a0; stroke-width: 3; stroke-dasharray: 11 7; }
+    </style>
+  </defs>
+  <rect width="1600" height="1380" fill="white"/>
+  <text x="45" y="49" class="title">Croc / cached HyperRAM</text>
+  <text x="45" y="82" class="subtitle">Target architecture - design proposal, not the current RTL</text>
+  <rect x="1270" y="28" width="285" height="52" fill="#eef6fc" stroke="#1769a0" stroke-width="2"/>
+  <text x="1412" y="61" font-size="20" font-weight="700" text-anchor="middle" fill="#1769a0">01 / SYSTEM OVERVIEW</text>
+
+  <rect x="40" y="116" width="1520" height="1014" fill="#f0f2f4" stroke="#c6cdd3" stroke-width="2"/>
+  <text x="63" y="148" class="group">Croc SoC</text>
+
+  <rect x="95" y="175" width="245" height="70" fill="#a21b81"/>
+  <text x="217" y="220" class="block">JTAG</text>
+  <rect x="95" y="315" width="245" height="85" fill="#a21b81"/>
+  <text x="217" y="350" class="block">Debug module</text>
+  <text x="217" y="379" class="sub">system-bus access</text>
+  <path d="M 217 245 V 315" class="link"/>
+
+  <rect x="500" y="171" width="670" height="263" fill="#f8e8e5" stroke="#bc665b" stroke-width="2"/>
+  <text x="519" y="200" class="label">core_wrap</text>
+  <rect x="535" y="216" width="600" height="66" fill="#b53c30"/>
+  <text x="835" y="260" class="block">Ibex / CHERIoT</text>
+  <rect x="535" y="329" width="280" height="80" fill="#1769a0"/>
+  <text x="675" y="363" class="block">I-cache + ECC</text>
+  <text x="675" y="391" class="sub">reuse Ibex cache logic</text>
+  <rect x="855" y="329" width="280" height="80" fill="#b53c30"/>
+  <text x="995" y="363" class="block">Data / TRVK</text>
+  <text x="995" y="391" class="sub">existing revocation check</text>
+  <path d="M 675 282 V 329" class="link"/>
+  <path d="M 995 282 V 329" class="link"/>
+  <text x="729" y="312" class="small">fetch</text>
+  <text x="1031" y="312" class="small">load / store</text>
+
+  <rect x="1260" y="175" width="230" height="90" fill="#a21b81"/>
+  <text x="1375" y="210" class="block">Revocation</text>
+  <text x="1375" y="239" class="sub">bitmap / local path</text>
+  <path d="M 1135 369 H 1205 V 220 H 1260" class="link"/>
+  <text x="1185" y="286" class="small" transform="rotate(-90 1185 286)">bitmap lookup</text>
+
+  <rect x="1260" y="325" width="230" height="75" fill="#a21b81"/>
+  <text x="1375" y="370" class="block">iDMA</text>
+
+  <rect x="95" y="490" width="1400" height="75" fill="#168443"/>
+  <text x="795" y="538" class="block">Existing OBI crossbar</text>
+  <path d="M 217 400 V 490" class="link"/>
+  <path d="M 675 409 V 490" class="link"/>
+  <path d="M 995 409 V 490" class="link"/>
+  <path d="M 1375 400 V 490" class="link"/>
+  <text x="697" y="461" class="label">I-cache misses</text>
+  <text x="1023" y="461" class="label">32-bit OBI + tag</text>
+  <path d="M 1495 528 H 1525 V 220 H 1490" class="link"/>
+  <text x="1546" y="382" class="small" transform="rotate(-90 1546 382)">software bitmap access</text>
+
+  <rect x="95" y="650" width="310" height="342" fill="white" stroke="#168443" stroke-width="2"/>
+  <rect x="95" y="650" width="310" height="55" fill="#168443"/>
+  <text x="250" y="685" class="block" style="font-size:23px">OBI peripheral demux</text>
+  <rect x="116" y="725" width="268" height="48" fill="#a21b81"/>
+  <text x="250" y="756" class="sub">Boot ROM / SoC control</text>
+  <rect x="116" y="787" width="268" height="48" fill="#a21b81"/>
+  <text x="250" y="818" class="sub">CLINT / timer / UART / GPIO</text>
+  <rect x="116" y="849" width="268" height="48" fill="#a21b81"/>
+  <text x="250" y="880" class="sub">iDMA configuration</text>
+  <rect x="116" y="911" width="268" height="57" fill="#a21b81"/>
+  <text x="250" y="935" class="sub">HyperBus + cache / ECC</text>
+  <text x="250" y="958" class="sub">control and status registers</text>
+  <path d="M 250 565 V 650" class="link"/>
+  <text x="106" y="617" class="small">uncached</text>
+
+  <rect x="465" y="650" width="1030" height="190" class="proposed"/>
+  <text x="490" y="689" class="group" fill="#1769a0">Cache layer / new OBI frontend</text>
+  <rect x="490" y="714" width="365" height="88" fill="#1769a0"/>
+  <text x="672" y="749" class="block" style="font-size:24px">OBI / capability adapter</text>
+  <text x="672" y="779" class="sub">source tracking + split transfers</text>
+  <rect x="900" y="714" width="565" height="88" fill="#1769a0"/>
+  <text x="1182" y="749" class="block">D-cache + tags + ECC</text>
+  <text x="1182" y="779" class="sub">write-back; shared by data, JTAG and DMA</text>
+  <path d="M 995 565 V 650" class="link"/>
+  <text x="1021" y="617" class="label">all HyperRAM requests</text>
+  <text x="980" y="826" class="small" text-anchor="middle">Internal connections and instruction/data consistency: see diagram 02.</text>
+
+  <rect x="465" y="888" width="1030" height="88" fill="#1769a0"/>
+  <text x="980" y="923" class="block">Protected memory controller</text>
+  <text x="980" y="954" class="sub">block buffer / ECC / logical-to-physical address mapping</text>
+  <path d="M 980 840 V 888" class="link"/>
+
+  <rect x="465" y="1020" width="1030" height="80" fill="#25736d"/>
+  <text x="980" y="1054" class="block">HyperBus host engine - midend - PHY</text>
+  <text x="980" y="1082" class="sub">reuse midend, PHY and configuration; single-beat transfers first</text>
+  <path d="M 980 976 V 1020" class="link"/>
+  <path d="M 384 939 H 436 V 1060 H 465" class="control"/>
+  <path d="M 436 939 H 465" class="control"/>
+  <path d="M 436 939 V 682 H 465" class="control"/>
+  <text x="96" y="1052" class="small">Peripheral interrupts and clocks</text>
+  <text x="96" y="1078" class="small">are unchanged and not drawn.</text>
+
+  <rect x="650" y="1200" width="660" height="88" fill="#1769a0"/>
+  <text x="980" y="1235" class="block">External HyperRAM</text>
+  <text x="980" y="1266" class="sub">program + data + capability tags + backing ECC</text>
+  <path d="M 980 1100 V 1200" class="link"/>
+  <text x="1010" y="1164" class="label">2 PHYs / 1 chip per PHY</text>
+  <text x="650" y="1316" class="small">DQ / RWDS / CK / CS# / RESET# cross the chip boundary.</text>
+
+  <path d="M 57 1351 H 113" class="link"/>
+  <text x="130" y="1358" class="small">request + response path</text>
+  <path d="M 430 1351 H 487" class="control"/>
+  <text x="502" y="1358" class="small">configuration / status</text>
+  <rect x="805" y="1335" width="36" height="27" class="proposed"/>
+  <text x="856" y="1358" class="small">proposed subsystem; SRAM becomes cache storage</text>
+</svg>
