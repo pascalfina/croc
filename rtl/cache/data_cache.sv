@@ -26,13 +26,18 @@ module data_cache #(
 
     import cache_pkg::*;
 
-    typedef enum logic [2:0]
+    typedef enum logic [3:0]
     {  
         IDLE,
         CACHE_LOOKUP,
         ACCESS_SRAM,
         WAIT_FOR_SECOND_WORD,
-        SEND_SECOND_WORD
+        SEND_SECOND_WORD,
+        SEND_WRITEBACK_CMD, 
+        SEND_REFILL_CMD, 
+        WAIT_REFILL_DATA, 
+        WAIT_REFILL_DONE
+
 
     } state_t;
 
@@ -81,6 +86,9 @@ module data_cache #(
     logic [SetIndexWidth-1:0] set_index;
 
     logic [WayIndexWidth-1:0] selected_way_q, selected_way_d;
+    logic [WayIndexWidth-1:0] replace_way_q [NumSets];
+    logic [WayIndexWidth-1:0] replace_way_d [NumSets];
+
 
     logic [RecordBits-1:0] rdata_cache_q,rdata_cache_d;
     logic [OffsetBits-1:0] block_offset;
@@ -96,6 +104,10 @@ module data_cache #(
     // extra flags 
     logic cap_flag_q, cap_flag_d;
     logic cap_flag_read_valid_q, cap_flag_read_valid_d;
+    logic hit_found;
+    logic all_valid;
+
+    logic [$clog2(RecordsPerLine)-1:0] block_refill_count_q, block_refill_count_d;
 
 
     cap_store_t cap_store_q, cap_store_d; 
@@ -111,7 +123,7 @@ module data_cache #(
     end
     assign addr_tag = obi_req_addr_q[AddrWidth-1 : OffsetBits+SetBits];
     assign block_offset = obi_req_addr_q[OffsetBits-1 : 0];
-    assign sram_word_addr = set_index * RecordsPerLine + (block_offset / RecordDataBytes);
+    //assign sram_word_addr = set_index * RecordsPerLine + (block_offset / RecordDataBytes);
 
 
     assign read_word = obi_req_addr_q[2] ? sram_rdata[selected_way_q][RecordBits-1 : RecordBits/2] 
@@ -137,20 +149,24 @@ module data_cache #(
         cache_meta_d = cache_meta_q;
         selected_way_d = selected_way_q;
         rdata_cache_d = rdata_cache_q;
+        replace_way_d = replace_way_q;
+        block_refill_count_d = block_refill_count_q;
 
         sram_req = '0;
         sram_we     = 0;
         sram_wdata  = '0;
         sram_mask   = '0;
 
-        // obi_rsp_o.gnt = 1'b0;
-        // obi_rsp_o.rvalid = 1'b0;
+        hit_found = 0;
+        all_valid = 0;
 
         cap_flag_d = cap_flag_q;
         cap_flag_read_valid_d = cap_flag_read_valid_q;
 
 
         merged_word = read_word;
+
+        sram_word_addr = set_index * RecordsPerLine + (block_offset / RecordDataBytes);
         
         case (state_q)
 
@@ -183,13 +199,14 @@ module data_cache #(
             end
 
             CACHE_LOOKUP: begin
-
+                hit_found = 0;
                 for (int way=0; way<NumWays; ++way) begin
                     if (cache_meta_q[set_index][way].addr_tag == addr_tag 
                         && cache_meta_q[set_index][way].valid) begin  // cache hit
+                        hit_found = 1;
 
                         selected_way_d = WayIndexWidth'(way);
-                        
+                       
                         if (obi_req_write_q) begin // write hit
                             
                             if (obi_is_cap_access_q) begin // cap store
@@ -255,11 +272,27 @@ module data_cache #(
                         end
   
                     end
-                    else begin // cache miss
-                        //todo
-                    end
                     
                 end  
+
+                if(!hit_found) begin // cache miss
+                    all_valid = 1;
+                    selected_way_d = replace_way_q[set_index];
+                    for (int way=0; way<NumWays; ++way) begin
+                        if (all_valid && !cache_meta_q[set_index][way].valid) begin //choose this cacheline
+                            all_valid = 0;
+                            selected_way_d = WayIndexWidth'(way);
+                        end
+                    end
+
+                    if (cache_meta_q[set_index][selected_way_d].valid && 
+                        cache_meta_q[set_index][selected_way_d].dirty) begin //write back bc dirty 
+
+                        state_d = SEND_WRITEBACK_CMD;
+                    end else begin
+                        state_d = SEND_REFILL_CMD; // immidately fetch new cacheline
+                    end
+                end
             end
 
             WAIT_FOR_SECOND_WORD: begin //cap address should be 
@@ -273,7 +306,6 @@ module data_cache #(
                     sram_mask     = '1;
                     sram_req[selected_way_q] = 1'b1;
                     sram_we       = 1'b1;
-                    sram_req[selected_way_q] = 1; 
                     cache_meta_d[set_index][selected_way_q].dirty = 1;
 
                     obi_rsp_o.r.rid = obi_aid_q;
@@ -360,6 +392,66 @@ module data_cache #(
 
                 state_d = IDLE;
             end
+
+            SEND_REFILL_CMD: begin
+                mem_req_o.cmd.write = 0; // we want to read from hypperam
+
+                mem_req_o.cmd.line_addr = {obi_req_addr_q[AddrWidth-1:OffsetBits],{OffsetBits{1'b0}}};
+                mem_req_o.cmd.records = RecordsPerLine; //fetch one cacheline
+                mem_req_o.cmd_valid = 1'b1;
+
+                if (mem_req_o.cmd_valid && mem_rsp_i.cmd_ready) begin
+                    state_d = WAIT_REFILL_DATA;
+                    block_refill_count_d = 0;
+                end
+
+            end
+
+            WAIT_REFILL_DATA: begin
+                mem_req_o.r_ready = 1;
+                if (mem_rsp_i.r_valid && mem_req_o.r_ready) begin //write data to sram
+                    sram_req[selected_way_q] = 1;
+                    sram_we = 1;
+                    sram_word_addr = set_index * RecordsPerLine + block_refill_count_q;
+                    sram_wdata = mem_rsp_i.r.record;
+                    sram_mask     = '1;
+                    
+                    if (block_refill_count_q == RecordsPerLine - 1) begin
+                        state_d = WAIT_REFILL_DONE;
+                    end
+                    else begin
+                        block_refill_count_d  = block_refill_count_q + 1;
+                    end
+                end
+            end
+
+            WAIT_REFILL_DONE: begin
+                mem_req_o.done_ready = 1;
+
+                if (mem_rsp_i.done_valid && mem_req_o.done_ready) begin
+                    
+                    if (mem_rsp_i.done.error) begin //todo: erro handling do smth
+                        // todo later somewhen maybe never
+                    end
+                    else begin //no error world is fine
+                        cache_meta_d[set_index][selected_way_q].dirty = 0; //cache data and hyperram synchronized
+                        cache_meta_d[set_index][selected_way_q].valid = 1; //data also valid
+                        cache_meta_d[set_index][selected_way_q].addr_tag = addr_tag;
+
+                        if (selected_way_q != NumWays-1) begin //round robin way selection within a set
+                            replace_way_d[set_index] = selected_way_q + 1;
+                        end
+                        else begin
+                            replace_way_d[set_index] = '0;
+                        end
+                        
+                        state_d = CACHE_LOOKUP;
+                    end
+                    
+                end 
+            end
+
+
             
             default: begin
                 state_d = IDLE;
@@ -410,14 +502,18 @@ module data_cache #(
             for (int unsigned s = 0; s < NumSets; s++) begin
                 for (int unsigned w = 0; w < NumWays; w++) begin
                     cache_meta_q[s][w] <= '0;
+                    replace_way_q[s] <= '0;
                 end
             end
             selected_way_q <= 0;
             rdata_cache_q <= 0;
+            block_refill_count_q <= 0;
         end else begin
             cache_meta_q <= cache_meta_d;
             selected_way_q <= selected_way_d;
             rdata_cache_q <= rdata_cache_d;
+            replace_way_q <= replace_way_d;
+            block_refill_count_q <= block_refill_count_d;
         end
     end
 
