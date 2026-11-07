@@ -2,10 +2,10 @@
 
 Snapshot: 7 November 2026.
 
-This document describes the in-progress data-cache sources, the SRAM design
-decisions and the partial-store ECC update. It separates logic already present
-in the files from intended behavior and missing integration. It is not an RTL
-verification or timing sign-off.
+This document describes the in-progress data-cache sources, the read/store-hit
+paths, the SRAM design decisions and the partial-store ECC update. It separates
+logic already present in the files from intended behavior and missing
+integration. It is not an RTL verification or timing sign-off.
 
 The architectural target is in [Cache Design Constraints](cache-design-constraints.md).
 The earlier HTML, SVG and PDF proposal is historical and does not describe this
@@ -15,13 +15,14 @@ implementation accurately.
 
 | Source | Responsibility |
 | --- | --- |
-| [data_cache.sv](../rtl/cache/data_cache.sv) | OBI request capture, lookup and draft store-hit paths |
+| [data_cache.sv](../rtl/cache/data_cache.sv) | OBI request capture, lookup and read/store-hit paths |
 | [cache_pkg.sv](../rtl/cache/cache_pkg.sv) | Stored-word structs, record dimensions and partial-store ECC function |
 | [cache_typedef.svh](../rtl/cache/cache_typedef.svh) | Instance-dependent address-tag, valid and dirty struct |
 | [cache_data_sram.sv](../rtl/cache/cache_data_sram.sv) | Masked 80-bit SRAM interface and physical macro packing |
 | [IHP SRAM implementation](../ihp13/tc_sram_impl.sv) | Technology-specific cuts and bit-mask connections |
 | [Ibex SECDED package](../ibex/vendor/lowrisc_ip/ip/prim/rtl/prim_secded_pkg.sv) | Original encoding function used by the ECC update |
 | [Ibex load/store unit](../ibex/rtl/ibex_load_store_unit.sv) | Core byte-enable generation and existing data ECC encoder/checker |
+| [Ibex LSU protocol](../ibex/doc/03_reference/load_store_unit.rst) | Grant/response timing and split capability transfers |
 
 Only the cache package is currently listed in the root Bender sources. The
 data-cache and SRAM-wrapper module files are not, and no data-cache instance is
@@ -41,18 +42,19 @@ build or test.
 
 | Case | Present in the source | Still missing or limited |
 | --- | --- | --- |
-| Request acceptance | `req && gnt` captures address, write flag, byte-enable, capability-access flag and first write word | Request ID capture and OBI completion |
+| Request acceptance | `req && gnt` captures address, write flag, byte-enable, capability-access flag, ID and first write word | Verify response accounting and the capability-pair input contract |
 | Set lookup | Valid/address-tag comparison across ways; selected way is retained | Miss handling, allocation, replacement and geometry assertions |
-| Full 32-bit store hit | Places the buffered 40-bit word in the selected half and marks the line dirty | Correct partial/full-store guards and transition to an answer state |
-| Capability store hit | Buffers the first word; accepts the second in lookup or a waiting state; writes all 80 bits | Complete pair contract, two OBI answers, core flag wiring and finished transitions |
-| Byte/halfword store hit | Starts a read; selects the old word; merges enabled bytes and incoming tag; calls the ECC helper | SRAM write enable, dirty update and completion |
+| Full 32-bit store hit | Places the buffered 40-bit word in the selected half, marks dirty and answers in the SRAM-write cycle | RTL verification and end-to-end ECC wiring |
+| Capability store hit | Buffers both words, writes all 80 bits, answers once in the write cycle and once in `IDLE` using `cap_flag_q` | Pair-contract enforcement, core flag wiring and separate second-request ID handling for generic requesters |
+| Byte/halfword store hit | Reads the old word, merges bytes/tag/ECC, writes the selected half, marks dirty and answers | RTL verification; empty masks are excluded by a simulation assertion, not a hardware no-op policy |
 | ECC merge helper | `ecc_merge_partial32()` calls the original inverted Ibex encoder and is used in `ACCESS_SRAM` | End-to-end integration and tag protection are not implemented |
-| Ordinary/capability reads | Request fields and SRAM interfaces exist | Read-hit datapath, tag/ECC forwarding and OBI response |
+| Ordinary read hit | Reads one record, selects one stored word and returns data, stored tag/ECC and the saved ID | RTL verification and core ECC wiring |
+| Capability read hit | Reuses the 80-bit store buffer; sends one response per accepted half; an extra flag prevents repeated first responses | RTL verification, SRAM output-hold validation during waiting, pair-contract enforcement and core flag wiring |
 | Eviction/refill | Architectural write-back intent only | Dirty write-back, allocation, line reception and failure handling |
 | I-cache/shared HyperBus arbiter | Architectural decisions only | RTL, routing, maintenance, coherence and burst integration |
 
 All valid bits reset to zero. Since there is no refill path yet, the draft
-cannot populate a valid line after reset. None of these store-hit paths is an
+cannot populate a valid line after reset. None of these hit paths is an
 end-to-end runnable cache at this snapshot.
 
 ## Representation and Addressing
@@ -166,9 +168,13 @@ automatically lock two separate requests against JTAG/DMA interleaving. That
 contract must be enforced before sharing this input with other requesters.
 Instruction fetches belong to the separate I-cache path.
 
-Two accepted OBI requests still require two correctly ordered responses and
-their IDs. Writing both halves at one SRAM edge does not implement those
-responses or provide system-wide atomicity against other memory paths.
+The SRAM-write cycle returns the first OBI response. `cap_flag_q` requests the
+second response in the following `IDLE` cycle, which may also accept a new
+request. The current store path echoes the first saved ID for both responses;
+different IDs for the two halves are not yet handled. This relies on the
+current same-core-ID assumption and must be revisited for generic requesters.
+Writing both halves at one SRAM edge does not provide system-wide atomicity
+against other memory paths.
 
 ### Byte and Halfword Store
 
@@ -176,7 +182,7 @@ A nonempty partial mask uses a read-modify-write path. This also covers a
 partial bus request generated for a misaligned ordinary word access; it is not
 restricted to instructions whose operand size is a byte or halfword.
 
-1. On a lookup hit, save the way, request the old record with `sram_we = 0),
+1. On a lookup hit, save the way, request the old record with `sram_we = 0`,
    leave dirty unchanged and enter `ACCESS_SRAM`.
 2. In `ACCESS_SRAM`, select the lower or upper old 40-bit word using address
    bit 2. Start `merged_word` from that word.
@@ -187,10 +193,10 @@ restricted to instructions whose operand size is a byte or halfword.
 5. Write that half with the same five-byte mask used for full-word stores,
    mark the line dirty and complete the OBI transaction.
 
-Step 4 is present: `ACCESS_SRAM` calls the helper before placing
-`merged_word` on the write bus. Step 5 is incomplete: the partial-store state
-does not yet assert SRAM write request or write enable, update dirty, or finish
-the response sequence. Computing write data alone does not commit a write.
+These steps are present in the source: `ACCESS_SRAM` asserts the selected SRAM
+request and write enable, sets dirty, returns one OBI response with the saved
+ID and transitions to `IDLE`. This is source-level implementation status, not a
+simulation result.
 
 For an old word `0x11223344`, incoming data `0x0000AABB` and byte-enable
 `0011`, the merged payload is `0x1122AABB`. The ECC of `0x0000AABB` alone
@@ -200,6 +206,154 @@ No extra register is required between the SRAM output and this merge. The
 intended hit path uses one read phase followed by one merge/write phase: one
 additional SRAM operation compared with a full-word hit. This is a scheduling
 target, not a measured total OBI latency or a proven single-cycle timing path.
+
+## Read-Hit Control Flow
+
+### Shared Request Capture and SRAM Read
+
+Both ordinary and capability reads enter through `IDLE`. An accepted
+`obi_req_i.req && obi_rsp_o.gnt` saves the address, byte-enable, ID and
+`is_cap_access` with `we = 0`. The capability-access marker applies to loads
+and stores; `we` distinguishes their direction. No write data is captured for
+a read.
+
+On a hit, `CACHE_LOOKUP` handles both read types identically:
+
+- Save the hit way in `selected_way_d`.
+- Assert `sram_req[way]` with `sram_we = 0` and the derived record address.
+- Set `cap_flag_read_valid_d = 1` and enter `ACCESS_SRAM`.
+- Do not return an OBI response yet: the wrapper has one synchronous read cycle.
+
+The wrapper reads the complete 80-bit record, even for an ordinary 32-bit
+load. Its main and packed-remainder SRAM parts are read in parallel; neither
+half requires another SRAM operation. Read hits do not write SRAM or change
+the line's valid/dirty metadata.
+
+### Ordinary Read
+
+`read_word` is a combinational packed-struct view of the selected way's SRAM
+output, not a flipflop. Saved CPU address bit 2 selects bits [39:0] or [79:40].
+The selected `cap_word_t` provides the matching data, tag and ECC together.
+
+In `ACCESS_SRAM`, the ordinary read returns:
+
+| OBI response field | Source |
+| --- | --- |
+| `r.rdata` | `read_word.data` |
+| `r.rid` | Saved `obi_aid_q` |
+| `r.r_optional.ecc` | `read_word.ecc` |
+| `r.r_optional.cap_tag` | `read_word.cap_tag` |
+
+`rvalid` is asserted for that cycle and the next state is `IDLE`. The default
+`obi_rsp_o = '0` supplies a zero error status for this hit response. The wrapper
+has no error output, and the cache does not check ECC before answering.
+
+Byte and halfword loads also receive the complete selected 32-bit word and its
+stored ECC. The Ibex load/store unit extracts the requested bytes and performs
+the required extension. The cache must not shift the returned word or generate
+fresh ECC from the observed data.
+
+The ordinary-read branch does not use the first-response flag: it leaves
+`ACCESS_SRAM` immediately after its single response. The flag is armed again
+by the next read hit in `CACHE_LOOKUP`.
+
+### Capability Read and Shared Record Buffer
+
+A capability load consists of two 32-bit OBI requests: an 8-byte-aligned first
+address `A`, followed by `A + 4`, both marked `is_cap_access` with `we = 0`.
+This pair uses one 80-bit record. Its two stored tags are returned separately;
+Ibex combines them when reconstructing capability validity.
+
+In `ACCESS_SRAM`, the cache assigns the complete SRAM result to
+`cap_store_d`. Despite its store-oriented name, this packed struct is also the
+read buffer. Reuse is safe for the current blocking cache: an unrelated store
+cannot overwrite it while the capability read is active.
+
+The first response uses `cap_store_d.lower` directly, so buffering the complete
+record does not add a register-wait cycle. The registered `cap_store_q` retains
+both words for the later upper-word response. No additional 80-bit read buffer
+is needed for this path; the separately declared `rdata_cache_q` is not used
+by it.
+
+`cap_flag_read_valid_q` means the first response is still pending:
+
+- It resets to zero and is armed in the read-hit lookup cycle.
+- The first capability `ACCESS_SRAM` cycle asserts `rvalid` and clears the flag.
+- Later cycles waiting in `ACCESS_SRAM` keep `rvalid = 0`. The first response
+  must not repeat merely because the second request is late.
+
+While in `ACCESS_SRAM`, `gnt` is high for the second request. On its
+`req && gnt` handshake, the cache saves its ID in `obi_aid_d` and enters
+`SEND_SECOND_WORD`. The first response still uses the previous `obi_aid_q`;
+the second ID takes effect only at the clock edge. The second request's address
+does not replace the saved first address or trigger another SRAM read.
+
+`SEND_SECOND_WORD` returns the upper word, its stored tag/ECC and the captured
+second ID for exactly one cycle, then enters `IDLE`. In that state,
+`cap_store_d` defaults to `cap_store_q`, so the response is sourced from the
+registered record. No new request is granted in `SEND_SECOND_WORD`.
+
+The implementation assumes the second request belongs to the same capability
+load and is the read of `A + 4`. This is not currently enforced by the
+store-only second-address assertion. The initial CPU-data-only contract must
+be preserved or explicitly enforced before allowing other requesters to
+interleave here.
+
+### OBI Timing and Latency
+
+These bus-cycle labels describe the current read-hit scheduling, not measured
+clock frequency. Handshakes and responses are sampled at the ending edge of
+each listed cycle.
+
+| Cycle | State | Ordinary read | Capability read with second request ready |
+| --- | --- | --- | --- |
+| C0 | `IDLE` | Accept the request | Accept the first request |
+| C1 | `CACHE_LOOKUP` | Issue one SRAM read | Issue one SRAM read |
+| C2 | `ACCESS_SRAM` | Return the selected word; next state `IDLE` | Return the lower word, buffer the record and accept the second request |
+| C3 | `IDLE` / `SEND_SECOND_WORD` | May accept another request | Return the upper word; next state `IDLE` |
+| C4 | Depends on next request / `IDLE` | Depends on next request | May accept another request |
+
+The capability responses can therefore occupy consecutive cycles, one word
+per cycle, with no empty response cycle between them. The first response and
+the second request's grant may overlap because they belong to different
+requests. A response to the newly granted request itself must wait until at
+least the following cycle, as specified by the local Ibex LSU protocol.
+
+If the second request arrives later, the first response still occurs at C2.
+`ACCESS_SRAM` then waits with grant high and response-valid low. After the
+second handshake at cycle Ck, `SEND_SECOND_WORD` answers at Ck+1. No repeated
+SRAM request, first response or lookup is required. `UseRReady = 0` means
+there is no response backpressure; each response-valid cycle completes one
+previously accepted request.
+
+The extra first-response flag costs one flipflop, not another pipeline stage.
+This is not a fully pipelined cache: an ordinary read uses separate capture,
+lookup and answer cycles, and the final capability-answer cycle does not also
+accept a new independent access. Back-to-back capability answers are not a
+claim of one new independent cache hit per cycle.
+
+### SRAM Holding and Read Verification
+
+The current capability branch assigns `cap_store_d` from `sram_rdata` on every
+`ACCESS_SRAM` cycle, including cycles waiting for the second request. No new
+SRAM operation is issued during that wait. The selected SRAM implementation
+must therefore retain the read output until the second request has been
+accepted. The wrapper's registered macro/slot selection alone is not proof of
+an arbitrary macro output-hold guarantee.
+
+This dependency must be tested with the selected SRAM model and preserved if
+refill/write-back arbitration is added. If the SRAM output can change while
+waiting, capture the record only on the initial read-result cycle and retain
+that buffer afterwards; that behavior is not implemented by the current
+repeated assignment.
+
+Focused read regressions still need to verify both word selections, distinct
+data/tag/ECC values in both halves, byte/halfword extraction, first and second
+response IDs, and exactly one answer per accepted request. Delay the second
+request for multiple cycles, change its live ID after its grant, and check
+that reset clears the first-response flag. Read hits must leave SRAM contents
+and dirty/valid state unchanged. No read-path build or RTL simulation was run
+for this documentation update.
 
 ## SRAM Design Decisions
 
@@ -402,6 +556,9 @@ for this helper exists yet.
 | Partial-store read-modify-write | Preserves untouched bytes with the existing ECC grouping | Extra read phase and SRAM-to-merge-to-encoder-to-SRAM timing path |
 | ECC update without checking | Avoids cache-side syndrome comparisons, decoder and correction logic | Retains the stated two-input cancellation risk; no early error report |
 | Combinational merge without another data register | Avoids an additional register stage and its latency | Longer combinational path; timing analysis may still require a stage |
+| Direct SRAM read-hit response | Avoids a separate response-data register stage | SRAM/way/word selection and OBI routing must meet the clock period |
+| Shared 80-bit store/read buffer | Retains both capability words without another record-sized buffer | Depends on blocking request ownership and correct SRAM-result capture |
+| One-bit first-read-response flag | Allows a delayed second request without repeating the first response | Must be reset, armed and cleared correctly; no extra pipeline stage |
 | Pure `function automatic` helper | Reuses the original code definition and synthesizes combinationally | Not zero-area software; repeated simultaneous calls may duplicate logic |
 | No write buffer or overlapping misses initially | Smaller control state and simpler ordering | Blocking latency limits throughput |
 
@@ -430,25 +587,26 @@ The current 32-bit codec and 80-bit record are not automatic 64-bit CPU support.
 
 ## Remaining Work and Verification Gates
 
-The current source still contains unfinished state assignments. Its store
-guards use `1'b1111` where a four-bit constant is required, and the capability
-assertion still refers to the old `CHACHE_LOOKUP` spelling. These must not be
-mistaken for verified implementations of the intended paths above.
+The ordinary and capability read/store-hit paths now have source-level
+datapaths and response sequencing. This does not establish that the module
+compiles or that its interface, timing and fault assumptions hold in RTL.
+Miss/refill and dirty eviction remain unimplemented.
 
 Before functional cache testing:
 
-- Finish partial-store write strobes, dirty update and answer sequencing;
-  define the zero-mask policy.
-- Implement OBI response timing, request IDs and exactly one response per
-  accepted request, including both halves of a capability transfer.
-- Implement read hits, miss/refill, allocation, replacement and dirty
+- Compile/elaborate and test the implemented hit paths, including OBI timing,
+  captured IDs and exactly one response per accepted request. Capability-read
+  and capability-store completion use different flags and sequences.
+- Verify the partial-store write strobes/dirty update and the assertion that
+  excludes empty masks; define a hardware policy if such masks must be handled.
+- Implement miss/refill, allocation, replacement and dirty
   write-back without exposing partially filled lines.
 - Define initialization of encoded data/tag/ECC and protection of address tags,
   valid and dirty state. Payload ECC does not protect lookup metadata.
 - Define the capability-pair input contract and conflicting JTAG/DMA accesses,
   plus I-cache/data-cache consistency and maintenance.
 - Finalize and connect the shared data-plus-tag codec in the core and cache;
-  remove the zero ECC and capability-store marker stubs.
+  remove the zero ECC and capability-access marker stubs.
 - Register the modules with Bender and connect the cache only after focused
   module tests pass.
 
@@ -457,7 +615,10 @@ This documentation update changes no RTL and does not run builds or simulations.
 The regression should cover both stored-word halves, all nonempty byte masks,
 unchanged neighboring words/packed slots, macro boundaries, saved read
 selection, reset, capability halves with and without waiting, and correct
-dirty/valid transitions. Check default and representative legal/illegal
+dirty/valid transitions. In particular, a delayed second capability-read request
+must not cause a repeated lower-word response, and the upper-word response
+must use the ID captured at its grant, not the live input ID. Verify SRAM output
+holding while waiting. Check default and representative legal/illegal
 geometries. Inject faults into each payload/ECC bit in either input, two faults
 within one input, and equal/different syndromes across both inputs. Explicitly
 test the documented silent-corruption limit rather than expecting every such

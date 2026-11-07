@@ -269,7 +269,7 @@ module data_cache #(
 
             ACCESS_SRAM: begin
 
-                if (obi_req_be_q != 4'b1111 && !obi_is_cap_access_q && obi_req_write_q) begin // handle write half word
+                if (obi_req_be_q != 4'b1111 && !obi_is_cap_access_q && obi_req_write_q) begin // store half word in cache
                     for (int i=0; i<4; ++i) begin
                         if (obi_req_be_q[i] == 1) begin
                             merged_word.data[i*8 +: 8] = cap_store_q.lower.data[i*8 +: 8];
@@ -296,8 +296,8 @@ module data_cache #(
                     state_d = IDLE; 
                 end
 
-                else if (!obi_req_write_q) begin //read
-                    if (obi_is_cap_access_q) begin // cap load
+                else if (!obi_req_write_q) begin //read from cache
+                    if (obi_is_cap_access_q) begin // capability load
                         cap_store_d = sram_rdata[selected_way_q];
                         obi_rsp_o.r.rdata = cap_store_d.lower.data;
                         obi_rsp_o.r.rid = obi_aid_q;
@@ -310,7 +310,7 @@ module data_cache #(
                         end
                         
 
-                        obi_rsp_o.gnt = 1'b1; //immidately tell be ready for requests again
+                        obi_rsp_o.gnt = 1'b1; //immidately be ready for requests again
 
                          if (obi_req_i.req && obi_rsp_o.gnt) begin
                             obi_aid_d = obi_req_i.a.aid;
@@ -319,7 +319,6 @@ module data_cache #(
 
                     end 
                     else begin // normal load 
-                        //TODO
                         obi_rsp_o.r.rdata = read_word.data;
                         obi_rsp_o.r.rid = obi_aid_q;
                         obi_rsp_o.r.r_optional.ecc = read_word.ecc;
