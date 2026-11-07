@@ -40,3 +40,24 @@
         $bits(obi_req_i.a.a_optional.is_cap_access) != 1) begin : gen_invalid_obi_optional_widths
         $error("data_cache: OBI ECC, tag and capability-access fields have unsupported widths.");
     end
+
+    if ($bits(mem_req_o.cmd.line_addr) != AddrWidth ||
+        $bits(mem_req_o.cmd.write) != 1 ||
+        $bits(mem_req_o.cmd.records) < $clog2(RecordsPerLine + 1)) begin : gen_invalid_mem_command_widths
+        $error("data_cache: memory command must match AddrWidth and represent the full line record count.");
+    end
+
+    if ($bits(mem_req_o.w.record) != RecordBits ||
+        $bits(mem_rsp_i.r.record) != RecordBits ||
+        $bits(mem_req_o.w.last) != 1 ||
+        $bits(mem_rsp_i.r.last) != 1 ||
+        $bits(mem_rsp_i.done.error) != 1) begin : gen_invalid_mem_data_widths
+        $error("data_cache: memory streams require complete records, one-bit last and one-bit error fields.");
+    end
+
+    if ($bits(mem_req_o.cmd_valid) != 1 || $bits(mem_rsp_i.cmd_ready) != 1 ||
+        $bits(mem_req_o.w_valid) != 1 || $bits(mem_rsp_i.w_ready) != 1 ||
+        $bits(mem_rsp_i.r_valid) != 1 || $bits(mem_req_o.r_ready) != 1 ||
+        $bits(mem_rsp_i.done_valid) != 1 || $bits(mem_req_o.done_ready) != 1) begin : gen_invalid_mem_handshake_widths
+        $error("data_cache: memory valid and ready fields must each be one bit wide.");
+    end

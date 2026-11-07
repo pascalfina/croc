@@ -18,6 +18,15 @@ package cache_pkg;
   localparam int unsigned CacheRecordDataBytes = 2 * CacheWordDataBits / 8;
   localparam int unsigned CacheRecordBits = $bits(cap_store_t);
 
+  typedef struct packed {
+    cap_store_t record;
+    logic       last; // Last record of the complete line, not of a host burst.
+  } cache_mem_data_t;
+
+  typedef struct packed {
+    logic error;
+  } cache_mem_done_t;
+
 
   function automatic logic [6:0] ecc_merge_partial32(input cap_word_t old_word,input cap_word_t incoming_word,input logic [3:0] byte_enable);
     logic [31:0] unused_data;

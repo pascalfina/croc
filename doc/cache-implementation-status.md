@@ -16,8 +16,8 @@ implementation accurately.
 | Source | Responsibility |
 | --- | --- |
 | [data_cache.sv](../rtl/cache/data_cache.sv) | OBI request capture, lookup and read/store-hit paths |
-| [cache_pkg.sv](../rtl/cache/cache_pkg.sv) | Stored-word structs, record dimensions and partial-store ECC function |
-| [cache_typedef.svh](../rtl/cache/cache_typedef.svh) | Instance-dependent address-tag, valid and dirty struct |
+| [cache_pkg.sv](../rtl/cache/cache_pkg.sv) | Stored-word and line-stream structs, completion status, record dimensions and partial-store ECC function |
+| [cache_typedef.svh](../rtl/cache/cache_typedef.svh) | Instance-dependent cache metadata and cache/arbiter command, request and response structs |
 | [cache_data_sram.sv](../rtl/cache/cache_data_sram.sv) | Masked 80-bit SRAM interface and physical macro packing |
 | [data_cache_param_checks.svh](../rtl/cache/data_cache_param_checks.svh) | Cache geometry and OBI-width elaboration checks |
 | [cache_data_sram_param_checks.svh](../rtl/cache/cache_data_sram_param_checks.svh) | SRAM depth and width elaboration checks |
@@ -52,7 +52,7 @@ build or test.
 | ECC merge helper | `ecc_merge_partial32()` calls the original inverted Ibex encoder and is used in `ACCESS_SRAM` | End-to-end integration and tag protection are not implemented |
 | Ordinary read hit | Reads one record, selects one stored word and returns data, stored tag/ECC and the saved ID | RTL verification and core ECC wiring |
 | Capability read hit | Reuses the 80-bit store buffer; sends one response per accepted half; an extra flag prevents repeated first responses | RTL verification, SRAM output-hold validation during waiting, pair-contract enforcement and core flag wiring |
-| Eviction/refill | Architectural write-back intent only | Dirty write-back, allocation, line reception and failure handling |
+| Eviction/refill | Line-transfer types and cache ports exist; memory outputs default to zero | Miss FSM, dirty write-back, allocation, line reception and failure handling |
 | I-cache/shared HyperBus arbiter | Architectural decisions only | RTL, routing, maintenance, coherence and burst integration |
 
 All valid bits reset to zero. Since there is no refill path yet, the draft
@@ -381,6 +381,75 @@ that reset clears the first-response flag. Read hits must leave SRAM contents
 and dirty/valid state unchanged. Only the isolated geometry elaboration
 described below has run; functional read behavior has not been RTL-simulated.
 
+## Line-Transfer Interface
+
+The cache now has `mem_req_t` / `mem_rsp_t` type parameters and `mem_req_o` /
+`mem_rsp_i` ports. These are protocol-neutral, complete-line transfers to the
+planned shared arbiter. They are not OBI requests or direct HyperBus commands.
+The miss FSM and arbiter are still unimplemented, so `mem_req_o = '0` currently
+keeps commands, write data and response readiness inactive. Hit behavior is
+unchanged.
+
+`cache_pkg::cache_mem_data_t` contains a complete `cap_store_t record` plus a
+one-bit `last`. The record preserves both payload words, tags and stored ECC.
+`cache_pkg::cache_mem_done_t` contains one error bit. The parameterized macros
+in `cache_typedef.svh` construct the command and outer packets:
+
+| Packet | Field | Meaning |
+| --- | --- | --- |
+| `cache_mem_req_t` | `cmd_valid`, `cmd` | Offer one complete-line operation |
+| `cmd` | `write` | Zero for refill; one for dirty-line write-back |
+| `cmd` | `line_addr` | Aligned logical byte address, before encoded HyperRAM mapping |
+| `cmd` | `records` | Exact number of complete 80-bit records, not a last index or host-beat count |
+| `cache_mem_req_t` | `w_valid`, `w.record`, `w.last` | Write-back stream in increasing record order |
+| `cache_mem_req_t` | `r_ready` | Cache can accept a refill record |
+| `cache_mem_req_t` | `done_ready` | Cache can accept the final operation status |
+| `cache_mem_rsp_t` | `cmd_ready` | Arbiter can accept the offered command |
+| `cache_mem_rsp_t` | `w_ready` | Transfer path can accept a write-back record |
+| `cache_mem_rsp_t` | `r_valid`, `r.record`, `r.last` | Refill stream in increasing record order |
+| `cache_mem_rsp_t` | `done_valid`, `done.error` | Final success/failure status for the complete operation |
+
+Each channel transfers only at a clock edge with its valid and ready both high.
+The producer holds valid and its payload stable until that handshake. Record
+`last` marks the end of the complete line, not the end of each HyperBus burst.
+No record byte mask is needed: write-back and refill transfer complete records.
+
+The planned completion contract distinguishes data acceptance from operation
+success. A successful refill completes only after all expected records have
+been accepted and committed to SRAM. A write-back completes only after the
+HyperBus write responses for all issued bursts have arrived. A failed operation
+may complete before all line records have been transferred, but only after
+issued transport activity is drained. The miss FSM must accept an error
+completion while waiting for data, rather than waiting indefinitely for a
+missing final record. It must not validate a partial refill or discard dirty
+victim data on failure. These rules are interface requirements for the future
+implementation, not behavior implemented by the current inactive ports.
+
+Create matching types in the future enclosing cache/arbiter scope, for example:
+
+```systemverilog
+`include "cache_typedef.svh"
+localparam int unsigned MaxLineRecords = MaxLineDataBytes / cache_pkg::CacheRecordDataBytes;
+localparam int unsigned RecordCountWidth = (MaxLineRecords > 0) ? $clog2(MaxLineRecords + 1) : 1;
+`CACHE_TYPEDEF_MEM_ALL(cache_mem, AddrWidth, RecordCountWidth)
+```
+
+`MaxLineDataBytes` is the larger of the configured instruction/data line sizes
+in that enclosing scope; it is not a new data-cache parameter. This produces
+`cache_mem_cmd_t`, `cache_mem_req_t` and `cache_mem_rsp_t`. Pass the latter two
+as `.mem_req_t(cache_mem_req_t)` and `.mem_rsp_t(cache_mem_rsp_t)`. A common
+record-count width may be wider than one cache needs. Data-cache elaboration
+checks enforce matching address/data/handshake widths and enough count bits
+to represent its complete line.
+
+A logical 64-byte line has `cmd.records = 8`, requiring at least four count
+bits. It becomes 20 physical 32-bit host beats only in the shared packing and
+transfer logic. `MaxBurstBeats` belongs to that future logic, not this command
+or the data-cache parameters. The arbiter retains its selected owner until
+the complete line operation's completion handshake. No transaction ID is
+included because the initial interface allows only one outstanding operation
+per cache and one selected shared owner.
+
 ## SRAM Design Decisions
 
 ### One Masked Logical Port per Way
@@ -614,14 +683,17 @@ The current 32-bit codec and 80-bit record are not automatic 64-bit CPU support.
 
 ### Geometry Elaboration Checks
 
-A temporary pyslang 3.0.0 harness elaborated 37 legal cache configurations,
+A temporary pyslang 3.0.0 harness elaborated 38 legal cache configurations,
 including capacities from 4 to 32 KiB, 16/32/64-byte lines, one/two/four ways,
 single-set configurations, an eight-way case and a matching 64-bit address
-interface with 32-bit data. Generated way counts, record depths, address widths
+interface with 32-bit data, plus a shared wider memory-record counter.
+Generated way counts, record depths, address widths
 and exact macro storage capacities were checked against the requested geometry.
 All 64 wrapper depths from 256 through 16,384 records in steps of 256 also
-elaborated. Fourteen invalid cache configurations and five invalid wrapper
+elaborated. Sixteen invalid cache configurations and five invalid wrapper
 configurations were rejected with the expected parameter diagnostics.
+The cache/arbiter packet widths were also checked, including rejection of
+mismatched memory addresses and a counter too narrow for the full line count.
 
 This was an isolated structural check using the actual cache sources and ECC
 package, with `tc_sram_impl` replaced by a port-compatible stub. It does not

@@ -7,14 +7,20 @@ module data_cache #(
     parameter int unsigned LineDataBytes  = 16,
     parameter int unsigned NumWays        = 2,
     parameter type         obi_req_t      = logic,
-    parameter type         obi_rsp_t      = logic
+    parameter type         obi_rsp_t      = logic,
+    parameter type         mem_req_t      = logic,
+    parameter type         mem_rsp_t      = logic
 ) (
     input  logic     clk_i,
     input  logic     rst_ni,
 
-    // obi signals <-> crossbar <-> ibex
+    // obi signals data cache <-> crossbar <-> ibex
     input  obi_req_t obi_req_i,
-    output obi_rsp_t obi_rsp_o
+    output obi_rsp_t obi_rsp_o,
+
+    // Complete-line transfers to the shared memory arbiter.
+    output mem_req_t mem_req_o,
+    input  mem_rsp_t mem_rsp_i
 
 );
 
@@ -126,6 +132,7 @@ module data_cache #(
         obi_aid_d = obi_aid_q;
 
         obi_rsp_o = '0;
+        mem_req_o = '0;
 
         cache_meta_d = cache_meta_q;
         selected_way_d = selected_way_q;
