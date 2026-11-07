@@ -30,8 +30,8 @@ data-cache module.
 
 The core still has `MemECC = 0`. Its write-integrity output is not connected,
 its read-integrity input is tied to zero, and the OBI request ECC and
-`is_cap_store` fields are tied to zero in `croc_domain.sv`. These are integration
-TODOs, not functional ECC or capability-store signaling. Existing HyperRAM
+`is_cap_access` fields are tied to zero in `croc_domain.sv`. These are integration
+TODOs, not functional ECC or capability-access signaling. Existing HyperRAM
 tests do not verify this new cache.
 
 ## Current Coverage
@@ -41,7 +41,7 @@ build or test.
 
 | Case | Present in the source | Still missing or limited |
 | --- | --- | --- |
-| Request acceptance | `req && gnt` captures address, write flag, byte-enable, capability-store flag and first write word | Request ID capture and OBI completion |
+| Request acceptance | `req && gnt` captures address, write flag, byte-enable, capability-access flag and first write word | Request ID capture and OBI completion |
 | Set lookup | Valid/address-tag comparison across ways; selected way is retained | Miss handling, allocation, replacement and geometry assertions |
 | Full 32-bit store hit | Places the buffered 40-bit word in the selected half and marks the line dirty | Correct partial/full-store guards and transition to an answer state |
 | Capability store hit | Buffers the first word; accepts the second in lookup or a waiting state; writes all 80 bits | Complete pair contract, two OBI answers, core flag wiring and finished transitions |

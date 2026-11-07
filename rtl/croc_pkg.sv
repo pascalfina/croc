@@ -191,7 +191,7 @@ package croc_pkg;
   } obi_r_optional_t;
 
   typedef struct packed {
-    logic       is_cap_store; // Asserted on both requests of a capability store.
+    logic       is_cap_access; // Asserted on both requests of a capability load or store.
     logic [6:0] ecc;
     logic       cap_tag;
   } obi_a_optional_t;

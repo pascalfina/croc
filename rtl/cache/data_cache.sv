@@ -26,8 +26,7 @@ module data_cache #(
         CACHE_LOOKUP,
         ACCESS_SRAM,
         WAIT_FOR_SECOND_WORD,
-
-
+        SEND_SECOND_WORD,
 
     } state_t;
 
@@ -78,26 +77,30 @@ module data_cache #(
     logic [AddrWidth-1:0]       obi_req_addr_q, obi_req_addr_d;
     logic                       obi_req_write_q, obi_req_write_d;
     logic                       obi_req_wtag_q, obi_req_wtag_d;
-    logic                       obi_is_cap_store_q, obi_is_cap_store_d;
+    logic                       obi_is_cap_access_q, obi_is_cap_access_d;
     logic [ObiIdWidth-1:0]      obi_aid_q, obi_aid_d;
 
-
+    // extra flags 
     logic cap_flag_q, cap_flag_d;
+    logic cap_flag_read_valid_q, cap_flag_read_valid_d;
 
 
-    cap_store_t cap_store_q, cap_store_d;             
-    cap_word_t old_word; // for halfworld 
+    cap_store_t cap_store_q, cap_store_d; 
+            
+    cap_word_t read_word; // for halfworld 
     cap_word_t merged_word; //for halfword
 
+  
     assign set_index = obi_req_addr_q[OffsetBits +: SetBits];
     assign addr_tag = obi_req_addr_q[AddrWidth-1 : OffsetBits+SetBits];
     assign block_offset = obi_req_addr_q[OffsetBits-1 : 0];
     assign sram_word_addr = set_index * RecordsPerLine + (block_offset / RecordDataBytes);
 
 
-    assign old_word = obi_req_addr_q[2] ? sram_rdata[selected_way_q][RecordBits-1 : RecordBits/2] 
+    assign read_word = obi_req_addr_q[2] ? sram_rdata[selected_way_q][RecordBits-1 : RecordBits/2] 
         : sram_rdata[selected_way_q][RecordBits/2-1 : 0];
 
+    
 
     always_comb begin
 
@@ -107,7 +110,7 @@ module data_cache #(
         obi_req_addr_d = obi_req_addr_q;
         obi_req_write_d = obi_req_write_q;
         obi_req_wtag_d = obi_req_wtag_q;
-        obi_is_cap_store_d = obi_is_cap_store_q;
+        obi_is_cap_access_d = obi_is_cap_access_q;
         cap_store_d = cap_store_q;
         obi_aid_d = obi_aid_q;
 
@@ -123,9 +126,14 @@ module data_cache #(
         sram_wdata  = '0;
         sram_mask   = '0;
 
-        cap_flag_d = cap_flag_q;
+        // obi_rsp_o.gnt = 1'b0;
+        // obi_rsp_o.rvalid = 1'b0;
 
-        merged_word = old_word;
+        cap_flag_d = cap_flag_q;
+        cap_flag_read_valid_d = cap_flag_read_valid_q;
+
+
+        merged_word = read_word;
         
         case (state_q)
 
@@ -135,7 +143,7 @@ module data_cache #(
                 if (cap_flag_q) begin // after cap store we need to send 2. resp back
                     obi_rsp_o.r.rid = obi_aid_q;
                     obi_rsp_o.rvalid = 1;
-                    cap_flag_d = 1'b0
+                    cap_flag_d = 1'b0;
                 end
 
                 if (obi_req_i.req && obi_rsp_o.gnt) begin // get new request
@@ -143,7 +151,7 @@ module data_cache #(
                     obi_req_be_d = obi_req_i.a.be;
                     obi_req_addr_d = obi_req_i.a.addr;
                     obi_req_write_d = obi_req_i.a.we;
-                    obi_is_cap_store_d = obi_req_i.a.a_optional.is_cap_store;
+                    obi_is_cap_access_d = obi_req_i.a.a_optional.is_cap_access;
                     obi_aid_d = obi_req_i.a.aid;
 
                     // only used for write
@@ -164,65 +172,71 @@ module data_cache #(
                         && cache_meta_q[set_index][way].valid) begin  // cache hit
 
                         selected_way_d = way;
-                        //sram_req[way] = 1;
-
-                        if (obi_is_cap_store_q && obi_req_write_q) begin //cap write
-                            obi_rsp_o.gnt = 1'b1;
-                            if (obi_req_i.req && obi_rsp_o.gnt) begin //second word already here we can already write to sram
-                                sram_req[way] = 1; 
-                                cap_store_d.upper.data    = obi_req_i.a.wdata;
-                                cap_store_d.upper.ecc     = obi_req_i.a.a_optional.ecc;
-                                cap_store_d.upper.cap_tag = obi_req_i.a.a_optional.cap_tag;
-
-                                sram_wdata    = cap_store_d;
-                                sram_mask     = '1;
-                                sram_req[way] = 1'b1;
-                                sram_we       = 1'b1;
-                                cache_meta_d[set_index][way].dirty = 1;
-
-                                obi_rsp_o.r.rid = obi_aid_q;
-                                obi_rsp_o.rvalid = 1;
-                                cap_flag_d = 1;
-                                state_d = IDLE; 
-                            end
-                            else begin //second word not here we need to wait for it
-                                state_d = WAIT_FOR_SECOND_WORD;
-                            end
-                        end
-
-                        else if (!obi_is_cap_store_q && obi_req_write_q) begin //normal store
-                            if (obi_req_be_q != 4'b1111) begin //half world
-                                // because off ecc we need to read from sram fist 
-                                // and lose a cycle necessarily maybe there is a better solution todo
-                                sram_req[way] = 1;
-                                sram_we = 0;
-                                state_d = ACCESS_SRAM;   
-                            end
-                            else begin // full word live is nice
-                                sram_wdata = '0;
-
-                                if (obi_req_addr_q[2]) begin
-                                    sram_wdata[RecordBits-1 : RecordBits/2] = cap_store_q.lower;
-                                    sram_mask = 10'h3E0;
-                                end else begin
-                                    sram_wdata[RecordBits/2-1 : 0] = cap_store_q.lower;
-                                    sram_mask = 10'h01F;
-                                end
-
-                                sram_req[way] = 1'b1;
-                                sram_we = 1'b1;
-                                cache_meta_d[set_index][way].dirty = 1'b1;
-
-                                // respond back to obi to save cycles
-                                obi_rsp_o.r.rid = obi_aid_q;
-                                obi_rsp_o.rvalid = 1;
-                                state_d = IDLE; 
-
-
-                            end  
-                        end
-                    
                         
+                        if (obi_req_write_q) begin // write hit
+                            
+                            if (obi_is_cap_access_q) begin // cap store
+                                obi_rsp_o.gnt = 1'b1;
+                                if (obi_req_i.req && obi_rsp_o.gnt) begin //second word already here we can already write to sram
+                                    sram_req[way] = 1; 
+                                    cap_store_d.upper.data    = obi_req_i.a.wdata;
+                                    cap_store_d.upper.ecc     = obi_req_i.a.a_optional.ecc;
+                                    cap_store_d.upper.cap_tag = obi_req_i.a.a_optional.cap_tag;
+
+                                    sram_wdata    = cap_store_d;
+                                    sram_mask     = '1;
+                                    sram_req[way] = 1'b1;
+                                    sram_we       = 1'b1;
+                                    cache_meta_d[set_index][way].dirty = 1;
+
+                                    obi_rsp_o.r.rid = obi_aid_q;
+                                    obi_rsp_o.rvalid = 1;
+                                    cap_flag_d = 1;
+                                    state_d = IDLE; 
+                                end
+                                else begin //second word not here we need to wait for it
+                                    state_d = WAIT_FOR_SECOND_WORD;
+                                end
+                            end
+                            else begin // normal store
+                                if (obi_req_be_q != 4'b1111) begin //half world
+                                    // because off ecc we need to read from sram fist 
+                                    // and lose a cycle necessarily maybe there is a better solution todo
+                                    sram_req[way] = 1;
+                                    sram_we = 0;
+                                    state_d = ACCESS_SRAM;   
+                                end
+                                else begin // full word live is nice
+                                    sram_wdata = '0;
+
+                                    if (obi_req_addr_q[2]) begin
+                                        sram_wdata[RecordBits-1 : RecordBits/2] = cap_store_q.lower;
+                                        sram_mask = 10'h3E0;
+                                    end else begin
+                                        sram_wdata[RecordBits/2-1 : 0] = cap_store_q.lower;
+                                        sram_mask = 10'h01F;
+                                    end
+
+                                    sram_req[way] = 1'b1;
+                                    sram_we = 1'b1;
+                                    cache_meta_d[set_index][way].dirty = 1'b1;
+
+                                    // respond back to obi to save cycles
+                                    obi_rsp_o.r.rid = obi_aid_q;
+                                    obi_rsp_o.rvalid = 1;
+                                    state_d = IDLE; 
+
+
+                                end  
+                            end
+                        end
+                        else begin //read hit
+                            sram_req[way] = 1'b1;
+                            sram_we       = 1'b0;
+                            state_d       = ACCESS_SRAM; 
+                            cap_flag_read_valid_d = 1;
+                        end
+  
                     end
                     else begin // cache miss
                         //todo
@@ -255,7 +269,7 @@ module data_cache #(
 
             ACCESS_SRAM: begin
 
-                if (obi_req_be_q != 4'b1111 && !obi_is_cap_store_q && obi_req_write_q) begin // handle half word
+                if (obi_req_be_q != 4'b1111 && !obi_is_cap_access_q && obi_req_write_q) begin // handle write half word
                     for (int i=0; i<4; ++i) begin
                         if (obi_req_be_q[i] == 1) begin
                             merged_word.data[i*8 +: 8] = cap_store_q.lower.data[i*8 +: 8];
@@ -263,7 +277,7 @@ module data_cache #(
                     end
 
                     merged_word.cap_tag = cap_store_q.lower.cap_tag;
-                    merged_word.ecc = ecc_merge_partial32(old_word,cap_store_q.lower,obi_req_be_q);
+                    merged_word.ecc = ecc_merge_partial32(read_word,cap_store_q.lower,obi_req_be_q);
 
                     if (obi_req_addr_q[2]) begin
                         sram_wdata[RecordBits-1 : RecordBits/2] = merged_word;
@@ -280,9 +294,49 @@ module data_cache #(
                     obi_rsp_o.r.rid = obi_aid_q;
                     obi_rsp_o.rvalid = 1;
                     state_d = IDLE; 
-                
                 end
 
+                else if (!obi_req_write_q) begin //read
+                    if (obi_is_cap_access_q) begin // cap load
+                        cap_store_d = sram_rdata[selected_way_q];
+                        obi_rsp_o.r.rdata = cap_store_d.lower.data;
+                        obi_rsp_o.r.rid = obi_aid_q;
+                        obi_rsp_o.r.r_optional.ecc = cap_store_d.lower.ecc;
+                        obi_rsp_o.r.r_optional.cap_tag = cap_store_d.lower.cap_tag;
+
+                        if (cap_flag_read_valid_q) begin
+                            obi_rsp_o.rvalid = 1; //only once valid before!!!
+                            cap_flag_read_valid_d = 0;
+                        end
+                        
+
+                        obi_rsp_o.gnt = 1'b1; //immidately tell be ready for requests again
+
+                         if (obi_req_i.req && obi_rsp_o.gnt) begin
+                            obi_aid_d = obi_req_i.a.aid;
+                            state_d = SEND_SECOND_WORD;
+                         end
+
+                    end 
+                    else begin // normal load 
+                        //TODO
+                    end
+                    
+                end
+
+            end
+
+            SEND_SECOND_WORD: begin
+               
+                // since we already have the upper data we can respond
+                // in the same cycle as rq was received 
+                obi_rsp_o.r.rdata = cap_store_d.upper.data;
+                obi_rsp_o.r.rid = obi_aid_q;
+                obi_rsp_o.r.r_optional.ecc = cap_store_d.upper.ecc;
+                obi_rsp_o.r.r_optional.cap_tag = cap_store_d.upper.cap_tag;
+                obi_rsp_o.rvalid = 1; 
+
+                state_d = IDLE;
             end
             
             default: begin
@@ -309,19 +363,21 @@ module data_cache #(
             obi_req_be_q <= 0;
             obi_req_addr_q <= 0;
             obi_req_write_q <= 0;
-            obi_is_cap_store_q <= 0;
+            obi_is_cap_access_q <= 0;
             cap_store_q <= '0;
             obi_aid_q <= 0;
             cap_flag_q <= 0;
+            cap_flag_read_valid_q <= 0;
         end
         else begin
             obi_req_be_q <= obi_req_be_d;
             obi_req_addr_q <= obi_req_addr_d;
             obi_req_write_q <= obi_req_write_d;
-            obi_is_cap_store_q <= obi_is_cap_store_d;
+            obi_is_cap_access_q <= obi_is_cap_access_d;
             cap_store_q <= cap_store_d;
             obi_aid_q <= obi_aid_d;
             cap_flag_q <= cap_flag_d;
+            cap_flag_read_valid_q <= cap_flag_read_valid_d;
         end
         
     end
@@ -389,7 +445,7 @@ module data_cache #(
         (
             (state_q == CACHE_LOOKUP ||
             state_q == WAIT_FOR_SECOND_WORD) &&
-            obi_is_cap_store_q &&
+            obi_is_cap_access_q &&
             obi_req_write_q &&
             obi_req_i.req &&
             obi_rsp_o.gnt

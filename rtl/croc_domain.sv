@@ -106,8 +106,8 @@ module croc_domain import croc_pkg::*; #(
   assign core_data_obi_req.a.a_optional.cap_tag = data_tag_out;
   // TODO: Connect the core write-integrity output when enabling ECC.
   assign core_data_obi_req.a.a_optional.ecc = '0;
-  // TODO: Export the capability-store indication from the core.
-  assign core_data_obi_req.a.a_optional.is_cap_store = 1'b0;
+  // TODO: Export the capability-access indication from the core.
+  assign core_data_obi_req.a.a_optional.is_cap_access = 1'b0;
 
   // dbg req bus
   mgr_obi_req_t dbg_req_obi_req;
