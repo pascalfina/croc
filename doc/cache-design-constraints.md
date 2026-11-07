@@ -17,6 +17,8 @@ The current record has two 40-bit words, each with its own stored tag.
 - The data cache must support capability tags, byte enables and ordinary data.
 - Use write-back as the data-cache baseline; define allocation and maintenance
   behavior before implementation.
+- Use write-allocate initially: a store miss refills the full line and then
+  replays the saved store through the existing hit path.
 - Store backing data, capability tags and backing ECC in HyperRAM.
 - Use SRAM for the cache payload arrays. Plan their actual macro mapping,
   including ECC storage, rather than relying on generic RTL arrays.
@@ -153,6 +155,40 @@ of the record bits are payload. Physical storage overhead is 25%; command,
 latency, refresh, backpressure and unnecessary line fetches cause additional
 performance costs.
 
+## Refill Completion and Performance Baseline
+
+The draft data cache uses `SEND_REFILL_CMD`, `WAIT_REFILL_DATA` and a separate
+`WAIT_REFILL_DONE`. The command addresses the requested logical line, not the
+evicted line, and requests `RecordsPerLine` full 80-bit records. The internal
+record index starts at zero when the command is accepted and advances only on
+`r_valid && r_ready`. Address the SRAM with
+`SetIndex * RecordsPerLine + RecordIndex`; this is a record address, not a byte
+address. Keep the saved OBI request and incoming store data intact.
+
+Retain the separate completion state as the initial baseline. After all records
+are committed and successful completion is accepted, install the new address
+tag, set valid, clear dirty, advance replacement state and return directly to
+`CACHE_LOOKUP`. The existing hit path completes the original read/store without
+accepting it again. The source contains this success path; error handling,
+dirty write-back and the shared transfer engine are not complete or verified.
+
+The completion state occupies one cycle if status is already available when
+entered; a late status adds more waiting cycles. It does not change hit-path
+scheduling. One extra cycle adds `1 / N` to an otherwise `N`-cycle miss, not
+necessarily to the whole program runtime. For example, the increase is 1% for
+100-cycle misses and 0.2% for 500-cycle misses. These are illustrative ratios,
+not measured performance. Shared-arbiter ownership held during completion
+waiting can also delay the other cache.
+
+Measure completion-wait cycles, total miss latency, contention and workload
+runtime before removing or merging this state. A future implementation may
+complete on the last-record edge when data and final success status can be
+accepted together. The producer, error rules and owner-release contract must
+support that change; the independent channels do not guarantee simultaneity.
+Counter-only refill completion is not the chosen initial contract. The
+`r.last` field is currently redundant with the expected record count for cache
+control and can be checked against that count in simulation.
+
 ## Transaction Arbiter and Ownership FSM
 
 The instruction-cache and data-cache memory request paths share the protected
@@ -262,6 +298,38 @@ Using flipflops does not itself provide error protection. Define protection for
 cache address tags and valid/dirty state as well as local cache data before RTL
 implementation; dirty-line corruption must never be handled by silently
 discarding the line.
+
+### Replacement State: Local Versus Global Round-Robin
+
+Initially prefer an invalid way; when all ways are valid, use a per-set
+round-robin candidate. Advance only the affected set's pointer after a
+successful refill to the way after the installed line, wrapping explicitly
+from the last way to zero. Do not advance on hits or failed refills. With one
+way the candidate stays zero. Round-robin is not LRU and does not track hit
+recency.
+
+For `NumWays > 1`, local candidates require
+`NumSets * ceil(log2(NumWays))` stored bits. The current 8 KiB, 16-byte-line,
+two-way defaults have 256 sets and require 256 replacement bits. At the same
+capacity and associativity, 64-byte lines require 64 bits. The `_d` next-state
+array is combinational, not a second set of flipflops. Actual cell area and
+optimization must be obtained from synthesis, not inferred from bit count or
+compared directly with SRAM bit area.
+
+Keep this local policy for the initial implementation, but leave its area
+versus effectiveness open for measurement. One global pointer per cache would
+need only `ceil(log2(NumWays))` stored bits and less replacement-state
+clock/reset load. In return, misses in other sets influence victim selection:
+interleaved accesses can repeatedly evict the same way within an individual
+set. Local candidates avoid that coupling but are not guaranteed to improve
+every workload. The global policy is an unimplemented alternative, not an
+existing configuration parameter.
+
+Compare policies at identical payload capacity, line size, ways and workloads.
+Collect miss rates, dirty evictions, HyperBus traffic, stall/runtime cycles,
+standard-cell area and timing; include conflicting and interleaved-set access
+patterns. This is cache replacement policy, not the independent I-cache versus
+D-cache transaction-arbitration policy.
 
 ## Generic Cache SRAM
 
@@ -447,6 +515,9 @@ possible measurement starting points, not fixed requirements or proven optima.
   conflicting accesses, including JTAG and DMA.
 - Specify instruction/data consistency, including `FENCE.I` and code modification.
 - Specify cache allocation, replacement, flush/drain and write-back error handling.
+- Measure the separate refill-completion wait before merging it with final data
+  acceptance, and compare local versus global replacement pointers for area,
+  traffic and workload performance before choosing the optimized policy.
 - Specify initialization of valid data/tag/ECC records before partial writes.
 - Finalize local cache-array and standard-cell metadata protection; verify the
   documented SRAM mapping, latency and parameter checks.

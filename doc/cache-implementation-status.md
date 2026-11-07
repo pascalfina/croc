@@ -3,7 +3,8 @@
 Snapshot: 7 November 2026.
 
 This document describes the in-progress data-cache sources, the read/store-hit
-paths, the SRAM design decisions and the partial-store ECC update. It separates
+and refill paths, replacement state, SRAM design decisions and the partial-store
+ECC update. It separates
 logic already present in the files from intended behavior and missing
 integration. It is not an RTL verification or timing sign-off.
 
@@ -15,7 +16,7 @@ implementation accurately.
 
 | Source | Responsibility |
 | --- | --- |
-| [data_cache.sv](../rtl/cache/data_cache.sv) | OBI request capture, lookup and read/store-hit paths |
+| [data_cache.sv](../rtl/cache/data_cache.sv) | OBI request capture, lookup, read/store-hit paths and draft refill/replacement control |
 | [cache_pkg.sv](../rtl/cache/cache_pkg.sv) | Stored-word and line-stream structs, completion status, record dimensions and partial-store ECC function |
 | [cache_typedef.svh](../rtl/cache/cache_typedef.svh) | Instance-dependent cache metadata and cache/arbiter command, request and response structs |
 | [cache_data_sram.sv](../rtl/cache/cache_data_sram.sv) | Masked 80-bit SRAM interface and physical macro packing |
@@ -45,19 +46,21 @@ build or test.
 | Case | Present in the source | Still missing or limited |
 | --- | --- | --- |
 | Request acceptance | `req && gnt` captures address, write flag, byte-enable, capability-access flag, ID and first write word | Verify response accounting and the capability-pair input contract |
-| Set lookup | Valid/address-tag comparison across ways; selected way is retained; geometry is checked at elaboration | Miss handling, allocation, replacement and functional verification |
+| Set lookup | Valid/address-tag comparison across all ways; a miss is decided after the scan; invalid ways are preferred over the set's round-robin candidate | Functional verification and dirty-victim handling |
 | Full 32-bit store hit | Places the buffered 40-bit word in the selected half, marks dirty and answers in the SRAM-write cycle | RTL verification and end-to-end ECC wiring |
 | Capability store hit | Buffers both words, writes all 80 bits, answers once in the write cycle and once in `IDLE` using `cap_flag_q` | Pair-contract enforcement, core flag wiring and separate second-request ID handling for generic requesters |
 | Byte/halfword store hit | Reads the old word, merges bytes/tag/ECC, writes the selected half, marks dirty and answers | RTL verification; empty masks are excluded by a simulation assertion, not a hardware no-op policy |
 | ECC merge helper | `ecc_merge_partial32()` calls the original inverted Ibex encoder and is used in `ACCESS_SRAM` | End-to-end integration and tag protection are not implemented |
 | Ordinary read hit | Reads one record, selects one stored word and returns data, stored tag/ECC and the saved ID | RTL verification and core ECC wiring |
 | Capability read hit | Reuses the 80-bit store buffer; sends one response per accepted half; an extra flag prevents repeated first responses | RTL verification, SRAM output-hold validation during waiting, pair-contract enforcement and core flag wiring |
-| Eviction/refill | Line-transfer types and cache ports exist; memory outputs default to zero | Miss FSM, dirty write-back, allocation, line reception and failure handling |
+| Refill | Command handshake, direct full-record SRAM writes, record index, separate completion wait, metadata installation and replay through lookup | Shared transfer engine, error/abort handling, record-count/`last` verification and functional tests |
+| Replacement/eviction | Per-set round-robin pointers reset to zero and advance after successful refill; valid dirty victims branch to `SEND_WRITEBACK_CMD` | Dirty write-back state implementation and local/global policy comparison |
 | I-cache/shared HyperBus arbiter | Architectural decisions only | RTL, routing, maintenance, coherence and burst integration |
 
-All valid bits reset to zero. Since there is no refill path yet, the draft
-cannot populate a valid line after reset. None of these hit paths is an
-end-to-end runnable cache at this snapshot.
+All valid bits reset to zero. The draft refill success path can now install a
+valid line at source level, but the shared memory path is not implemented or
+connected. Neither this path nor the hit paths form an end-to-end runnable,
+verified cache at this snapshot.
 
 ## Representation and Addressing
 
@@ -386,9 +389,10 @@ described below has run; functional read behavior has not been RTL-simulated.
 The cache now has `mem_req_t` / `mem_rsp_t` type parameters and `mem_req_o` /
 `mem_rsp_i` ports. These are protocol-neutral, complete-line transfers to the
 planned shared arbiter. They are not OBI requests or direct HyperBus commands.
-The miss FSM and arbiter are still unimplemented, so `mem_req_o = '0` currently
-keeps commands, write data and response readiness inactive. Hit behavior is
-unchanged.
+`mem_req_o = '0` supplies combinational defaults. The draft refill states now
+override the read command, read readiness and completion readiness; write-back
+outputs and the shared arbiter/transfer engine are still unimplemented. The
+existing hit paths are reused after a successful refill.
 
 `cache_pkg::cache_mem_data_t` contains a complete `cap_store_t record` plus a
 one-bit `last`. The record preserves both payload words, tags and stored ECC.
@@ -423,7 +427,9 @@ issued transport activity is drained. The miss FSM must accept an error
 completion while waiting for data, rather than waiting indefinitely for a
 missing final record. It must not validate a partial refill or discard dirty
 victim data on failure. These rules are interface requirements for the future
-implementation, not behavior implemented by the current inactive ports.
+implementation. The current refill handles the success sequence, but its
+completion-error branch is still a TODO and it does not accept an early error
+completion in `WAIT_REFILL_DATA`.
 
 Create matching types in the future enclosing cache/arbiter scope, for example:
 
@@ -449,6 +455,155 @@ or the data-cache parameters. The arbiter retains its selected owner until
 the complete line operation's completion handshake. No transaction ID is
 included because the initial interface allows only one outstanding operation
 per cache and one selected shared owner.
+
+## Miss, Refill and Replacement Control
+
+### Miss Detection and Victim Selection
+
+`CACHE_LOOKUP` sets `hit_found` when any valid way in the indexed set matches
+the saved request's address tag. The miss decision is made after checking all
+ways, not in an individual way's mismatch branch.
+
+On a miss, `selected_way_d` first takes `replace_way_q[set_index]` as its
+fallback. The scan then selects the first invalid way if one exists;
+`all_valid` prevents later invalid ways from replacing that selection. A valid
+dirty victim must be written back first. An invalid or clean victim can go
+directly to refill. This decision uses `selected_way_d`, because the selection
+does not reach `selected_way_q` until the next clock edge.
+
+`SEND_WRITEBACK_CMD` is currently an enum/transition target without a state
+implementation. Dirty misses are therefore not functional yet. The eventual
+write-back must reconstruct the victim's old line address from its stored tag
+and set index; refill instead uses the new saved OBI request address.
+
+### Refill State Sequence
+
+| State | Current success-path behavior |
+| --- | --- |
+| `SEND_REFILL_CMD` | Offer `cmd.write = 0`, the saved OBI address with its lower `OffsetBits` cleared, and `cmd.records = RecordsPerLine`. Hold the command and `cmd_valid` until `cmd_ready`. On acceptance, reset `block_refill_count_d` to zero and enter `WAIT_REFILL_DATA`. |
+| `WAIT_REFILL_DATA` | Assert `r_ready`. Each `r_valid && r_ready` handshake writes `r.record` directly to the selected way's SRAM with all ten storage-byte enables active. Increment the index after nonfinal records; after accepting the expected final record, enter `WAIT_REFILL_DONE`. |
+| `WAIT_REFILL_DONE` | Assert `done_ready` and wait for `done_valid`. On a successful completion, install the new address tag, set valid, clear dirty, advance this set's replacement pointer and return to `CACHE_LOOKUP`. The error branch is not implemented. |
+
+`cmd.records` is the requested count; `block_refill_count_q` is a zero-based
+index of the next record to receive. They are different quantities. The
+internal index starts at zero for every accepted refill command and advances
+only on a data handshake. With the default 16-byte logical line, indices zero
+and one select its two 80-bit records.
+
+`r_valid` is not a one-cycle pulse contract. It may stay high for consecutive
+records when the receiver remains ready. With valid high and ready low, the
+producer must retain the same record. Detect completion inside the handshake
+that actually accepts the final record, not merely when the counter has
+reached its last index. The source currently uses this count to terminate
+reception; `r.last` exists in the stream struct but is not checked. A simulation
+assertion comparing `r.last` with the expected final index is a possible
+follow-up without adding a hardware wait state.
+
+The SRAM address is a combinational selection, not a new address register:
+
+```text
+Hit/default: SetIndex * RecordsPerLine + floor(BlockOffset / RecordDataBytes)
+Refill:      SetIndex * RecordsPerLine + block_refill_count_q
+```
+
+The default expression remains at the start of `always_comb`; the accepted
+refill record overrides it in `WAIT_REFILL_DATA`. Use the current `_q` index
+for the write address, not the incremented `_d` value. The wrapper addresses
+complete 80-bit records, so the refill index is not multiplied by eight or
+ten. No extra SRAM-address pipeline cycle is introduced.
+
+### Metadata Installation and Request Replay
+
+The refill does not overwrite the saved OBI address, byte-enable, direction,
+capability-access marker, ID or buffered incoming store word. In particular,
+incoming refill records go straight to SRAM rather than through `cap_store_q`,
+which may still hold the original store's first word.
+
+Only after the full line has been stored and a successful completion accepted
+does the selected metadata entry receive `addr_tag` from the saved OBI address,
+`valid = 1` and `dirty = 0`. This is the cache address tag, not either
+capability tag inside the record. These metadata updates and the state change
+commit at the same edge. In the following `CACHE_LOOKUP`, the original request
+hits the newly installed line and reuses the existing ordinary/capability
+read or store path. It is not accepted a second time through `IDLE`.
+
+This is write-allocate: a store miss also fetches the complete line before
+replaying the store, whose hit path then marks it dirty. Skipping a record
+that will be overwritten is not implemented. A 32-bit or partial store still
+needs untouched data from its record; even a complete capability overwrite
+would require both words to be buffered and the transfer/packing contract to
+support omitting that record. Extra command boundaries could offset the saved
+bytes.
+
+### Separate Completion Wait: Initial Baseline and Measurement
+
+Keep `WAIT_REFILL_DONE` for the first implementation. The current interface
+separates the accepted data stream from final operation status; receiving the
+expected number of records alone does not establish that `done.error` is zero.
+The producer must hold completion valid and status until the cache accepts it.
+
+If completion is available on entry, this state occupies one cycle after the
+last record write. If it arrives later, the wait can be multiple cycles.
+Hit-path scheduling is unchanged. For an otherwise `N`-cycle miss, one extra
+cycle adds `1 / N` to that miss's latency: 1% at 100 cycles, 0.5% at 200 and
+0.2% at 500. These are arithmetic examples, not measured HyperRAM latencies
+or predictions of whole-program slowdown. Retaining the shared arbiter owner
+while waiting can also delay the other cache.
+
+Measure total miss latency, cycles spent in this state, completion availability
+relative to the last record, shared-owner blocking and total workload cycles
+before deciding whether this separation is worth optimizing. A future design
+could accept the final record and successful completion together and install
+metadata at that edge, avoiding a separate success-path wait. That requires
+compatible producer/consumer handshakes, error handling, timing and arbiter
+ownership release; it is not achieved by simply dropping the completion
+check. Counter-only read completion would be a different interface contract,
+not the current baseline.
+
+Error recovery remains open: `WAIT_REFILL_DONE` currently consumes an error
+completion but has no invalidation, OBI-error response or exit for that case.
+An earlier error completion is not accepted while waiting for records and can
+leave the draft waiting indefinitely if the remaining records never arrive.
+A failed partial refill must not leave the victim usable under its old tag.
+Keeping the done state is therefore not a claim of completed error handling.
+
+### Local Round-Robin Pointers and Area Trade-Off
+
+Each set has its own `replace_way_q` candidate. After a successful refill,
+the next candidate is `selected_way_q + 1`, except that the last way wraps
+explicitly to zero. Other sets retain their candidates. This also keeps the
+pointer at zero for `NumWays = 1`, where the minimum one-bit index type would
+make unchecked overflow unsuitable. Hits and failed refills do not advance
+the pointer. Invalid-way preference still takes priority over the candidate.
+
+For two ways, successful installation in way zero makes way one the next
+candidate; installation in way one makes way zero next. This prevents every
+full-set replacement from always selecting the same fixed way. It is not LRU:
+the policy does not record which line was most recently hit, and better miss
+rates are not guaranteed for every workload.
+
+For more than one way, the local state is
+`NumSets * ceil(log2(NumWays))` bits. With the current 8 KiB / 16-byte / two-way
+defaults, that is 256 bits, nominally 256 flipflops before synthesis
+optimization. At the same capacity and ways with 64-byte lines, it is 64 bits.
+`replace_way_d` is combinational next-state logic, not another storage array.
+A one-way cache needs no meaningful replacement state; its declared pointer
+is constant zero in the functional policy and may be optimized away.
+
+An alternative is one global round-robin pointer per cache, shared by all its
+sets. With two ways this needs one stored bit rather than 256 at the current
+defaults, but requests to other sets then influence a set's next victim.
+For example, alternating misses in two full sets can repeatedly select the
+same way in each set despite the global pointer alternating. Local pointers
+avoid that cross-set dependence. Neither policy is an established area or
+performance optimum, and the global alternative is not implemented yet.
+
+Keep local pointers as the initial baseline, then compare local and global
+replacement at identical cache capacity, line size, ways and workloads.
+Measure miss rate, dirty evictions, HyperBus traffic, stall/runtime cycles,
+standard-cell area, clock/reset load and timing. Flipflop bits are not directly
+comparable to SRAM bits in physical area. This replacement decision is
+separate from round-robin arbitration between the I-cache and D-cache.
 
 ## SRAM Design Decisions
 
@@ -654,6 +809,8 @@ for this helper exists yet.
 | Direct SRAM read-hit response | Avoids a separate response-data register stage | SRAM/way/word selection and OBI routing must meet the clock period |
 | Shared 80-bit store/read buffer | Retains both capability words without another record-sized buffer | Depends on blocking request ownership and correct SRAM-result capture |
 | One-bit first-read-response flag | Allows a delayed second request without repeating the first response | Must be reset, armed and cleared correctly; no extra pipeline stage |
+| Separate refill completion wait | Keeps full-line reception and final success/failure status distinct | At least one state cycle after the final record; longer if completion is late; measure miss and workload impact |
+| Per-set round-robin replacement | Independent replacement progress per set with invalid-way preference | `NumSets * WayIndexWidth` declared bits; compare a smaller global pointer against miss rate and traffic |
 | Pure `function automatic` helper | Reuses the original code definition and synthesizes combinationally | Not zero-area software; repeated simultaneous calls may duplicate logic |
 | No write buffer or overlapping misses initially | Smaller control state and simpler ordering | Blocking latency limits throughput |
 
@@ -678,7 +835,8 @@ The wrapper's depth decomposition is generic within its supported constraints.
 The cache now derives its number of wrappers, records per way and address/index
 widths from the geometry, including one-way and single-set cases. Its parameter
 checks restrict sweeps to supported combinations. Performance sweeps still need
-the missing refill/write-back logic, SoC integration and functional verification.
+completed refill/error and write-back logic, the shared memory path, SoC
+integration and functional verification.
 The current 32-bit codec and 80-bit record are not automatic 64-bit CPU support.
 
 ### Geometry Elaboration Checks
@@ -699,13 +857,17 @@ This was an isolated structural check using the actual cache sources and ECC
 package, with `tc_sram_impl` replaced by a port-compatible stub. It does not
 verify SRAM behavior, hit responses, a full Bender/SoC build, synthesis, timing
 or RTL simulation. The temporary harness is not a checked-in regression.
+These checks preceded the refill/replacement FSM additions documented above;
+they are not an elaboration result for the current expanded FSM.
 
 ## Remaining Work and Verification Gates
 
 The ordinary and capability read/store-hit paths now have source-level
 datapaths and response sequencing. Isolated geometry elaboration has passed as
 described above; interface behavior, timing and fault assumptions have not been
-verified in simulation. Miss/refill and dirty eviction remain unimplemented.
+verified in simulation. The refill success path and local replacement state
+are now drafted, but refill errors, dirty eviction and the shared transfer
+engine remain incomplete.
 
 Before functional cache testing:
 
@@ -715,8 +877,14 @@ Before functional cache testing:
   and sequences.
 - Verify the partial-store write strobes/dirty update and the assertion that
   excludes empty masks; define a hardware policy if such masks must be handled.
-- Implement miss/refill, allocation, replacement and dirty
-  write-back without exposing partially filled lines.
+- Verify refill command stability, continuous/gapped `r_valid`, handshake-only
+  indexing, SRAM record addressing and metadata installation before request
+  replay. Check that incoming store data survives the refill.
+- Complete early and final refill-error handling, invalidation and OBI failure
+  responses; implement dirty write-back without discarding modified lines or
+  exposing partial refills. Test retained/delayed completion status and reset.
+- Check invalid-way priority, per-set replacement independence, explicit wrap
+  including one-way caches, and advancement only after successful refill.
 - Define initialization of encoded data/tag/ECC and protection of address tags,
   valid and dirty state. Payload ECC does not protect lookup metadata.
 - Define the capability-pair input contract and conflicting JTAG/DMA accesses,
@@ -726,8 +894,9 @@ Before functional cache testing:
 - Register the modules with Bender and connect the cache only after focused
   module tests pass.
 
-The geometry changes do not alter read/write FSM scheduling. No full SoC build
-or RTL simulation has been run for these changes.
+The geometry changes did not alter hit-path scheduling. The subsequent refill
+states add miss-path control and have not been functionally verified. No full
+SoC build or RTL simulation has been run for these changes.
 
 The regression should cover both stored-word halves, all nonempty byte masks,
 unchanged neighboring words/packed slots, macro boundaries, saved read
