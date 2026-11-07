@@ -320,6 +320,12 @@ module data_cache #(
                     end 
                     else begin // normal load 
                         //TODO
+                        obi_rsp_o.r.rdata = read_word.data;
+                        obi_rsp_o.r.rid = obi_aid_q;
+                        obi_rsp_o.r.r_optional.ecc = read_word.ecc;
+                        obi_rsp_o.r.r_optional.cap_tag = read_word.cap_tag;
+                        obi_rsp_o.rvalid = 1;
+                        state_d = IDLE;
                     end
                     
                 end
