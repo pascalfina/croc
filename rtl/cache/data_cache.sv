@@ -88,6 +88,12 @@ module data_cache #(
     assign block_offset = obi_req_addr_q[OffsetBits-1 : 0];
     assign sram_word_addr = set_index * RecordsPerLine + (block_offset / RecordDataBytes);
 
+    cap_word_t old_word; // for halfworld 
+    cap_word_t merged_word;
+
+    assign old_word = obi_req_addr_q[2] ? sram_rdata[selected_way_q][RecordBits-1 : RecordBits/2] 
+        : sram_rdata[selected_way_q][RecordBits/2-1 : 0];
+
 
     always_comb begin
 
@@ -111,6 +117,8 @@ module data_cache #(
         sram_we     = 0;
         sram_wdata  = '0;
         sram_mask   = '0;
+
+        merged_word = old_word;
         
         case (state_q)
 
@@ -165,27 +173,31 @@ module data_cache #(
                         end
 
                         else if (!obi_is_cap_store_q && obi_req_write_q) begin //normal store
-                            sram_wdata    = cap_store_d;
-                            sram_mask = 10'h01F; //set lower five bits
-                            if (obi_req_addr_q[2] = 1) begin //set upper bits
-                                sram_mask = 10'h3E0; //upper 5 bits
+                            if (obi_req_be_q != 1'b1111) begin //half world
+                                // because off ecc we need to read from sram fist 
+                                // and lose a cycle necessarily maybe there is a better solution todo
+                                sram_req[way] = 1;
+                                sram_we = 0;
+                                state_d = ACCESS_SRAM;   
                             end
-                            else begin
-                                sram_mask = 10'h01F; //lower 5 bits
-                            end
-                            sram_req[way] = 1'b1;
-                            sram_we       = 1'b1;
-                            cache_meta_d[set_index][way].dirty = 1;
+                            else begin // full word live is nice
+                                sram_wdata = '0;
 
-                            state_d = /*todo*/
+                                if (obi_req_addr_q[2]) begin
+                                    sram_wdata[RecordBits-1 : RecordBits/2] = cap_store_q.lower;
+                                    sram_mask = 10'h3E0;
+                                end else begin
+                                    sram_wdata[RecordBits/2-1 : 0] = cap_store_q.lower;
+                                    sram_mask = 10'h01F;
+                                end
 
-                            
+                                sram_req[way] = 1'b1;
+                                sram_we = 1'b1;
+                                cache_meta_d[set_index][way].dirty = 1'b1;
+                            end  
                         end
+                    
                         
-
-                        
-                        
-                        //state_d = ACCESS_SRAM;
                     end
                     else begin // cache miss
                         //todo
@@ -213,9 +225,34 @@ module data_cache #(
             end
 
             ACCESS_SRAM: begin
-                // if (!obi_req_write_q) begin
-                //     rdata_cache_d = sram_rdata[selected_way_q]; //rdata from sram should be there 1 cycle delay
-                // end
+
+                if (obi_req_be_q != 1'b1111 && !obi_is_cap_store_q && obi_req_write_q) begin
+                    for (int i=0; i<4; ++i) begin
+                        if (obi_req_be_q[i] == 1) begin
+                            merged_word.data[i*8 +: 8] = cap_store_q.lower.data[i*8 +: 8];
+                        end
+                    end
+
+                    merged_word.cap_tag = cap_store_q.lower.cap_tag;
+                    merged_word.ecc = ecc_merge_partial32(old_word,cap_store_q.lower,obi_req_be_q);
+
+                    if (obi_req_addr_q[2]) begin
+                        sram_wdata[RecordBits-1 : RecordBits/2] = merged_word;
+                        sram_mask = 10'h3E0;
+                    end else begin
+                        sram_wdata[RecordBits/2-1 : 0] = merged_word;
+                        sram_mask = 10'h01F;
+                    end
+
+                    state_d = /*TODO*/
+                
+                end
+
+
+
+               
+
+               
             end
             
             default: begin
@@ -271,6 +308,8 @@ module data_cache #(
             rdata_cache_q <= rdata_cache_d;
         end
     end
+
+////////////////////////////////// two way cache for now -> one sram wrapper instance per way
 
     localparam unsigned int NumWords = 512;
     localparam unsigned int AddrWidthSram = (NumWords > 1) ? $clog2(NumWords) : 1;
