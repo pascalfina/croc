@@ -103,7 +103,11 @@ module croc_domain import croc_pkg::*; #(
   mgr_obi_req_t core_data_obi_req;
   mgr_obi_rsp_t core_data_obi_rsp;
   assign core_data_obi_req.a.aid = '0;
-  assign core_data_obi_req.a.a_optional = data_tag_out;
+  assign core_data_obi_req.a.a_optional.cap_tag = data_tag_out;
+  // TODO: Connect the core write-integrity output when enabling ECC.
+  assign core_data_obi_req.a.a_optional.ecc = '0;
+  // TODO: Export the capability-store indication from the core.
+  assign core_data_obi_req.a.a_optional.is_cap_store = 1'b0;
 
   // dbg req bus
   mgr_obi_req_t dbg_req_obi_req;
@@ -272,7 +276,7 @@ module croc_domain import croc_pkg::*; #(
     .cheriot_enable_i( cheriot_enable ),
     .core_busy_o     ( core_busy_o   ),
     .data_tag_o       (data_tag_out),
-    .data_tag_i       (core_data_obi_rsp.r.r_optional), 
+    .data_tag_i       (core_data_obi_rsp.r.r_optional.cap_tag),
     // .data_tag_i       (1'b0)
 
     .trvk_revbm_req_o(trvk_req),

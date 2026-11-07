@@ -3,8 +3,8 @@
 module cache_data_sram #(
     parameter int unsigned NumWords = 512,
 
-    localparam int unsigned DataWidth = 80,
-    localparam int unsigned AddrWidth = (NumWords > 1) ? $clog2(NumWords) : 1
+    parameter int unsigned DataWidth = 80,
+    parameter int unsigned AddrWidth = (NumWords > 1) ? $clog2(NumWords) : 1
 ) (
     input  logic                 clk_i,
     input  logic                 rst_ni,
@@ -13,6 +13,7 @@ module cache_data_sram #(
     input  logic                 we_i,
     input  logic [AddrWidth-1:0] addr_i,
     input  logic [DataWidth-1:0] wdata_i,
+    input logic [DataWidth/8-1:0] be_i,
 
     output logic [DataWidth-1:0] rdata_o
 );
@@ -29,10 +30,12 @@ module cache_data_sram #(
         logic [63:0]              part_wdata;
         logic [7:0]               part_be;
 
-        assign part_req = req_i && (addr_i < NumWords);
         assign part_addr = (part == 0) ? addr_i : (addr_i >> 2);
         assign part_wdata = (part == 0) ? wdata_i[63:0]: {4{wdata_i[79:64]}};
-        assign part_be = (part == 0) ? 8'hFF: (8'b00000011 << (2 * addr_i[1:0]));
+        // assign part_be = (part == 0) ? 8'hFF: (8'b00000011 << (2 * addr_i[1:0]));
+        assign part_be = (part == 0) ? be_i[7:0]: ({6'b0, be_i[9:8]} << (2 * addr_i[1:0]));
+        assign part_req = req_i && (addr_i < NumWords) && (!we_i || (|part_be));
+
         localparam int unsigned PartWords = (part == 0) ? NumWords : NumWords / 4;
 
         localparam int unsigned Count2048 =  PartWords         / 2048;

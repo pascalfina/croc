@@ -185,6 +185,17 @@ package croc_pkg;
   // To make it easier to understand we instead write them out here,
   // in a comment at the end you can find the equivalent using the macros.
 
+  typedef struct packed {
+    logic [6:0] ecc;
+    logic       cap_tag;
+  } obi_r_optional_t;
+
+  typedef struct packed {
+    logic       is_cap_store; // Asserted on both requests of a capability store.
+    logic [6:0] ecc;
+    logic       cap_tag;
+  } obi_a_optional_t;
+
   /// OBI manager configuration (from a manager into the crossbar)
   localparam obi_pkg::obi_cfg_t MgrObiCfg = '{
     UseRReady:   1'b0,
@@ -204,7 +215,7 @@ package croc_pkg;
     logic [MgrObiCfg.DataWidth/8-1:0] be;
     logic [  MgrObiCfg.DataWidth-1:0] wdata;
     logic [    MgrObiCfg.IdWidth-1:0] aid;
-    logic                             a_optional; // dummy signal; not used
+    obi_a_optional_t                  a_optional;
   } mgr_obi_a_chan_t;
   /// OBI Manager -> Xbar request
   typedef struct packed {
@@ -217,7 +228,7 @@ package croc_pkg;
     logic [MgrObiCfg.DataWidth-1:0] rdata;
     logic [  MgrObiCfg.IdWidth-1:0] rid;
     logic                           err;
-    logic                           r_optional; // dummy signal; not used
+    obi_r_optional_t                r_optional;
   } mgr_obi_r_chan_t;
   /// OBI Manager <- Xbar response
   typedef struct packed {
@@ -244,7 +255,7 @@ package croc_pkg;
     logic [SbrObiCfg.DataWidth/8-1:0] be;
     logic [  SbrObiCfg.DataWidth-1:0] wdata;
     logic [    SbrObiCfg.IdWidth-1:0] aid;
-    logic                             a_optional; // dummy signal; not used
+    obi_a_optional_t                  a_optional;
   } sbr_obi_a_chan_t;
   /// OBI Xbar -> Subordinate request
   typedef struct packed {
@@ -257,7 +268,7 @@ package croc_pkg;
     logic [SbrObiCfg.DataWidth-1:0] rdata;
     logic [  SbrObiCfg.IdWidth-1:0] rid;
     logic                           err;
-    logic                           r_optional; // dummy signal; not used
+    obi_r_optional_t                r_optional;
   } sbr_obi_r_chan_t;
   /// OBI Xbar <- Subordinate response
   typedef struct packed {
@@ -268,16 +279,16 @@ package croc_pkg;
 
   /* This is how we would usually define interconnects using the typedef.svh macros
    *
-   * `OBI_TYPEDEF_A_CHAN_T(mgr_obi_a_chan_t, MgrObiCfg.AddrWidth, MgrObiCfg.DataWidth, MgrObiCfg.IdWidth, logic [0:0])
+   * `OBI_TYPEDEF_A_CHAN_T(mgr_obi_a_chan_t, MgrObiCfg.AddrWidth, MgrObiCfg.DataWidth, MgrObiCfg.IdWidth, obi_a_optional_t)
    * `OBI_TYPEDEF_DEFAULT_REQ_T(mgr_obi_req_t, mgr_obi_a_chan_t)
-   * `OBI_TYPEDEF_R_CHAN_T(mgr_obi_r_chan_t, MgrObiCfg.DataWidth, MgrObiCfg.IdWidth, logic [0:0])
+   * `OBI_TYPEDEF_R_CHAN_T(mgr_obi_r_chan_t, MgrObiCfg.DataWidth, MgrObiCfg.IdWidth, obi_r_optional_t)
    * `OBI_TYPEDEF_RSP_T(mgr_obi_rsp_t, mgr_obi_r_chan_t)
    *
    * // Create types for OBI subordinates/slaves (out of the interconnect, into the device)
    * localparam obi_pkg::obi_cfg_t SbrObiCfg = obi_pkg::mux_grow_cfg(MgrObiCfg, NumManagers);
-   * `OBI_TYPEDEF_A_CHAN_T(sbr_obi_a_chan_t, SbrObiCfg.AddrWidth, SbrObiCfg.DataWidth, SbrObiCfg.IdWidth, logic [0:0])
+   * `OBI_TYPEDEF_A_CHAN_T(sbr_obi_a_chan_t, SbrObiCfg.AddrWidth, SbrObiCfg.DataWidth, SbrObiCfg.IdWidth, obi_a_optional_t)
    * `OBI_TYPEDEF_DEFAULT_REQ_T(sbr_obi_req_t, sbr_obi_a_chan_t)
-   * `OBI_TYPEDEF_R_CHAN_T(sbr_obi_r_chan_t, SbrObiCfg.DataWidth, SbrObiCfg.IdWidth, logic [0:0])
+   * `OBI_TYPEDEF_R_CHAN_T(sbr_obi_r_chan_t, SbrObiCfg.DataWidth, SbrObiCfg.IdWidth, obi_r_optional_t)
    * `OBI_TYPEDEF_RSP_T(sbr_obi_rsp_t, sbr_obi_r_chan_t)
    *
    * // Register Interface configured as 32 bit data, 32 bit address width (4 byte enable bits)
