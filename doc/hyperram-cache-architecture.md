@@ -1,5 +1,11 @@
 # Cached HyperRAM Architecture Proposal
 
+**Historical illustration.** The diagrams, HTML and PDF below predate the
+custom I-cache, two-tag record and current partial-store ECC decisions. Use
+[Cache Design Constraints](cache-design-constraints.md) for the current baseline
+and [Cache Implementation Status](cache-implementation-status.md) for the RTL
+snapshot. The older drawings have not been regenerated to reflect these changes.
+
 **Status: design proposal, not implemented RTL.** This document illustrates the
 proposed next architecture with instruction and data caches, capability tags in
 HyperRAM, and ECC for both backing memory and cache storage. Initial sizes and
