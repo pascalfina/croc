@@ -19,6 +19,8 @@ implementation accurately.
 | [cache_pkg.sv](../rtl/cache/cache_pkg.sv) | Stored-word structs, record dimensions and partial-store ECC function |
 | [cache_typedef.svh](../rtl/cache/cache_typedef.svh) | Instance-dependent address-tag, valid and dirty struct |
 | [cache_data_sram.sv](../rtl/cache/cache_data_sram.sv) | Masked 80-bit SRAM interface and physical macro packing |
+| [data_cache_param_checks.svh](../rtl/cache/data_cache_param_checks.svh) | Cache geometry and OBI-width elaboration checks |
+| [cache_data_sram_param_checks.svh](../rtl/cache/cache_data_sram_param_checks.svh) | SRAM depth and width elaboration checks |
 | [IHP SRAM implementation](../ihp13/tc_sram_impl.sv) | Technology-specific cuts and bit-mask connections |
 | [Ibex SECDED package](../ibex/vendor/lowrisc_ip/ip/prim/rtl/prim_secded_pkg.sv) | Original encoding function used by the ECC update |
 | [Ibex load/store unit](../ibex/rtl/ibex_load_store_unit.sv) | Core byte-enable generation and existing data ECC encoder/checker |
@@ -26,8 +28,8 @@ implementation accurately.
 
 Only the cache package is currently listed in the root Bender sources. The
 data-cache and SRAM-wrapper module files are not, and no data-cache instance is
-connected in the SoC. Two SRAM wrappers are instantiated inside the draft
-data-cache module.
+connected in the SoC. A generate loop instantiates one SRAM wrapper per way;
+the default configuration still has two wrappers.
 
 The core still has `MemECC = 0`. Its write-integrity output is not connected,
 its read-integrity input is tied to zero, and the OBI request ECC and
@@ -43,7 +45,7 @@ build or test.
 | Case | Present in the source | Still missing or limited |
 | --- | --- | --- |
 | Request acceptance | `req && gnt` captures address, write flag, byte-enable, capability-access flag, ID and first write word | Verify response accounting and the capability-pair input contract |
-| Set lookup | Valid/address-tag comparison across ways; selected way is retained | Miss handling, allocation, replacement and geometry assertions |
+| Set lookup | Valid/address-tag comparison across ways; selected way is retained; geometry is checked at elaboration | Miss handling, allocation, replacement and functional verification |
 | Full 32-bit store hit | Places the buffered 40-bit word in the selected half, marks dirty and answers in the SRAM-write cycle | RTL verification and end-to-end ECC wiring |
 | Capability store hit | Buffers both words, writes all 80 bits, answers once in the write cycle and once in `IDLE` using `cap_flag_q` | Pair-contract enforcement, core flag wiring and separate second-request ID handling for generic requesters |
 | Byte/halfword store hit | Reads the old word, merges bytes/tag/ECC, writes the selected half, marks dirty and answers | RTL verification; empty masks are excluded by a simulation assertion, not a hardware no-op policy |
@@ -112,6 +114,30 @@ offset then identifies one SRAM word.
 CPU addresses count logical bytes. The SRAM wrapper address counts complete
 80-bit records; it must not receive the CPU byte address or a multiplication
 by ten. HyperRAM byte serialization is a separate, still-unimplemented layer.
+
+The SRAM instances now use the derived `SramWordsPerWay`, `SramAddrWidth` and
+`RecordBits`, with one instance per `NumWays`. The request vector is defaulted
+as a whole. Way indices have at least one storage bit, so a direct-mapped
+configuration is supported. For a single set, the set index is constant zero;
+no set-address bits are consumed by the cache address tag.
+
+Elaboration checks reject zero or inconsistent capacities, non-power-of-two
+ways/sets, and line sizes that are not powers of two of at least 16 bytes.
+Capacity must contain complete sets, and each way's record count must be a
+positive multiple of 256. At least one address-tag bit must remain. OBI address,
+32-bit data, byte-enable, ID, ECC and tag fields must match the implementation.
+The 80-bit record and current codec are fixed during geometry sweeps.
+
+The checks live in `data_cache_param_checks.svh` and
+`cache_data_sram_param_checks.svh`, included directly in their respective
+module scopes. This keeps the module bodies short without changing the
+generate-time `$error` behavior. The headers use the existing `rtl/cache`
+include path; no extra package, module instance or simulation-time process is
+needed. Protocol assertions remain in `data_cache.sv`.
+
+For example, 8 KiB with four ways uses 256 records per way and is supported
+structurally. A 4 KiB, four-way configuration would need 128 records per way
+and is rejected by the current SRAM packing constraints, not silently rounded.
 
 ## Store-Hit Control Flow
 
@@ -352,8 +378,8 @@ data/tag/ECC values in both halves, byte/halfword extraction, first and second
 response IDs, and exactly one answer per accepted request. Delay the second
 request for multiple cycles, change its live ID after its grant, and check
 that reset clears the first-response flag. Read hits must leave SRAM contents
-and dirty/valid state unchanged. No read-path build or RTL simulation was run
-for this documentation update.
+and dirty/valid state unchanged. Only the isolated geometry elaboration
+described below has run; functional read behavior has not been RTL-simulated.
 
 ## SRAM Design Decisions
 
@@ -408,10 +434,10 @@ are elaboration-time constants. There is no runtime search for a suitable cut.
 | 4096 | 2 x 2048 | 1 x 1024 | 3 |
 
 Widths in the table are all 64 bits. Require a positive record count divisible
-by 256, so both parts are exactly covered by the available cuts. These checks
-are design requirements; elaboration assertions are not yet implemented.
-`DataWidth` and `AddrWidth` are parameters, but fixed bit slices still restrict
-the implementation to 80-bit records and a matching record-address width.
+by 256, so both parts are exactly covered by the available cuts. Generate-time
+checks now enforce this rule, `DataWidth = 80` and the matching record-address
+width. These remain overrideable parameters, but unsupported combinations fail
+elaboration rather than silently losing data.
 
 At the default size, each way uses 512 x 64 + 2 x 64 x 64 = 40,960 storage bits.
 Both ways together use six cuts and 81,920 bits: 10 KiB for 8 KiB of payload.
@@ -580,23 +606,41 @@ smaller in actual area despite using fewer bits. Evaluate macro area,
 surrounding logic, power and timing, not only bit utilization.
 
 The wrapper's depth decomposition is generic within its supported constraints.
-The complete cache is not yet sweep-ready: it still hard-codes two wrappers
-and `NumWords = 512` instead of using the derived record count. One-way and
-other geometries also need width/legality checks before they can be advertised.
+The cache now derives its number of wrappers, records per way and address/index
+widths from the geometry, including one-way and single-set cases. Its parameter
+checks restrict sweeps to supported combinations. Performance sweeps still need
+the missing refill/write-back logic, SoC integration and functional verification.
 The current 32-bit codec and 80-bit record are not automatic 64-bit CPU support.
+
+### Geometry Elaboration Checks
+
+A temporary pyslang 3.0.0 harness elaborated 37 legal cache configurations,
+including capacities from 4 to 32 KiB, 16/32/64-byte lines, one/two/four ways,
+single-set configurations, an eight-way case and a matching 64-bit address
+interface with 32-bit data. Generated way counts, record depths, address widths
+and exact macro storage capacities were checked against the requested geometry.
+All 64 wrapper depths from 256 through 16,384 records in steps of 256 also
+elaborated. Fourteen invalid cache configurations and five invalid wrapper
+configurations were rejected with the expected parameter diagnostics.
+
+This was an isolated structural check using the actual cache sources and ECC
+package, with `tc_sram_impl` replaced by a port-compatible stub. It does not
+verify SRAM behavior, hit responses, a full Bender/SoC build, synthesis, timing
+or RTL simulation. The temporary harness is not a checked-in regression.
 
 ## Remaining Work and Verification Gates
 
 The ordinary and capability read/store-hit paths now have source-level
-datapaths and response sequencing. This does not establish that the module
-compiles or that its interface, timing and fault assumptions hold in RTL.
-Miss/refill and dirty eviction remain unimplemented.
+datapaths and response sequencing. Isolated geometry elaboration has passed as
+described above; interface behavior, timing and fault assumptions have not been
+verified in simulation. Miss/refill and dirty eviction remain unimplemented.
 
 Before functional cache testing:
 
-- Compile/elaborate and test the implemented hit paths, including OBI timing,
-  captured IDs and exactly one response per accepted request. Capability-read
-  and capability-store completion use different flags and sequences.
+- Build with the real SRAM implementation and test the implemented hit paths,
+  including OBI timing, captured IDs and exactly one response per accepted
+  request. Capability-read and capability-store completion use different flags
+  and sequences.
 - Verify the partial-store write strobes/dirty update and the assertion that
   excludes empty masks; define a hardware policy if such masks must be handled.
 - Implement miss/refill, allocation, replacement and dirty
@@ -610,7 +654,8 @@ Before functional cache testing:
 - Register the modules with Bender and connect the cache only after focused
   module tests pass.
 
-This documentation update changes no RTL and does not run builds or simulations.
+The geometry changes do not alter read/write FSM scheduling. No full SoC build
+or RTL simulation has been run for these changes.
 
 The regression should cover both stored-word halves, all nonempty byte masks,
 unchanged neighboring words/packed slots, macro boundaries, saved read

@@ -26,7 +26,7 @@ module data_cache #(
         CACHE_LOOKUP,
         ACCESS_SRAM,
         WAIT_FOR_SECOND_WORD,
-        SEND_SECOND_WORD,
+        SEND_SECOND_WORD
 
     } state_t;
 
@@ -34,19 +34,26 @@ module data_cache #(
 
     localparam int unsigned EccBits = CacheEccBits;
 
-    localparam int unsigned NumSets = CacheDataBytes / (LineDataBytes * NumWays);
+    localparam int unsigned NumSets = (LineDataBytes > 0 && NumWays > 0)
+        ? CacheDataBytes / NumWays / LineDataBytes : 0;
     localparam int unsigned OffsetBits = $clog2(LineDataBytes);
     localparam int unsigned SetBits    = $clog2(NumSets);
-    localparam int unsigned TagBits    = AddrWidth - OffsetBits - SetBits;
+    localparam int unsigned SetIndexWidth = (NumSets > 1) ? SetBits : 1;
+    localparam int unsigned WayIndexWidth = (NumWays > 1) ? $clog2(NumWays) : 1;
+    localparam int unsigned TagBits = (AddrWidth > OffsetBits + SetBits)
+        ? AddrWidth - OffsetBits - SetBits : 1;
 
     localparam int unsigned RecordDataBytes = CacheRecordDataBytes;
-    localparam int unsigned SramWordsPerWay = CacheDataBytes / (NumWays * RecordDataBytes);
+    localparam int unsigned SramWordsPerWay = (NumWays > 0)
+        ? CacheDataBytes / NumWays / RecordDataBytes : 0;
     localparam int unsigned SramAddrWidth = (SramWordsPerWay > 1) ? $clog2(SramWordsPerWay) : 1;
 
     localparam int unsigned RecordsPerLine = LineDataBytes / RecordDataBytes;
     localparam int unsigned RecordBits = CacheRecordBits;
 
     localparam int unsigned ObiIdWidth = $bits(obi_req_i.a.aid);
+
+    `include "data_cache_param_checks.svh"
 
     // sram signals 
 
@@ -65,9 +72,9 @@ module data_cache #(
     cache_meta_t cache_meta_d [NumSets][NumWays];
 
     logic [TagBits-1:0] addr_tag;
-    logic [SetBits-1:0] set_index;
+    logic [SetIndexWidth-1:0] set_index;
 
-    logic [$clog2(NumWays)-1:0] selected_way_q, selected_way_d;
+    logic [WayIndexWidth-1:0] selected_way_q, selected_way_d;
 
     logic [RecordBits-1:0] rdata_cache_q,rdata_cache_d;
     logic [OffsetBits-1:0] block_offset;
@@ -91,7 +98,11 @@ module data_cache #(
     cap_word_t merged_word; //for halfword
 
   
-    assign set_index = obi_req_addr_q[OffsetBits +: SetBits];
+    if (NumSets > 1) begin : gen_set_index
+        assign set_index = obi_req_addr_q[OffsetBits +: SetBits];
+    end else begin : gen_single_set
+        assign set_index = '0;
+    end
     assign addr_tag = obi_req_addr_q[AddrWidth-1 : OffsetBits+SetBits];
     assign block_offset = obi_req_addr_q[OffsetBits-1 : 0];
     assign sram_word_addr = set_index * RecordsPerLine + (block_offset / RecordDataBytes);
@@ -120,8 +131,7 @@ module data_cache #(
         selected_way_d = selected_way_q;
         rdata_cache_d = rdata_cache_q;
 
-        sram_req[0] = 0;
-        sram_req[1] = 0;
+        sram_req = '0;
         sram_we     = 0;
         sram_wdata  = '0;
         sram_mask   = '0;
@@ -171,7 +181,7 @@ module data_cache #(
                     if (cache_meta_q[set_index][way].addr_tag == addr_tag 
                         && cache_meta_q[set_index][way].valid) begin  // cache hit
 
-                        selected_way_d = way;
+                        selected_way_d = WayIndexWidth'(way);
                         
                         if (obi_req_write_q) begin // write hit
                             
@@ -404,46 +414,22 @@ module data_cache #(
         end
     end
 
-////////////////////////////////// two way cache for now -> one sram wrapper instance per way
-
-    localparam unsigned int NumWords = 512;
-    localparam unsigned int AddrWidthSram = (NumWords > 1) ? $clog2(NumWords) : 1;
-
-    cache_data_sram #(
-        .NumWords(NumWords),
-        .DataWidth(80),
-        .AddrWidth(AddrWidthSram)
-    ) i_cache_data_sram_way_0 (
-
-        .clk_i(clk_i),
-        .rst_ni(rst_ni),
-
-        .req_i(sram_req[0]),
-        .we_i(sram_we),
-        .addr_i(sram_word_addr),
-        .wdata_i(sram_wdata),
-        .be_i(sram_mask),
-
-        .rdata_o(sram_rdata[0])
-    );
-
-    cache_data_sram #(
-        .NumWords(NumWords),
-        .DataWidth(80),
-        .AddrWidth(AddrWidthSram)
-    ) i_cache_data_sram_way_1 (
-
-        .clk_i(clk_i),
-        .rst_ni(rst_ni),
-
-        .req_i(sram_req[1]),
-        .we_i(sram_we),
-        .addr_i(sram_word_addr),
-        .wdata_i(sram_wdata),
-        .be_i(sram_mask),
-
-        .rdata_o(sram_rdata[1])
-    );
+    for (genvar way = 0; way < NumWays; ++way) begin : gen_sram_ways
+        cache_data_sram #(
+            .NumWords(SramWordsPerWay),
+            .DataWidth(RecordBits),
+            .AddrWidth(SramAddrWidth)
+        ) i_cache_data_sram (
+            .clk_i(clk_i),
+            .rst_ni(rst_ni),
+            .req_i(sram_req[way]),
+            .we_i(sram_we),
+            .addr_i(sram_word_addr),
+            .wdata_i(sram_wdata),
+            .be_i(sram_mask),
+            .rdata_o(sram_rdata[way])
+        );
+    end
     // synthesis translate_off
     assert_cap_store_second_addr: assert property (
         @(posedge clk_i) disable iff (!rst_ni)

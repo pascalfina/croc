@@ -267,11 +267,12 @@ discarding the line.
 
 The draft implementation is `rtl/cache/cache_data_sram.sv`. As of 7 November
 2026, its macro instances, write masks, registered read selection and 80-bit
-output are connected, and two wrappers are instantiated in the draft data
-cache. Neither module is registered as a module source in the normal Bender
-build or connected as a cache in the SoC. They have not been compiled or
-RTL-simulated for this work. The following describes the interface and mapping,
-not a verification sign-off.
+output are connected, and a generate loop instantiates one wrapper per way in
+the draft data cache. Neither module is registered as a module source in the
+normal Bender build or connected as a cache in the SoC. Isolated parameter
+elaboration with an SRAM-interface stub has passed; no full SoC build or RTL
+simulation has been performed for this work. See the implementation-status
+document for the checked configurations and limits.
 
 ### Interface and Capacity
 
@@ -381,8 +382,10 @@ another data register without changing the latency contract.
   utilization. Larger bank counts and multiplexers must still meet the target
   clock; constant cycle latency does not guarantee constant maximum frequency.
 
-Before integrated use, add the missing parameter/address assertions and the
-wrapper source to Bender. Verify full-record round trips, preservation of all
+The wrapper now checks depth, fixed 80-bit data width and matching address
+width at elaboration. The cache also checks its geometry and OBI field widths.
+Before integrated use, add a runtime request-address assertion and the wrapper
+source to Bender. Verify full-record round trips, preservation of all
 four packed slots, macro-boundary accesses, changing addresses during reads,
 back-to-back reads/writes, reset behavior and representative sweep depths in
 both the generic and IHP simulation models. No such RTL verification has been
@@ -425,7 +428,10 @@ Make the following independently configurable for the I-cache and D-cache:
 Derive record count, physical transfer size, host-beat count, set count and
 address-tag width from those parameters. Reject unsupported combinations rather
 than truncating values. Capacity must be divisible by line size times ways; the
-initial indexed design uses power-of-two set counts and ways.
+initial indexed design uses positive power-of-two set counts and ways. One-way
+and single-set configurations are handled explicitly without zero-width
+indices. Each way must contain a positive multiple of 256 records for the
+current SRAM packing; for example, 4 KiB with four ways is unsupported.
 
 Keep the 80-bit backing format and ECC grouping fixed during cache-geometry
 sweeps. Changing this format is a separate experiment and requires compatible

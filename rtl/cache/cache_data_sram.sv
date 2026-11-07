@@ -17,6 +17,8 @@ module cache_data_sram #(
 
     output logic [DataWidth-1:0] rdata_o
 );
+    `include "cache_data_sram_param_checks.svh"
+
     logic [63:0] part_rdata [2];
     logic [1:0] read_slot_q;
 
