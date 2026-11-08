@@ -1,10 +1,10 @@
 # Cache Implementation Status
 
-Snapshot: 7 November 2026.
+Snapshot: 8 November 2026.
 
 This document describes the in-progress data-cache sources, the read/store-hit
-and refill paths, replacement state, SRAM design decisions and the partial-store
-ECC update. It separates
+and refill/write-back paths, replacement state, SRAM design decisions and the
+partial-store ECC update. It separates
 logic already present in the files from intended behavior and missing
 integration. It is not an RTL verification or timing sign-off.
 
@@ -16,12 +16,13 @@ implementation accurately.
 
 | Source | Responsibility |
 | --- | --- |
-| [data_cache.sv](../rtl/cache/data_cache.sv) | OBI request capture, lookup, read/store-hit paths and draft refill/replacement control |
+| [data_cache.sv](../rtl/cache/data_cache.sv) | OBI request capture, lookup, hit paths, refill/replacement control and FIFO-buffered dirty write-back |
 | [cache_pkg.sv](../rtl/cache/cache_pkg.sv) | Stored-word and line-stream structs, completion status, record dimensions and partial-store ECC function |
 | [cache_typedef.svh](../rtl/cache/cache_typedef.svh) | Instance-dependent cache metadata and cache/arbiter command, request and response structs |
 | [cache_data_sram.sv](../rtl/cache/cache_data_sram.sv) | Masked 80-bit SRAM interface and physical macro packing |
-| [data_cache_param_checks.svh](../rtl/cache/data_cache_param_checks.svh) | Cache geometry and OBI-width elaboration checks |
+| [data_cache_param_checks.svh](../rtl/cache/data_cache_param_checks.svh) | Cache geometry/interface checks and simulation-only protocol/completion assertions |
 | [cache_data_sram_param_checks.svh](../rtl/cache/cache_data_sram_param_checks.svh) | SRAM depth and width elaboration checks |
+| [stream_fifo.sv](../rtl/common_cells/stream_fifo.sv), [fifo_v3.sv](../rtl/common_cells/fifo_v3.sv) | Existing register-based valid/ready FIFO used for write-back read-ahead |
 | [IHP SRAM implementation](../ihp13/tc_sram_impl.sv) | Technology-specific cuts and bit-mask connections |
 | [Ibex SECDED package](../ibex/vendor/lowrisc_ip/ip/prim/rtl/prim_secded_pkg.sv) | Original encoding function used by the ECC update |
 | [Ibex load/store unit](../ibex/rtl/ibex_load_store_unit.sv) | Core byte-enable generation and existing data ECC encoder/checker |
@@ -46,15 +47,16 @@ build or test.
 | Case | Present in the source | Still missing or limited |
 | --- | --- | --- |
 | Request acceptance | `req && gnt` captures address, write flag, byte-enable, capability-access flag, ID and first write word | Verify response accounting and the capability-pair input contract |
-| Set lookup | Valid/address-tag comparison across all ways; a miss is decided after the scan; invalid ways are preferred over the set's round-robin candidate | Functional verification and dirty-victim handling |
+| Set lookup | Valid/address-tag comparison across all ways; a miss is decided after the scan; invalid ways are preferred over the set's round-robin candidate | Functional verification and integration |
 | Full 32-bit store hit | Places the buffered 40-bit word in the selected half, marks dirty and answers in the SRAM-write cycle | RTL verification and end-to-end ECC wiring |
 | Capability store hit | Buffers both words, writes all 80 bits, answers once in the write cycle and once in `IDLE` using `cap_flag_q` | Pair-contract enforcement, core flag wiring and separate second-request ID handling for generic requesters |
 | Byte/halfword store hit | Reads the old word, merges bytes/tag/ECC, writes the selected half, marks dirty and answers | RTL verification; empty masks are excluded by a simulation assertion, not a hardware no-op policy |
 | ECC merge helper | `ecc_merge_partial32()` calls the original inverted Ibex encoder and is used in `ACCESS_SRAM` | End-to-end integration and tag protection are not implemented |
 | Ordinary read hit | Reads one record, selects one stored word and returns data, stored tag/ECC and the saved ID | RTL verification and core ECC wiring |
 | Capability read hit | Reuses the 80-bit store buffer; sends one response per accepted half; an extra flag prevents repeated first responses | RTL verification, SRAM output-hold validation during waiting, pair-contract enforcement and core flag wiring |
-| Refill | Command handshake, direct full-record SRAM writes, record index, separate completion wait, metadata installation and replay through lookup | Shared transfer engine, error/abort handling, record-count/`last` verification and functional tests |
-| Replacement/eviction | Per-set round-robin pointers reset to zero and advance after successful refill; valid dirty victims branch to `SEND_WRITEBACK_CMD` | Dirty write-back state implementation and local/global policy comparison |
+| Refill | Command handshake, full-record SRAM writes, record index, completion wait, metadata installation and lookup replay; an assertion stops on an accepted error completion | Shared transfer engine, actual error/abort recovery, record-count/`last` verification and functional tests |
+| Dirty write-back | Old-line command, synchronous SRAM reads, parameterized fall-through FIFO, read-ahead capacity check, last-record handshake and separate completion wait | Shared packing/HyperBus engine, actual error recovery, FIFO area/performance evaluation and RTL tests |
+| Replacement/eviction | Per-set round-robin pointers reset to zero and advance after successful refill; dirty victims use the write-back states before refill | Functional tests and local/global policy comparison |
 | I-cache/shared HyperBus arbiter | Architectural decisions only | RTL, routing, maintenance, coherence and burst integration |
 
 All valid bits reset to zero. The draft refill success path can now install a
@@ -136,7 +138,11 @@ The checks live in `data_cache_param_checks.svh` and
 module scopes. This keeps the module bodies short without changing the
 generate-time `$error` behavior. The headers use the existing `rtl/cache`
 include path; no extra package, module instance or simulation-time process is
-needed. Protocol assertions remain in `data_cache.sv`.
+needed for the elaboration checks. The same data-cache header now contains
+the simulation-only protocol and completion assertions; it is included after
+the module declarations and instances. Enable assertion evaluation in the
+simulator to execute them. They are excluded from synthesis with
+`translate_off/on`; elaborating them alone does not test a failure report.
 
 For example, 8 KiB with four ways uses 256 records per way and is supported
 structurally. A 4 KiB, four-way configuration would need 128 records per way
@@ -389,10 +395,10 @@ described below has run; functional read behavior has not been RTL-simulated.
 The cache now has `mem_req_t` / `mem_rsp_t` type parameters and `mem_req_o` /
 `mem_rsp_i` ports. These are protocol-neutral, complete-line transfers to the
 planned shared arbiter. They are not OBI requests or direct HyperBus commands.
-`mem_req_o = '0` supplies combinational defaults. The draft refill states now
-override the read command, read readiness and completion readiness; write-back
-outputs and the shared arbiter/transfer engine are still unimplemented. The
-existing hit paths are reused after a successful refill.
+`mem_req_o = '0` supplies combinational defaults. Refill and write-back states
+override their command, stream and completion fields. The shared arbiter,
+packer and HyperBus transfer engine are still unimplemented. The existing hit
+paths are reused after a successful refill.
 
 `cache_pkg::cache_mem_data_t` contains a complete `cap_store_t record` plus a
 one-bit `last`. The record preserves both payload words, tags and stored ECC.
@@ -427,9 +433,14 @@ issued transport activity is drained. The miss FSM must accept an error
 completion while waiting for data, rather than waiting indefinitely for a
 missing final record. It must not validate a partial refill or discard dirty
 victim data on failure. These rules are interface requirements for the future
-implementation. The current refill handles the success sequence, but its
-completion-error branch is still a TODO and it does not accept an early error
-completion in `WAIT_REFILL_DATA`.
+implementation. The current cache handles the success sequence and asserts
+against an accepted error completion in either completion-wait state. This is
+not hardware recovery, and it does not cover an early abort: `WAIT_REFILL_DATA`
+and `WRITE_BACK_DATA` do not accept completion status. Before integration,
+either extend the cache for that early-error contract or require the transfer
+engine to finish the expected record stream before returning failure. These
+are future-engine requirements, not a claim that the existing HyperBus midend
+spontaneously stops returning read data.
 
 Create matching types in the future enclosing cache/arbiter scope, for example:
 
@@ -471,20 +482,21 @@ dirty victim must be written back first. An invalid or clean victim can go
 directly to refill. This decision uses `selected_way_d`, because the selection
 does not reach `selected_way_q` until the next clock edge.
 
-`SEND_WRITEBACK_CMD` is currently an enum/transition target without a state
-implementation. Dirty misses are therefore not functional yet. The eventual
-write-back must reconstruct the victim's old line address from its stored tag
-and set index; refill instead uses the new saved OBI request address.
+Dirty misses now enter the write-back states described below. The command uses
+the victim's stored address tag and the current set index, not the new saved
+OBI request's tag. Refill subsequently uses the new saved OBI address. Both
+paths have source-level success handling, but the shared transfer engine and
+end-to-end verification are still missing.
 
 ### Refill State Sequence
 
 | State | Current success-path behavior |
 | --- | --- |
-| `SEND_REFILL_CMD` | Offer `cmd.write = 0`, the saved OBI address with its lower `OffsetBits` cleared, and `cmd.records = RecordsPerLine`. Hold the command and `cmd_valid` until `cmd_ready`. On acceptance, reset `block_refill_count_d` to zero and enter `WAIT_REFILL_DATA`. |
+| `SEND_REFILL_CMD` | Offer `cmd.write = 0`, the saved OBI address with its lower `OffsetBits` cleared, and `cmd.records = RecordsPerLine`. Hold the command and `cmd_valid` until `cmd_ready`. On acceptance, reset `line_record_index_d` to zero and enter `WAIT_REFILL_DATA`. |
 | `WAIT_REFILL_DATA` | Assert `r_ready`. Each `r_valid && r_ready` handshake writes `r.record` directly to the selected way's SRAM with all ten storage-byte enables active. Increment the index after nonfinal records; after accepting the expected final record, enter `WAIT_REFILL_DONE`. |
-| `WAIT_REFILL_DONE` | Assert `done_ready` and wait for `done_valid`. On a successful completion, install the new address tag, set valid, clear dirty, advance this set's replacement pointer and return to `CACHE_LOOKUP`. The error branch is not implemented. |
+| `WAIT_REFILL_DONE` | Assert `done_ready` and wait for `done_valid`. On success, install the new address tag, set valid, clear dirty, advance this set's replacement pointer and return to `CACHE_LOOKUP`. An accepted error triggers a simulation assertion; hardware recovery is not implemented. |
 
-`cmd.records` is the requested count; `block_refill_count_q` is a zero-based
+`cmd.records` is the requested count; `line_record_index_q` is a zero-based
 index of the next record to receive. They are different quantities. The
 internal index starts at zero for every accepted refill command and advances
 only on a data handshake. With the default 16-byte logical line, indices zero
@@ -503,7 +515,7 @@ The SRAM address is a combinational selection, not a new address register:
 
 ```text
 Hit/default: SetIndex * RecordsPerLine + floor(BlockOffset / RecordDataBytes)
-Refill:      SetIndex * RecordsPerLine + block_refill_count_q
+Refill:      SetIndex * RecordsPerLine + line_record_index_q
 ```
 
 The default expression remains at the start of `always_comb`; the accepted
@@ -560,14 +572,184 @@ ownership release; it is not achieved by simply dropping the completion
 check. Counter-only read completion would be a different interface contract,
 not the current baseline.
 
-Error recovery remains open: `WAIT_REFILL_DONE` currently consumes an error
-completion but has no invalidation, OBI-error response or exit for that case.
+Error recovery remains open: with assertion evaluation enabled, an accepted
+error in `WAIT_REFILL_DONE` triggers `assert_refill_success` and stops simulation
+with `$fatal`, reporting set and way. The synthesis-excluded assertion adds no
+hardware recovery. Without it,
+the state consumes an error completion but has no invalidation, OBI-error
+response or exit for that case.
 An earlier error completion is not accepted while waiting for records and can
 leave the draft waiting indefinitely if the remaining records never arrive.
 A failed partial refill must not leave the victim usable under its old tag.
 Keeping the done state is therefore not a claim of completed error handling.
 
-### Local Round-Robin Pointers and Area Trade-Off
+## Dirty Write-Back Control Flow
+
+### Victim Ownership and Command
+
+Write-back is needed only for a valid dirty victim. Keep the selected way,
+its old metadata and the original pending OBI request unchanged while it is
+active. No new OBI request is granted, no write-back SRAM operation modifies
+the line, and buffered incoming store data remains in `cap_store_q`. Write-back
+reads all records from the victim, independently of the pending access offset.
+
+The line command carries `write = 1` and `records = RecordsPerLine`. Its
+logical byte address is the old metadata address tag followed by the actual
+set bits and zero line-offset bits. With `NumSets = 1`, omit the set field:
+`set_index` still has a one-bit storage type but must not contribute an extra
+address bit. Refill does not have that issue because it aligns the saved OBI
+address directly. Logical-to-physical encoded mapping is the shared engine's
+job, not this command's.
+
+| State | Current success-path behavior |
+| --- | --- |
+| `SEND_WRITEBACK_CMD` | Hold the victim-line command and `cmd_valid` stable until `cmd_ready`. At the command handshake, issue the SRAM read for record 0, mark its pending result and set the next read index to 1. Enter `WRITE_BACK_DATA`. |
+| `WRITE_BACK_DATA` | Feed returning SRAM records into the FIFO and present its output to the memory path. Issue another SRAM read only when the conservative capacity test passes and the last read has not been issued. On the handshake of the FIFO output with `last = 1`, enter `WAIT_WRITEBACK_DONE`. |
+| `WAIT_WRITEBACK_DONE` | Assert `done_ready`, issue no SRAM read or write-data transfer, and wait for `done_valid`. On success enter `SEND_REFILL_CMD`; an accepted error triggers `assert_writeback_success`. |
+
+Sending the last record is not confirmation that HyperRAM has been updated.
+The future shared engine may still be buffering or serializing records and
+must collect all required HyperBus write responses before reporting success.
+It must retain completion status until the cache accepts it. Only then may
+the cache start the replacement refill. The arbiter may serve the I-cache
+between these two complete operations; the write-back FIFO does not control
+shared ownership or burst segmentation.
+
+The current code leaves the victim's dirty bit unchanged even at successful
+write-back completion. Refill installation later replaces its address tag and
+clears dirty. The cache remains blocked in between. No OBI response is generated
+by write-back itself: the original request completes through the hit path after
+refill. Recovery after a failed or partially stored refill is still open.
+
+### SRAM Read Results and the Two Last Markers
+
+The SRAM has one synchronous read cycle and no result-valid output. A started
+write-back read sets `wb_read_valid_d`; `wb_read_valid_q` marks its result in
+the following cycle. Likewise, `wb_read_last_d` is computed from the index of
+the read being issued, and `wb_read_last_q` accompanies that returned record.
+The first command-handshake read is record 0, not the next-index value 1.
+
+In write-back, `line_record_index_q` identifies the next SRAM read to issue.
+Increment it only when issuing that read. In refill the same register instead
+identifies the next incoming record to store. These uses do not overlap.
+
+After the last SRAM read, `wb_read_last_q` stays high because its default
+next value holds it. This blocks further reads even if the index wraps or the
+FIFO still has space. The next accepted write-back command reinitializes that
+marker for its first read. Do not clear it merely when one FIFO input is accepted.
+
+The FIFO stores each record's `last` together with its data. These markers
+serve two different points in the pipeline:
+
+| Marker | Meaning and use |
+| --- | --- |
+| `wb_read_last_q` | The last SRAM read has returned; stop issuing additional reads. |
+| `wb_fifo_out.last` with output valid/ready | The last queued record was accepted by the memory path; finish the send phase. |
+
+The last SRAM result can arrive while an older record is at the FIFO head.
+Stopping reads must not wait for that last record to reach the output, and
+finishing the send phase must not happen merely because it entered the FIFO.
+
+### FIFO Handshakes and Fall-Through
+
+The cache instantiates the existing `stream_fifo`/`fifo_v3`, not a new custom
+queue. `WritebackFifoDepth` defaults to 2. Each entry is one 80-bit encoded
+record plus its one-bit `last`: 81 bits, not 80 payload bits and not a 32-bit
+HyperBus beat. The marker is internal control and is not serialized into the
+80-bit backing record.
+
+The input is the selected way's SRAM result, `wb_read_last_q`, and
+`wb_read_valid_q`. In `WRITE_BACK_DATA`, the output connections are:
+
+| Connection | Responsibility |
+| --- | --- |
+| `mem_req_o.w_valid = wb_fifo_out_valid` | Advertise a record independently of downstream readiness. |
+| `mem_req_o.w = wb_fifo_out` | Keep the offered record and its marker present while waiting. |
+| `wb_fifo_out_ready = mem_rsp_i.w_ready` | Return the memory path's readiness so the FIFO advances on the same handshake. |
+
+FIFO output readiness defaults to zero outside this state. Internally, the
+FIFO removes an entry only on `ready && valid`; high readiness with no valid
+output does not remove anything. The cache's output-handshake `if` observes
+that same transfer to check `last`; it does not perform a separate data copy.
+
+With `FALL_THROUGH = 1`, an empty FIFO can present a valid SRAM result at its
+output in the same cycle. If the memory path is ready, it passes through with
+no extra FIFO register cycle. Otherwise it is stored at the edge. Older queued
+records always come first. The SRAM read cycle still exists, and the direct
+path adds combinational mux/control delay that must be checked in timing.
+
+### Read-Ahead Capacity and Supported Depths
+
+A synchronous SRAM result cannot be backpressured after its read is issued.
+Reserve space before issuing the request; testing only the FIFO's current
+input readiness would ignore the result already arriving that cycle.
+
+The current conservative read-enable condition is:
+
+```systemverilog
+int'(wb_fifo_usage) + 1 < WritebackFifoDepth &&
+wb_fifo_in_ready && !wb_read_last_q
+```
+
+The extra one reserves capacity for the arriving result, even on cycles
+without a valid pending result. `wb_fifo_in_ready` also rejects a full FIFO:
+the FIFO's truncated usage output wraps to zero at full power-of-two depths.
+For example, with depth 2, one stored record plus one arriving record prevents
+another read. This policy does not subtract a simultaneous output transfer,
+so it may pause SRAM reads unnecessarily and must not be described as the
+maximum-throughput scheduling policy.
+
+This control requires `WritebackFifoDepth >= 2`. The parameter currently has
+no cache-side lower-bound check; depth 1 can block after the first read, and
+depth 0 is not a supported way to disable the FIFO. Add that elaboration guard
+before exposing FIFO-depth sweeps. A no-FIFO comparison needs a separate
+correct handshake implementation, not simply a depth-zero parameter.
+
+No finite FIFO allows unlimited SRAM read-ahead through an arbitrarily long
+downstream stall. A full queue must stop new reads. The FIFO is assumed empty
+at a new write-back; after a correct last-output handshake, no queued or pending
+record may remain to leak into the next operation. Reset clears its control
+and contents, but coordinated reset of an outstanding memory operation remains
+an integration requirement.
+
+### FIFO Area Versus Performance: Measurement Required
+
+The FIFO is a performance hypothesis, not a proven necessary or area-optimal
+component. Its RTL uses register storage: depth 2 declares 162 entry bits,
+depth 4 declares 324, and depth 8 declares 648, plus read/write pointers,
+occupancy state, muxes and control. The two delayed SRAM-result flags add two
+state bits; the existing line index is shared with refill. These are logical
+state counts, not synthesized flipflop counts or physical area estimates.
+
+Buffering can hide short downstream stalls by reading subsequent SRAM records
+before older records are consumed. It cannot accelerate the physical HyperBus
+data rate, make a long stall disappear, or guarantee `w_ready` every cycle.
+The midend already has a host-write FIFO, and a separate packer may need
+storage too; evaluate the whole buffering chain before retaining redundant
+queues. This write-back FIFO does not make the cache nonblocking.
+
+Compare supported depths such as 2, 4 and 8 against a deliberately implemented
+no-FIFO baseline using the SRAM output as a held one-record source. Such a
+source can also sustain one record per cycle with continuous readiness if
+read/consume scheduling is correct; the FIFO's intended advantage is read-ahead
+under variable readiness, not an automatic doubling of peak throughput.
+Keep cache geometry, packing, burst limits, clocks and workloads identical.
+
+| Measure | Decision it supports |
+| --- | --- |
+| Mapped standard-cell area, register count and routing/timing | Physical cost of each depth and of fall-through versus registered output |
+| Occupancy distribution, peak use and time spent full | Whether additional entries are actually used |
+| SRAM-read pause cycles, including conservative-rule bubbles | Whether queue depth or the read-enable policy limits progress |
+| Memory-path ready cycles without a valid record during an active write-back | Whether the FIFO reduces downstream data starvation |
+| Write-back latency, physical HyperBus utilization and actual burst gaps | Whether earlier SRAM reads improve transport rather than only moving waiting elsewhere |
+| Dirty-eviction count, miss stall cycles and workload runtime | End-to-end benefit relative to area, including I-cache contention |
+
+Retain or deepen the FIFO only if measurements justify its cost. If depth 2
+is sufficient, larger queues waste area; if the simpler no-FIFO source performs
+equally well, removing this queue is a valid optimization. No such comparison,
+synthesis result or integrated cache benchmark exists at this snapshot.
+
+## Local Round-Robin Pointers and Area Trade-Off
 
 Each set has its own `replace_way_q` candidate. After a successful refill,
 the next candidate is `selected_way_q + 1`, except that the last way wraps
@@ -810,9 +992,12 @@ for this helper exists yet.
 | Shared 80-bit store/read buffer | Retains both capability words without another record-sized buffer | Depends on blocking request ownership and correct SRAM-result capture |
 | One-bit first-read-response flag | Allows a delayed second request without repeating the first response | Must be reset, armed and cleared correctly; no extra pipeline stage |
 | Separate refill completion wait | Keeps full-line reception and final success/failure status distinct | At least one state cycle after the final record; longer if completion is late; measure miss and workload impact |
+| Fall-through write-back FIFO | Allows finite SRAM read-ahead and same-cycle forwarding when empty | 81 bits per entry plus queue control; compare measured area/runtime with a no-FIFO source |
+| Conservative FIFO capacity reservation | Prevents unbackpressurable SRAM results from overflowing the queue | Ignores simultaneous output consumption and can introduce avoidable read bubbles |
+| Separate write-back completion wait | Prevents replacement refill before confirmed write success | Completion/owner waiting costs cycles; actual recovery remains unimplemented |
 | Per-set round-robin replacement | Independent replacement progress per set with invalid-way preference | `NumSets * WayIndexWidth` declared bits; compare a smaller global pointer against miss rate and traffic |
 | Pure `function automatic` helper | Reuses the original code definition and synthesizes combinationally | Not zero-area software; repeated simultaneous calls may duplicate logic |
-| No write buffer or overlapping misses initially | Smaller control state and simpler ordering | Blocking latency limits throughput |
+| No CPU store buffer or overlapping misses initially | Smaller request-control state and simpler ordering | The write-back FIFO does not hide an eviction from the requesting CPU; blocking latency remains |
 
 At the defaults, metadata has 512 lines x (20 tag bits + valid + dirty) =
 11,264 logical state bits, before replacement state or metadata protection.
@@ -834,9 +1019,10 @@ surrounding logic, power and timing, not only bit utilization.
 The wrapper's depth decomposition is generic within its supported constraints.
 The cache now derives its number of wrappers, records per way and address/index
 widths from the geometry, including one-way and single-set cases. Its parameter
-checks restrict sweeps to supported combinations. Performance sweeps still need
-completed refill/error and write-back logic, the shared memory path, SoC
-integration and functional verification.
+checks restrict geometry sweeps to supported combinations. FIFO depth still
+needs its lower-bound check. Performance sweeps need error/recovery handling,
+the shared memory path, SoC integration and functional verification of refill
+and write-back.
 The current 32-bit codec and 80-bit record are not automatic 64-bit CPU support.
 
 ### Geometry Elaboration Checks
@@ -857,17 +1043,33 @@ This was an isolated structural check using the actual cache sources and ECC
 package, with `tc_sram_impl` replaced by a port-compatible stub. It does not
 verify SRAM behavior, hit responses, a full Bender/SoC build, synthesis, timing
 or RTL simulation. The temporary harness is not a checked-in regression.
-These checks preceded the refill/replacement FSM additions documented above;
-they are not an elaboration result for the current expanded FSM.
+The checks were rerun on 8 November with the current refill/write-back FSM,
+the actual `stream_fifo` and `fifo_v3`, and the relocated simulation assertions.
+FIFO-depth behavior and area are not established by geometry elaboration.
+
+### Write-Back Control Model Check
+
+A separate temporary cycle model explored 3,077 reachable control states across
+25 combinations: 2/4/8/16/64 records per line and FIFO depths 2/3/4/5/8, with
+both downstream-ready choices at each state. It modeled the one-cycle pending
+SRAM read, fall-through queue, conservative capacity condition, sticky last-read
+marker and ordered output handshakes. In that model, records were neither lost
+nor duplicated, the queue did not overflow, no extra read followed the last
+record, and progress remained possible with a ready receiver.
+
+This is an algorithm-level check, not execution or formal proof of the RTL.
+It did not exercise physical SRAM data, the new `$fatal` branches, HyperBus,
+reset/error recovery or timing. No clocked cache RTL regression or integrated
+performance measurement has run.
 
 ## Remaining Work and Verification Gates
 
 The ordinary and capability read/store-hit paths now have source-level
 datapaths and response sequencing. Isolated geometry elaboration has passed as
 described above; interface behavior, timing and fault assumptions have not been
-verified in simulation. The refill success path and local replacement state
-are now drafted, but refill errors, dirty eviction and the shared transfer
-engine remain incomplete.
+verified in simulation. Refill, dirty write-back and local replacement now
+have source-level success paths. Transfer-error assertions stop simulation,
+but recovery and the shared transfer engine remain incomplete.
 
 Before functional cache testing:
 
@@ -880,9 +1082,19 @@ Before functional cache testing:
 - Verify refill command stability, continuous/gapped `r_valid`, handshake-only
   indexing, SRAM record addressing and metadata installation before request
   replay. Check that incoming store data survives the refill.
-- Complete early and final refill-error handling, invalidation and OBI failure
-  responses; implement dirty write-back without discarding modified lines or
-  exposing partial refills. Test retained/delayed completion status and reset.
+- Verify the victim's old write-back address, including a single-set geometry,
+  first-read timing, increasing record order and preservation of the pending
+  OBI request/store data. Test short and long downstream stalls, full and empty
+  FIFO boundaries, fall-through, stable offered data and delayed completion.
+- Verify that the sticky last-read marker prevents every additional SRAM read,
+  that only the last output handshake leaves the send phase, and that no FIFO
+  entry or pending read remains before another operation. Test consecutive
+  dirty evictions and add the FIFO-depth lower-bound check before sweeps.
+- Complete early and final transfer-error handling, partial-refill invalidation
+  and OBI failure responses without discarding modified lines. Exercise both
+  completion-error assertions with simulation assertions enabled; they do not
+  test recovery or diagnose an early-abort deadlock. Test retained/delayed
+  completion status and coordinated reset.
 - Check invalid-way priority, per-set replacement independence, explicit wrap
   including one-way caches, and advancement only after successful refill.
 - Define initialization of encoded data/tag/ECC and protection of address tags,
@@ -894,9 +1106,9 @@ Before functional cache testing:
 - Register the modules with Bender and connect the cache only after focused
   module tests pass.
 
-The geometry changes did not alter hit-path scheduling. The subsequent refill
-states add miss-path control and have not been functionally verified. No full
-SoC build or RTL simulation has been run for these changes.
+The geometry, refill and write-back additions do not change the documented
+hit-path scheduling. The miss-path control has not been functionally verified
+in RTL. No full SoC build or RTL simulation has been run for these changes.
 
 The regression should cover both stored-word halves, all nonempty byte masks,
 unchanged neighboring words/packed slots, macro boundaries, saved read
@@ -912,4 +1124,5 @@ case to trap.
 
 Only after functional and interface checks should SRAM macro area, metadata
 area, maximum frequency, hit/miss latency, HyperBus burst behavior and workload
-performance be compared across cache configurations.
+performance be compared across cache configurations. Include write-back FIFO
+depth and its no-FIFO alternative in that measured area/performance comparison.

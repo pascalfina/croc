@@ -1,6 +1,6 @@
 # Cache Design Constraints
 
-Date: 7 November 2026
+Date: 8 November 2026
 
 Status: architectural baseline, not a claim of implemented or verified RTL.
 See [Cache Implementation Status](cache-implementation-status.md) for the current
@@ -169,8 +169,9 @@ Retain the separate completion state as the initial baseline. After all records
 are committed and successful completion is accepted, install the new address
 tag, set valid, clear dirty, advance replacement state and return directly to
 `CACHE_LOOKUP`. The existing hit path completes the original read/store without
-accepting it again. The source contains this success path; error handling,
-dirty write-back and the shared transfer engine are not complete or verified.
+accepting it again. The source contains refill and dirty-write-back success
+paths; actual error recovery and the shared transfer engine are incomplete.
+Neither path has been verified in a clocked RTL cache simulation.
 
 The completion state occupies one cycle if status is already available when
 entered; a late status adds more waiting cycles. It does not change hit-path
@@ -188,6 +189,62 @@ support that change; the independent channels do not guarantee simultaneity.
 Counter-only refill completion is not the chosen initial contract. The
 `r.last` field is currently redundant with the expected record count for cache
 control and can be checked against that count in simulation.
+
+## Write-Back Buffering Baseline
+
+A valid dirty victim must complete a full write-back before replacement refill
+starts. Use its stored old address tag, the real set-address bits and a zero
+line offset; omit the set field for a single-set cache. Preserve the pending
+OBI request, its incoming store data and the victim's contents while sending.
+No new CPU request is accepted during this blocking operation.
+
+The source now uses `SEND_WRITEBACK_CMD`, `WRITE_BACK_DATA` and
+`WAIT_WRITEBACK_DONE`. The command handshake also starts SRAM read 0. Subsequent
+reads use a shared line-record index and one-cycle result-valid/last tracking.
+Use the sticky last-read marker to stop new reads, and the FIFO output's
+accepted `last` to end the send phase: they refer to different pipeline points.
+After the final data handshake, wait for final status. The future shared engine
+must report success only after all required HyperBus write responses, not just
+after accepting records into an internal buffer.
+
+Use the existing `stream_fifo` as the initial write-back read-ahead buffer:
+
+- `WritebackFifoDepth = 2` initially, configurable independently of line size.
+- Store one encoded 80-bit record plus its `last` marker per entry: 81 bits.
+  The marker does not change the physical backing format or host-beat count.
+- Enable fall-through: an empty FIFO can forward a returning SRAM result in
+  the same cycle, without another FIFO register cycle. Check the combinational
+  path in timing; the SRAM's one-cycle latency remains.
+- Offer output valid/data independently of readiness. Return downstream
+  readiness to the FIFO; it removes entries only on valid/ready handshakes.
+- Reserve capacity for an issued SRAM read before its unbackpressurable result
+  arrives. The current `usage + 1 < depth` rule, additionally gated by FIFO input
+  readiness, is deliberately conservative and ignores simultaneous consumption.
+- Require depth at least 2 for this implementation. Its missing lower-bound
+  elaboration check must be added before exposing depth sweeps; setting depth
+  zero is not an implemented no-FIFO mode.
+
+The FIFO is not a settled area/performance optimum. Register storage alone is
+162 bits at depth 2, 324 at depth 4 and 648 at depth 8, before pointer/count
+state, muxes and control. These bit counts are not physical area measurements.
+Finite read-ahead may hide short readiness gaps but cannot make HyperBus accept
+a record every cycle or hide arbitrarily long stalls. The HyperBus midend also
+buffers writes; avoid retaining duplicate buffering without measured benefit.
+
+Compare depths 2/4/8 and a separately implemented no-FIFO SRAM-output source at
+identical cache geometry, clocks, packing, burst limits and workloads. Measure
+mapped standard-cell area, timing, occupancy/full cycles, SRAM-read bubbles,
+downstream starvation, write-back latency, physical bus utilization and total
+workload cycles. Keep, resize or remove the queue based on that comparison.
+Depth sweeps are independent of the future engine's `MaxBurstBeats` parameter.
+
+Until recovery is implemented, simulation assertions stop on accepted error
+completions for both refill and write-back when assertion evaluation is enabled.
+They live in the existing
+`data_cache_param_checks.svh`, alongside the protocol checks, under synthesis
+exclusion. They do not implement hardware recovery or support an early abort
+that leaves the record stream incomplete. Resolve that producer/consumer
+contract before connecting the shared engine.
 
 ## Transaction Arbiter and Ownership FSM
 
@@ -505,6 +562,11 @@ Keep the 80-bit backing format and ECC grouping fixed during cache-geometry
 sweeps. Changing this format is a separate experiment and requires compatible
 address mapping, initialization and test data.
 
+Sweep the D-cache write-back FIFO depth separately, starting with 2/4/8 entries.
+Do not interpret a depth-zero build as the no-FIFO baseline without implementing
+its alternative source control. Record both physical area and whole-workload
+performance; fewer SRAM-read stalls alone do not justify extra queue storage.
+
 The previous 4 KiB I-cache / 8 KiB D-cache / 16-byte lines / two ways remain
 possible measurement starting points, not fixed requirements or proven optima.
 
@@ -518,6 +580,9 @@ possible measurement starting points, not fixed requirements or proven optima.
 - Measure the separate refill-completion wait before merging it with final data
   acceptance, and compare local versus global replacement pointers for area,
   traffic and workload performance before choosing the optimized policy.
+- Evaluate write-back FIFO depths and a no-FIFO source against mapped cell area,
+  timing, real bus starvation and workload runtime. Do not retain the queue
+  solely on an assumed peak-throughput advantage; add the missing depth guard.
 - Specify initialization of valid data/tag/ECC records before partial writes.
 - Finalize local cache-array and standard-cell metadata protection; verify the
   documented SRAM mapping, latency and parameter checks.
