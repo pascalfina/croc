@@ -65,7 +65,7 @@ module data_cache #(
         WAIT_REFILL_DONE,
         WRITE_BACK_DATA,
         WAIT_WRITEBACK_DONE
-        
+
     } state_t;
 
     state_t state_q, state_d;
@@ -129,6 +129,7 @@ module data_cache #(
     end else begin : gen_single_set
         assign set_index = '0;
     end
+
     assign addr_tag = obi_req_addr_q[AddrWidth-1 : OffsetBits+SetBits];
     assign block_offset = obi_req_addr_q[OffsetBits-1 : 0];
     //assign sram_word_addr = set_index * RecordsPerLine + (block_offset / RecordDataBytes);
@@ -142,47 +143,51 @@ module data_cache #(
     assign wb_fifo_in_valid  = wb_read_valid_q;
 
     
-
     always_comb begin
 
-        state_d = state_q;
+        state_d             = state_q;
 
-        obi_req_be_d = obi_req_be_q;
-        obi_req_addr_d = obi_req_addr_q;
-        obi_req_write_d = obi_req_write_q;
-        obi_req_wtag_d = obi_req_wtag_q;
+        // obi signals
+        obi_req_be_d        = obi_req_be_q;
+        obi_req_addr_d      = obi_req_addr_q;
+        obi_req_write_d     = obi_req_write_q;
+        obi_req_wtag_d      = obi_req_wtag_q;
         obi_is_cap_access_d = obi_is_cap_access_q;
-        cap_store_d = cap_store_q;
-        obi_aid_d = obi_aid_q;
+        cap_store_d         = cap_store_q;
+        obi_aid_d           = obi_aid_q;
 
-        obi_rsp_o = '0;
-        mem_req_o = '0;
+        // module output
+        obi_rsp_o           = '0;
+        mem_req_o           = '0;
 
-        cache_meta_d = cache_meta_q;
-        selected_way_d = selected_way_q;
-        rdata_cache_d = rdata_cache_q;
-        replace_way_d = replace_way_q;
+        // cache logic signals
+        cache_meta_d        = cache_meta_q;
+        selected_way_d      = selected_way_q;
+        rdata_cache_d       = rdata_cache_q;
+        replace_way_d       = replace_way_q;
         line_record_index_d = line_record_index_q;
+        cap_flag_d              = cap_flag_q;
+        cap_flag_read_valid_d   = cap_flag_read_valid_q;
 
-        sram_req = '0;
-        sram_we     = 0;
-        sram_wdata  = '0;
-        sram_mask   = '0;
+        hit_found           = 0;
+        all_valid           = 0;
 
-        hit_found = 0;
-        all_valid = 0;
-
-        wb_read_valid_d = 1'b0;
-        wb_read_last_d = wb_read_last_q;
-        wb_fifo_out_ready = 0;
-
-        cap_flag_d = cap_flag_q;
-        cap_flag_read_valid_d = cap_flag_read_valid_q;
+        // sram signals
+        sram_req            = '0;
+        sram_we             =  0;
+        sram_wdata          = '0;
+        sram_mask           = '0;
+        sram_word_addr      = set_index * RecordsPerLine + (block_offset / RecordDataBytes);
 
 
-        merged_word = read_word;
+        // fifo signals
+        wb_read_valid_d     = 1'b0;
+        wb_read_last_d      = wb_read_last_q;
+        wb_fifo_out_ready   = 0;
 
-        sram_word_addr = set_index * RecordsPerLine + (block_offset / RecordDataBytes);
+        // extra logic
+        merged_word         = read_word;
+
         
         case (state_q)
 
@@ -240,7 +245,9 @@ module data_cache #(
                                     sram_req[way] = 1'b1;
                                     sram_we       = 1'b1;
                                     cache_meta_d[set_index][way].dirty = 1;
-
+                                    
+                                    // already send first response to boi bus second in idle
+                                    obi_aid_d = obi_req_i.a.aid;
                                     obi_rsp_o.r.rid = obi_aid_q;
                                     obi_rsp_o.r.rdata = '0;
                                     obi_rsp_o.r.r_optional.ecc = 7'h2A;
@@ -330,6 +337,8 @@ module data_cache #(
                     sram_we       = 1'b1;
                     cache_meta_d[set_index][selected_way_q].dirty = 1;
 
+
+                    obi_aid_d = obi_req_i.a.aid;
                     obi_rsp_o.r.rid = obi_aid_q;
                     obi_rsp_o.r.rdata = '0;
                     obi_rsp_o.r.r_optional.ecc = 7'h2A;
@@ -435,9 +444,6 @@ module data_cache #(
                 mem_req_o.cmd.records = RecordsPerLine; // write an entire cacheline
                 mem_req_o.cmd_valid = 1'b1;
                 line_record_index_d = 0;
-
-               
-
 
                 if (mem_req_o.cmd_valid && mem_rsp_i.cmd_ready) begin //start reading from sram
                     sram_req[selected_way_q] = 1;
