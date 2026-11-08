@@ -4,7 +4,9 @@ Snapshot: 8 November 2026.
 
 This document describes the in-progress data-cache sources, the read/store-hit
 and refill/write-back paths, replacement state, SRAM design decisions and the
-partial-store ECC update. It separates
+partial-store ECC update. The shared arbiter's current write path, port
+selection and completion bridge are documented in
+[Cache Memory Arbiter](cache-mem-arbiter.md). This document separates
 logic already present in the files from intended behavior and missing
 integration. It is not an RTL verification or timing sign-off.
 
@@ -17,8 +19,9 @@ implementation accurately.
 | Source | Responsibility |
 | --- | --- |
 | [data_cache.sv](../rtl/cache/data_cache.sv) | OBI request capture, lookup, hit paths, refill/replacement control and FIFO-buffered dirty write-back |
+| [cache_mem_arbiter.sv](../rtl/cache/cache_mem_arbiter.sv) | Shared port ownership, round-robin handover, address expansion, write packing and final write completion; read path unfinished |
 | [cache_pkg.sv](../rtl/cache/cache_pkg.sv) | Stored-word and line-stream structs, completion status, record dimensions and partial-store ECC function |
-| [cache_typedef.svh](../rtl/cache/cache_typedef.svh) | Instance-dependent cache metadata and cache/arbiter command, request and response structs |
+| [cache_typedef.svh](../rtl/cache/cache_typedef.svh) | Instance-dependent metadata, write-buffer and cache/arbiter command, request and response structs |
 | [cache_data_sram.sv](../rtl/cache/cache_data_sram.sv) | Masked 80-bit SRAM interface and physical macro packing |
 | [data_cache_param_checks.svh](../rtl/cache/data_cache_param_checks.svh) | Cache geometry/interface checks and simulation-only protocol/completion assertions |
 | [cache_data_sram_param_checks.svh](../rtl/cache/cache_data_sram_param_checks.svh) | SRAM depth and width elaboration checks |
@@ -29,9 +32,9 @@ implementation accurately.
 | [Ibex LSU protocol](../ibex/doc/03_reference/load_store_unit.rst) | Grant/response timing and split capability transfers |
 
 Only the cache package is currently listed in the root Bender sources. The
-data-cache and SRAM-wrapper module files are not, and no data-cache instance is
-connected in the SoC. A generate loop instantiates one SRAM wrapper per way;
-the default configuration still has two wrappers.
+data-cache, SRAM-wrapper and shared-arbiter module files are not, and these
+modules are not connected in the SoC. A generate loop instantiates one SRAM
+wrapper per way; the default configuration still has two wrappers.
 
 The core still has `MemECC = 0`. Its write-integrity output is not connected,
 its read-integrity input is tied to zero, and the OBI request ECC and
@@ -57,12 +60,14 @@ build or test.
 | Refill | Command handshake, full-record SRAM writes, record index, completion wait, metadata installation and lookup replay; an assertion stops on an accepted error completion | Shared transfer engine, actual error/abort recovery, record-count/`last` verification and functional tests |
 | Dirty write-back | Old-line command, synchronous SRAM reads, parameterized fall-through FIFO, read-ahead capacity check, last-record handshake and separate completion wait | Shared packing/HyperBus engine, actual error recovery, FIFO area/performance evaluation and RTL tests |
 | Replacement/eviction | Per-set round-robin pointers reset to zero and advance after successful refill; dirty victims use the write-back states before refill | Functional tests and local/global policy comparison |
-| I-cache/shared HyperBus arbiter | Architectural decisions only | RTL, routing, maintenance, coherence and burst integration |
+| Shared HyperBus arbiter | Command selection, whole-operation ownership, round-robin handover, write packing and completion forwarding | Read path, complete interface guards, competing-port RTL tests, actual midend/HyperRAM tests and SoC integration; see [module documentation](cache-mem-arbiter.md) |
+| I-cache | Architectural decisions only | RTL, routing, maintenance, coherence and integration |
 
 All valid bits reset to zero. The draft refill success path can now install a
-valid line at source level, but the shared memory path is not implemented or
-connected. Neither this path nor the hit paths form an end-to-end runnable,
-verified cache at this snapshot.
+valid line at source level. The shared write path now has an implementation
+exercised in isolation, but its read counterpart and SoC connection remain
+missing.
+These modules do not yet form an end-to-end runnable, verified cached SoC.
 
 ## Representation and Addressing
 
@@ -118,7 +123,8 @@ offset then identifies one SRAM word.
 
 CPU addresses count logical bytes. The SRAM wrapper address counts complete
 80-bit records; it must not receive the CPU byte address or a multiplication
-by ten. HyperRAM byte serialization is a separate, still-unimplemented layer.
+by ten. HyperRAM byte serialization is a separate layer, implemented for writes
+in the [shared arbiter](cache-mem-arbiter.md#logical-addresses-and-physical-transfers).
 
 The SRAM instances now use the derived `SramWordsPerWay`, `SramAddrWidth` and
 `RecordBits`, with one instance per `NumWays`. The request vector is defaulted
@@ -422,11 +428,13 @@ described below has run; functional read behavior has not been RTL-simulated.
 
 The cache now has `mem_req_t` / `mem_rsp_t` type parameters and `mem_req_o` /
 `mem_rsp_i` ports. These are protocol-neutral, complete-line transfers to the
-planned shared arbiter. They are not OBI requests or direct HyperBus commands.
+shared arbiter. They are not OBI requests or direct HyperBus commands.
 `mem_req_o = '0` supplies combinational defaults. Refill and write-back states
-override their command, stream and completion fields. The shared arbiter,
-packer and HyperBus transfer engine are still unimplemented. The existing hit
-paths are reused after a successful refill.
+override their command, stream and completion fields. The shared arbiter now
+includes write packing and the midend host-command/completion path; read
+unpacking and integration remain unfinished. See
+[Cache Memory Arbiter](cache-mem-arbiter.md) for the implemented state sequence.
+The existing hit paths are reused after a successful refill.
 
 `cache_pkg::cache_mem_data_t` contains a complete `cap_store_t record` plus a
 one-bit `last`. The record preserves both payload words, tags and stored ECC.
@@ -489,11 +497,12 @@ to represent its complete line.
 
 A logical 64-byte line has `cmd.records = 8`, requiring at least four count
 bits. It becomes 20 physical 32-bit host beats only in the shared packing and
-transfer logic. `MaxBurstBeats` belongs to that future logic, not this command
-or the data-cache parameters. The arbiter retains its selected owner until
-the complete line operation's completion handshake. No transaction ID is
-included because the initial interface allows only one outstanding operation
-per cache and one selected shared owner.
+transfer logic. The current arbiter issues one host command for the complete
+line; it has no `MaxBurstBeats` cap or arbiter-side segmentation. Configured
+lines must fit the midend's supported transfer limits. The arbiter retains its
+selected owner until the complete line operation's completion handshake. No
+transaction ID is included because the initial interface allows only one
+outstanding operation per cache and one selected shared owner.
 
 ## Miss, Refill and Replacement Control
 

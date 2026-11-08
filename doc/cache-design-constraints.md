@@ -5,6 +5,8 @@ Date: 8 November 2026
 Status: architectural baseline, not a claim of implemented or verified RTL.
 See [Cache Implementation Status](cache-implementation-status.md) for the current
 source-level behavior, incomplete paths, SRAM mapping and ECC fault model.
+The implemented write transport and port ownership are described in
+[Cache Memory Arbiter](cache-mem-arbiter.md).
 This document supersedes the earlier proposal where it used the Ibex I-cache,
 the shared 65-bit ECC scheme, or one stored capability tag plus a reserved bit.
 The current record has two 40-bit words, each with its own stored tag.
@@ -26,9 +28,9 @@ The current record has two 40-bit words, each with its own stored tag.
 - Keep ECC checking in the core for the initial design. The cache stores and
   forwards encoded words; its partial-store path updates ECC without decoding
   or correcting data. The fault-model limitations below are part of this choice.
-- Support burst transfers in the first cache implementation. Use one shared
-  transaction arbiter between the cache request paths and the protected
-  HyperRAM transfer engine.
+- Support burst transfers in the first cache implementation. The shared
+  transaction arbiter also performs address expansion and record packing,
+  connecting directly to the existing HyperBus midend host interface.
 
 ## Two Different Tags
 
@@ -140,9 +142,11 @@ HostBeatsPerLine  = PhysicalLineBits / 32
 | 128 bytes | 16 | 160 bytes | 40 |
 
 A 64-byte logical line therefore requires an 80-byte physical transfer. Burst
-lengths must use physical sizes, not logical line sizes. A single incrementing
-burst is the target when controller, chip-range and timing limits allow it;
-otherwise split the transfer while preserving its ordering and error handling.
+lengths must use physical sizes, not logical line sizes. The current baseline
+issues one incrementing host command per complete line, with no artificial
+`MaxBurstBeats` cap or arbiter-side splitting. Select line sizes that fit the
+host-command and controller limits. The midend may segment that command
+internally at supported chip-range boundaries without ending cache ownership.
 
 Implement incrementing burst transport from the start. The cache refill and
 write-back interfaces must describe complete line operations, including their
@@ -203,9 +207,10 @@ The source now uses `SEND_WRITEBACK_CMD`, `WRITE_BACK_DATA` and
 reads use a shared line-record index and one-cycle result-valid/last tracking.
 Use the sticky last-read marker to stop new reads, and the FIFO output's
 accepted `last` to end the send phase: they refer to different pipeline points.
-After the final data handshake, wait for final status. The future shared engine
-must report success only after all required HyperBus write responses, not just
-after accepting records into an internal buffer.
+After the final data handshake, wait for final status. The shared arbiter
+forwards the midend's final host write response, not success inferred from
+accepting records into its internal buffer. See its
+[completion contract](cache-mem-arbiter.md#completion-and-backpressure).
 
 Use the existing `stream_fifo` as the initial write-back read-ahead buffer:
 
@@ -236,7 +241,7 @@ identical cache geometry, clocks, packing, burst limits and workloads. Measure
 mapped standard-cell area, timing, occupancy/full cycles, SRAM-read bubbles,
 downstream starvation, write-back latency, physical bus utilization and total
 workload cycles. Keep, resize or remove the queue based on that comparison.
-Depth sweeps are independent of the future engine's `MaxBurstBeats` parameter.
+Depth sweeps are independent of the arbiter's `WriteBufferBits` parameter.
 
 Until recovery is implemented, simulation assertions stop on accepted error
 completions for both refill and write-back when assertion evaluation is enabled.
@@ -248,24 +253,25 @@ contract before connecting the shared engine.
 
 ## Transaction Arbiter and Ownership FSM
 
-The instruction-cache and data-cache memory request paths share the protected
-memory controller and HyperBus host interface. A state machine must select one
-request and retain its owner until that complete memory operation finishes.
-The instruction-cache path only issues reads. The data-cache path issues both
-refill reads and dirty-line write-backs.
+The instruction-cache and data-cache memory request paths share the HyperBus
+host interface. `cache_mem_arbiter` combines port selection, address expansion
+and encoded-record transport. Its write path is implemented; read unpacking
+is still a placeholder. The intended instruction-cache path only issues reads;
+the data-cache path issues refill reads and dirty-line write-backs.
 
 ### Arbitration Granularity
 
 - One request describes one complete line read or line write-back, not one beat.
 - Accept a request only when no previous owner or undrained response remains.
-- Latch the selected owner, operation, address and physical host-beat count at
-  acceptance. Derive sizes from that owner's cache configuration; the two caches
-  may have different line lengths.
-- Owner is `NONE`, `ICACHE` or `DCACHE`. Only the selected path may supply write
-  data or receive the operation's read data and completion status.
-- Keep ownership across all host bursts needed for this request. Splitting a
-  line at a supported range or transfer limit must not allow the other cache to
-  insert commands between its segments.
+- Latch the selected port, operation, logical address and record count at
+  acceptance. Derive the physical host-beat count from that captured descriptor;
+  the two caches may have different line lengths but use a common packet type.
+- `IDLE` means no owned operation; otherwise `selected_port_q` identifies the
+  owner. Only that path may supply write data or receive completion. Port numbers
+  are not hardwired to cache identities.
+- Issue one host command for the complete line and retain ownership until the
+  cache accepts final status. There are no independently arbitrated line
+  segments or per-port suspended-transfer counters in this baseline.
 - Internal segmentation by the HyperBus midend does not end the owned request.
 - Use round-robin selection when both paths are eligible at an operation
   boundary. Arbitration is not repeated for each beat or segment.
@@ -279,18 +285,23 @@ recovery times, refresh opportunities and legal burst boundaries still apply.
 
 ### FSM Responsibilities
 
-The following are logical states; final RTL state names and any equivalent
-merging of states are implementation details.
+The current RTL states are shown below. The shared write-data block runs after
+the state `case` in the same `always_comb`, enabling the same buffer/host-word
+logic in `SEND_WRITE` and on a write command's acceptance in `ISSUE_COMMAND`.
 
 | State | Required behavior | Transition |
 | --- | --- | --- |
 | `IDLE` | Choose an eligible cache request, acknowledge it and latch its owner and descriptor. Do not acknowledge the other request. | Accepted request -> `ISSUE_COMMAND` |
-| `ISSUE_COMMAND` | Present the next host-burst command. Hold command fields and valid stable until the midend accepts it. Retain owner. | Command accepted -> `RECEIVE_READ` or `SEND_WRITE` |
-| `RECEIVE_READ` | Route accepted read beats to the owner's refill path. Count beats, check `last` and accumulate errors. The receive buffer must not depend on CPU word consumption. | Segment complete -> next `ISSUE_COMMAND`, or `COMPLETE` after all segments and required format processing |
-| `SEND_WRITE` | Supply only the owner's encoded write data. Hold each beat stable under backpressure and assert `last` on the segment's final beat. | Final write beat accepted -> `WAIT_WRITE_RESPONSE` |
-| `WAIT_WRITE_RESPONSE` | Wait for the matching write response and record its status. Sending the final data beat alone is not completion. | Response accepted -> next `ISSUE_COMMAND`, or `COMPLETE` after all required responses |
-| `COMPLETE` | Return the accumulated result to the owner. Keep completion stable until accepted. All outstanding transport activity must already be drained. | Completion accepted -> release owner and return to `IDLE` |
-| `FAULT` | Block new owners and preserve the failed request's diagnostic state. Never reassign responses from an uncertain outstanding transaction. | Coordinated reset/recovery only |
+| `ISSUE_COMMAND` | Present one full-line host command and hold it stable until accepted. The first write word may be accepted on that same edge. Retain owner. | Command accepted -> `RECEIVE_READ` or `SEND_WRITE` |
+| `RECEIVE_READ` | Placeholder. Read unpacking, record delivery, errors and final handover remain to be implemented. | No working read exit yet |
+| `SEND_WRITE` | Supply only the owner's packed write data. Hold each offered word under backpressure and mark the line's final host beat with `last`. | Registered beat count equals total -> `WAIT_WRITE_RESPONSE` |
+| `WAIT_WRITE_RESPONSE` | Forward midend write validity/status to cache completion and cache completion readiness back to the midend. No additional completion register/state is used. | Completion accepted by cache -> advance round-robin, release owner and return to `IDLE` |
+
+The response bridge must offer `done_valid` independently of `done_ready` and
+must not consume the midend's response before the cache accepts it. Its status
+mapping is `HyperRespOkay` to no error, all other responses to `done.error = 1`.
+The midend retains a blocked response. The current source has no separate
+`COMPLETE` or `FAULT` state, no retry and no hardware cache-recovery policy.
 
 If format processing and burst reception run concurrently, completion still
 waits until the complete encoded line is stored and no transport error remains.
@@ -302,25 +313,28 @@ explicitly tracked.
 ### Progress and Error Rules
 
 - Advance beat counters only on valid/ready handshakes, never on elapsed cycles.
-- Track both remaining line beats and the current host burst's expected beats.
-  Check `last` against the accepted host command, not an assumed cycle count.
+- Use one line-local host-beat counter; reset it on a new cache command.
+  Generate host `w.last` from the full-line count. Incoming record counts and
+  cache-side `w.last` still need protocol assertions in the arbiter.
 - Do not release ownership on command acceptance, a temporary lack of valid
   data, backpressure, or a change in either cache's pending request.
-- A 64-byte logical line has 20 host beats. If split into two host bursts of
-  10 beats, keep the same owner across both commands and their responses.
+- A 64-byte logical line has 20 host beats in one arbiter-issued command.
+  Midend-internal segmentation does not create a new arbitration boundary.
 - A successful transport read completes only after all expected encoded beats
   have been received, format processing has finished and the final result is
   accepted by the owner. Architectural data-integrity checking remains the
   core's responsibility.
 - A successful write completes only after all write beats and all required write responses
   have been accepted, and the final result is accepted by the owner.
-- On a reported transfer/ECC error, retain the error and drain accepted commands
-  before returning failure. Unissued remaining segments may be cancelled on
-  failure; a failed read must not validate a partial line. Never route a late
-  response to the next owner.
+- On a reported transport error, return failure only after accepted transport
+  activity is drained. The implemented write path forwards final midend status;
+  it does not itself check ECC. Read-error recovery is not yet implemented, and
+  a failed read must not validate a partial line. Never route a late response to
+  the next owner.
 - Unexpected response ordering or beat counts, a stuck transfer or an uncertain
-  partial write must enter `FAULT`. Do not simply unlock
-  the bus on a timeout and start another request. Preserve dirty data on failure.
+  partial write need an explicit fault/recovery policy before integration. Do
+  not simply unlock on a timeout and start another request. Preserve dirty data
+  on failure; this policy is not an implemented arbiter `FAULT` state today.
 - Reset/recovery must also reset or quiesce the downstream path before a new
   owner is admitted; clearing the owner register alone is insufficient.
 
@@ -567,12 +581,23 @@ Do not interpret a depth-zero build as the no-FIFO baseline without implementing
 its alternative source control. Record both physical area and whole-workload
 performance; fewer SRAM-read stalls alone do not justify extra queue storage.
 
+Sweep the arbiter's `WriteBufferBits` module parameter independently, for example
+at 96, 160 and 320 bits. It defaults to 96 bits and must be at least 96 for the
+current 80-bit record / 32-bit host packing. The buffer struct is generated by
+`CACHE_TYPEDEF_WRITE_BUFFER_T` in `cache_typedef.svh`; its data width, occupancy
+counter and free-space check follow the parameter, not a package-wide constant.
+Pass `.WriteBufferBits(...)` at instantiation. A Verilator test top can expose
+and forward the same parameter for `-GWriteBufferBits=160` overrides; this is not
+yet a Croc SoC build option because the arbiter is not connected there. Each
+configuration requires a new elaboration/build, not a runtime setting.
+
 The previous 4 KiB I-cache / 8 KiB D-cache / 16-byte lines / two ways remain
 possible measurement starting points, not fixed requirements or proven optima.
 
 ## Required Follow-Up Decisions
 
-- Freeze the shared data-plus-tag ECC codec and backing byte serialization.
+- Freeze the shared data-plus-tag ECC codec and implement read unpacking that
+  matches the documented contiguous 80-bit-record write serialization.
 - Specify split capability-store commit, consistent capability reads and all
   conflicting accesses, including JTAG and DMA. Before sharing the D-cache OBI
   input, enforce requester ownership across both halves and validate their
@@ -593,4 +618,5 @@ possible measurement starting points, not fixed requirements or proven optima.
 - Verify packing across record and line boundaries, ECC fault injection and
   independently varied I-cache/D-cache geometries before performance sweeps.
 - Verify simultaneous cache requests, fair handover, backpressure on every
-  channel, multi-burst ownership, write-response delay and error/reset handling.
+  channel, ownership across midend-internal segments, write-response delay and
+  error/reset handling. See the [current isolated write-test scope](cache-mem-arbiter.md#verification-scope).
