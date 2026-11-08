@@ -49,7 +49,7 @@ build or test.
 | Request acceptance | `req && gnt` captures address, write flag, byte-enable, capability-access flag, ID and first write word | Verify response accounting and the capability-pair input contract |
 | Set lookup | Valid/address-tag comparison across all ways; a miss is decided after the scan; invalid ways are preferred over the set's round-robin candidate | Functional verification and integration |
 | Full 32-bit store hit | Places the buffered 40-bit word in the selected half, marks dirty and answers in the SRAM-write cycle | RTL verification and end-to-end ECC wiring |
-| Capability store hit | Buffers both words, writes all 80 bits, answers once in the write cycle and once in `IDLE` using `cap_flag_q` | Pair-contract enforcement, core flag wiring and separate second-request ID handling for generic requesters |
+| Capability store hit | Buffers both words, writes all 80 bits, captures the second request ID in both receive paths and answers once in the write cycle and once in `IDLE` using `cap_flag_q` | Pair-contract enforcement, core flag wiring and regression of distinct IDs in both receive paths |
 | Byte/halfword store hit | Reads the old word, merges bytes/tag/ECC, writes the selected half, marks dirty and answers | RTL verification; empty masks are excluded by a simulation assertion, not a hardware no-op policy |
 | ECC merge helper | `ecc_merge_partial32()` calls the original inverted Ibex encoder and is used in `ACCESS_SRAM` | End-to-end integration and tag protection are not implemented |
 | Ordinary read hit | Reads one record, selects one stored word and returns data, stored tag/ECC and the saved ID | RTL verification and core ECC wiring |
@@ -205,9 +205,12 @@ Instruction fetches belong to the separate I-cache path.
 
 The SRAM-write cycle returns the first OBI response. `cap_flag_q` requests the
 second response in the following `IDLE` cycle, which may also accept a new
-request. The current store path echoes the first saved ID for both responses;
-different IDs for the two halves are not yet handled. This relies on the
-current same-core-ID assumption and must be revisited for generic requesters.
+request. Both `CACHE_LOOKUP` and `WAIT_FOR_SECOND_WORD` now capture the second
+request ID in `obi_aid_d`: the first response still uses the previous
+`obi_aid_q`, and the following `IDLE` response uses the newly captured ID.
+Different IDs no longer depend on the same-core-ID assumption at source
+level. Regress both immediate and delayed second requests with distinct IDs;
+capturing response IDs does not itself enforce capability-pair ownership.
 Writing both halves at one SRAM edge does not provide system-wide atomicity
 against other memory paths.
 
@@ -330,9 +333,34 @@ registered record. No new request is granted in `SEND_SECOND_WORD`.
 
 The implementation assumes the second request belongs to the same capability
 load and is the read of `A + 4`. This is not currently enforced by the
-store-only second-address assertion. The initial CPU-data-only contract must
-be preserved or explicitly enforced before allowing other requesters to
-interleave here.
+store-only second-address assertion.
+
+### Deferred: Capability-Pair Contract Before Sharing the Cache Input
+
+The initial contract is an exclusive Ibex data-port input with correctly
+paired capability requests. Before allowing JTAG, DMA or another bus master
+to share the data-cache OBI input, enforce ownership across both halves.
+The crossbar arbitrates individual requests; it does not automatically reserve
+the next granted request for the owner of a capability's first half.
+
+For example, after accepting a capability-store first half at `A`, the cache
+could accept another master's ordinary read at `A + 4` as the upper store
+half. The current receive logic copies its `wdata`, ECC and tag fields without
+checking that it is a matching capability write. The existing address-only
+assertion passes because the address is correct, even though a read's write
+data is not valid store payload. Correctly paired, exclusive Ibex data traffic
+does not trigger this case. A separate I-cache competing at the downstream
+memory arbiter is not another requester at this OBI input.
+
+Follow-up work must cover first-address alignment, second address `A + 4`,
+matching read/write direction and capability marker, supported byte masks and
+requester ownership for both capability loads and stores. Requester ownership
+must not be confused with equal transaction IDs: the two halves may have
+different IDs and still belong to the same requester. Preserve the exclusive
+input or prevent interleaving with explicit pair-aware arbitration; assertions
+alone diagnose violations in simulation, not prevent them in hardware. Add
+tests with competing requesters and malformed second halves before enabling
+shared-input operation. This contract is deferred, not implemented here.
 
 ### OBI Timing and Latency
 

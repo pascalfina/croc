@@ -574,7 +574,11 @@ possible measurement starting points, not fixed requirements or proven optima.
 
 - Freeze the shared data-plus-tag ECC codec and backing byte serialization.
 - Specify split capability-store commit, consistent capability reads and all
-  conflicting accesses, including JTAG and DMA.
+  conflicting accesses, including JTAG and DMA. Before sharing the D-cache OBI
+  input, enforce requester ownership across both halves and validate their
+  address, direction, capability marker and byte masks; address-only assertions
+  do not detect an ordinary read at the expected second-store address. See the
+  [deferred capability-pair contract](cache-implementation-status.md#deferred-capability-pair-contract-before-sharing-the-cache-input).
 - Specify instruction/data consistency, including `FENCE.I` and code modification.
 - Specify cache allocation, replacement, flush/drain and write-back error handling.
 - Measure the separate refill-completion wait before merging it with final data
