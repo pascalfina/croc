@@ -11,6 +11,12 @@
     logic                  dirty;                \
   } type_name;
 
+`define CACHE_TYPEDEF_WRITE_BUFFER_T(type_name, buffer_bits) \
+  typedef struct packed {                                  \
+    logic [(buffer_bits)-1:0] data;                        \
+    logic [$clog2((buffer_bits)+1)-1:0] valid_bits;         \
+  } type_name;
+
 `define CACHE_TYPEDEF_MEM_CMD_T(type_name, addr_width, record_count_width) \
   typedef struct packed {                                               \
     logic                            write;                             \
