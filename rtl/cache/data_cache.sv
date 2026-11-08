@@ -1,11 +1,12 @@
 `include "cache_typedef.svh"
 
 module data_cache #(
-    parameter int unsigned AddrWidth      = 32,
-    parameter int unsigned CpuDataWidth   = 32,
-    parameter int unsigned CacheDataBytes = 8 * 1024,
-    parameter int unsigned LineDataBytes  = 16,
-    parameter int unsigned NumWays        = 2,
+    parameter int unsigned AddrWidth            = 32,
+    parameter int unsigned CpuDataWidth         = 32,
+    parameter int unsigned CacheDataBytes       = 8 * 1024,
+    parameter int unsigned LineDataBytes        = 16,
+    parameter int unsigned NumWays              = 2,
+    parameter int unsigned WritebackFifoDepth   = 2,
     parameter type         obi_req_t      = logic,
     parameter type         obi_rsp_t      = logic,
     parameter type         mem_req_t      = logic,
@@ -25,23 +26,6 @@ module data_cache #(
 );
 
     import cache_pkg::*;
-
-    typedef enum logic [3:0]
-    {  
-        IDLE,
-        CACHE_LOOKUP,
-        ACCESS_SRAM,
-        WAIT_FOR_SECOND_WORD,
-        SEND_SECOND_WORD,
-        SEND_WRITEBACK_CMD, 
-        SEND_REFILL_CMD, 
-        WAIT_REFILL_DATA, 
-        WAIT_REFILL_DONE
-
-
-    } state_t;
-
-    state_t state_q, state_d;
 
     localparam int unsigned EccBits = CacheEccBits;
 
@@ -64,7 +48,27 @@ module data_cache #(
 
     localparam int unsigned ObiIdWidth = $bits(obi_req_i.a.aid);
 
-    `include "data_cache_param_checks.svh"
+    localparam int unsigned WbFifoUsageWidth = 
+    (WritebackFifoDepth > 1) ? $clog2(WritebackFifoDepth) : 1;
+
+    // fsm states signals
+    typedef enum logic [3:0]
+    {  
+        IDLE,
+        CACHE_LOOKUP,
+        ACCESS_SRAM,
+        WAIT_FOR_SECOND_WORD,
+        SEND_SECOND_WORD,
+        SEND_WRITEBACK_CMD, 
+        SEND_REFILL_CMD, 
+        WAIT_REFILL_DATA, 
+        WAIT_REFILL_DONE,
+        WRITE_BACK_DATA,
+        WAIT_WRITEBACK_DONE
+        
+    } state_t;
+
+    state_t state_q, state_d;
 
     // sram signals 
 
@@ -84,14 +88,13 @@ module data_cache #(
 
     logic [TagBits-1:0] addr_tag;
     logic [SetIndexWidth-1:0] set_index;
+    logic [OffsetBits-1:0] block_offset;
 
     logic [WayIndexWidth-1:0] selected_way_q, selected_way_d;
     logic [WayIndexWidth-1:0] replace_way_q [NumSets];
     logic [WayIndexWidth-1:0] replace_way_d [NumSets];
-
-
     logic [RecordBits-1:0] rdata_cache_q,rdata_cache_d;
-    logic [OffsetBits-1:0] block_offset;
+    logic [$clog2(RecordsPerLine)-1:0] line_record_index_q, line_record_index_d;
 
     // obi singals 
     logic [CpuDataWidth/8-1:0]  obi_req_be_q, obi_req_be_d;
@@ -101,17 +104,22 @@ module data_cache #(
     logic                       obi_is_cap_access_q, obi_is_cap_access_d;
     logic [ObiIdWidth-1:0]      obi_aid_q, obi_aid_d;
 
+    // fifo signals 
+    cache_mem_data_t wb_fifo_in, wb_fifo_out;
+    logic wb_fifo_in_valid, wb_fifo_in_ready;
+    logic wb_fifo_out_valid, wb_fifo_out_ready;
+    logic [WbFifoUsageWidth-1:0] wb_fifo_usage;
+
+    logic wb_read_valid_q, wb_read_valid_d;
+    logic wb_read_last_q, wb_read_last_d;
+
     // extra flags 
     logic cap_flag_q, cap_flag_d;
     logic cap_flag_read_valid_q, cap_flag_read_valid_d;
     logic hit_found;
     logic all_valid;
 
-    logic [$clog2(RecordsPerLine)-1:0] block_refill_count_q, block_refill_count_d;
-
-
-    cap_store_t cap_store_q, cap_store_d; 
-            
+    cap_store_t cap_store_q, cap_store_d;    
     cap_word_t read_word; // for halfworld 
     cap_word_t merged_word; //for halfword
 
@@ -128,6 +136,10 @@ module data_cache #(
 
     assign read_word = obi_req_addr_q[2] ? sram_rdata[selected_way_q][RecordBits-1 : RecordBits/2] 
         : sram_rdata[selected_way_q][RecordBits/2-1 : 0];
+
+    assign wb_fifo_in.record = sram_rdata[selected_way_q];
+    assign wb_fifo_in.last   = wb_read_last_q;
+    assign wb_fifo_in_valid  = wb_read_valid_q;
 
     
 
@@ -150,7 +162,7 @@ module data_cache #(
         selected_way_d = selected_way_q;
         rdata_cache_d = rdata_cache_q;
         replace_way_d = replace_way_q;
-        block_refill_count_d = block_refill_count_q;
+        line_record_index_d = line_record_index_q;
 
         sram_req = '0;
         sram_we     = 0;
@@ -159,6 +171,10 @@ module data_cache #(
 
         hit_found = 0;
         all_valid = 0;
+
+        wb_read_valid_d = 1'b0;
+        wb_read_last_d = wb_read_last_q;
+        wb_fifo_out_ready = 0;
 
         cap_flag_d = cap_flag_q;
         cap_flag_read_valid_d = cap_flag_read_valid_q;
@@ -175,6 +191,8 @@ module data_cache #(
 
                 if (cap_flag_q) begin // after cap store we need to send 2. resp back
                     obi_rsp_o.r.rid = obi_aid_q;
+                    obi_rsp_o.r.rdata = '0;
+                    obi_rsp_o.r.r_optional.ecc = 7'h2A;
                     obi_rsp_o.rvalid = 1;
                     cap_flag_d = 1'b0;
                 end
@@ -224,6 +242,8 @@ module data_cache #(
                                     cache_meta_d[set_index][way].dirty = 1;
 
                                     obi_rsp_o.r.rid = obi_aid_q;
+                                    obi_rsp_o.r.rdata = '0;
+                                    obi_rsp_o.r.r_optional.ecc = 7'h2A;
                                     obi_rsp_o.rvalid = 1;
                                     cap_flag_d = 1;
                                     state_d = IDLE; 
@@ -257,6 +277,8 @@ module data_cache #(
 
                                     // respond back to obi to save cycles
                                     obi_rsp_o.r.rid = obi_aid_q;
+                                    obi_rsp_o.r.rdata = '0;
+                                    obi_rsp_o.r.r_optional.ecc = 7'h2A;
                                     obi_rsp_o.rvalid = 1;
                                     state_d = IDLE; 
 
@@ -309,7 +331,9 @@ module data_cache #(
                     cache_meta_d[set_index][selected_way_q].dirty = 1;
 
                     obi_rsp_o.r.rid = obi_aid_q;
-                    obi_rsp_o.rvalid = 1;
+                    obi_rsp_o.r.rdata = '0;
+                    obi_rsp_o.r.r_optional.ecc = 7'h2A;
+                    obi_rsp_o.rvalid = 1; //already write response for the first request second response in idle
                     cap_flag_d = 1;
                     state_d = IDLE; 
                 end
@@ -341,6 +365,8 @@ module data_cache #(
                     cache_meta_d[set_index][selected_way_q].dirty = 1;
 
                     obi_rsp_o.r.rid = obi_aid_q;
+                    obi_rsp_o.r.rdata = '0;
+                    obi_rsp_o.r.r_optional.ecc = 7'h2A;
                     obi_rsp_o.rvalid = 1;
                     state_d = IDLE; 
                 end
@@ -393,16 +419,101 @@ module data_cache #(
                 state_d = IDLE;
             end
 
+            SEND_WRITEBACK_CMD: begin
+              
+                mem_req_o.cmd.write = 1; // we need to writeback cacheline
+                 
+                if (NumSets > 1) begin // use adress of old cache line
+                    mem_req_o.cmd.line_addr = {cache_meta_q[set_index][selected_way_q].addr_tag,
+                                            set_index,{OffsetBits{1'b0}}};
+                end 
+                else begin // corner case for set = 0
+                    mem_req_o.cmd.line_addr = {cache_meta_q[set_index][selected_way_q].addr_tag,
+                                            {OffsetBits{1'b0}}};
+                end
+
+                mem_req_o.cmd.records = RecordsPerLine; // write an entire cacheline
+                mem_req_o.cmd_valid = 1'b1;
+                line_record_index_d = 0;
+
+               
+
+
+                if (mem_req_o.cmd_valid && mem_rsp_i.cmd_ready) begin //start reading from sram
+                    sram_req[selected_way_q] = 1;
+                    sram_we = 0;
+                    sram_word_addr = set_index * RecordsPerLine + line_record_index_d;
+
+                    line_record_index_d = 1;
+
+                    wb_read_valid_d = 1'b1;
+                    wb_read_last_d  = (RecordsPerLine == 1);
+
+                    state_d = WRITE_BACK_DATA;   
+                end
+
+
+            end
+
+            WRITE_BACK_DATA: begin
+
+                // fifo not full yet and we did not read all words from sram yet
+                if (int'(wb_fifo_usage) + 1 <  WritebackFifoDepth && wb_fifo_in_ready && !wb_read_last_q) begin 
+                    
+                    sram_req[selected_way_q] = 1;
+                    sram_we = 0;
+                    sram_word_addr = set_index * RecordsPerLine + line_record_index_q;
+                    line_record_index_d = line_record_index_q + 1;
+
+                    wb_read_valid_d = 1'b1;
+                    wb_read_last_d  = (line_record_index_q == RecordsPerLine - 1);
+                end
+
+                
+                mem_req_o.w_valid  = wb_fifo_out_valid; //fifo has valid data
+                mem_req_o.w        = wb_fifo_out;      // write data from fifo 
+                wb_fifo_out_ready = mem_rsp_i.w_ready; // tell fifo ready to recive data
+
+                // fifo pops if ready_i & valid;
+                if (wb_fifo_out_ready && wb_fifo_out_valid) begin //beat written fifo -> mem_req_o
+                    
+
+                    
+                    if (wb_fifo_out.last) begin // last beat transmitted
+                        //line_record_index_d = 0;
+                        state_d = WAIT_WRITEBACK_DONE;
+                    end
+                    
+                    
+                end
+                
+
+            end
+
+            WAIT_WRITEBACK_DONE: begin
+                mem_req_o.done_ready = 1;
+
+                if (mem_req_o.done_ready && mem_rsp_i.done_valid) begin
+                    if (mem_rsp_i.done.error) begin //todo: erro handling do smth
+                        // todo later somewhen maybe never
+                    end
+                    else begin //word is nice
+                        state_d = SEND_REFILL_CMD; //ready to refill the cahcheline now
+                    end
+                end
+            end
+
             SEND_REFILL_CMD: begin
                 mem_req_o.cmd.write = 0; // we want to read from hypperam
 
+                // use adress received from obi bus
                 mem_req_o.cmd.line_addr = {obi_req_addr_q[AddrWidth-1:OffsetBits],{OffsetBits{1'b0}}};
                 mem_req_o.cmd.records = RecordsPerLine; //fetch one cacheline
                 mem_req_o.cmd_valid = 1'b1;
 
                 if (mem_req_o.cmd_valid && mem_rsp_i.cmd_ready) begin
                     state_d = WAIT_REFILL_DATA;
-                    block_refill_count_d = 0;
+                    line_record_index_d = 0;
                 end
 
             end
@@ -412,15 +523,15 @@ module data_cache #(
                 if (mem_rsp_i.r_valid && mem_req_o.r_ready) begin //write data to sram
                     sram_req[selected_way_q] = 1;
                     sram_we = 1;
-                    sram_word_addr = set_index * RecordsPerLine + block_refill_count_q;
+                    sram_word_addr = set_index * RecordsPerLine + line_record_index_q;
                     sram_wdata = mem_rsp_i.r.record;
                     sram_mask     = '1;
                     
-                    if (block_refill_count_q == RecordsPerLine - 1) begin
+                    if (line_record_index_q == RecordsPerLine - 1) begin
                         state_d = WAIT_REFILL_DONE;
                     end
                     else begin
-                        block_refill_count_d  = block_refill_count_q + 1;
+                        line_record_index_d  = line_record_index_q + 1;
                     end
                 end
             end
@@ -451,8 +562,6 @@ module data_cache #(
                 end 
             end
 
-
-            
             default: begin
                 state_d = IDLE;
             end
@@ -496,7 +605,7 @@ module data_cache #(
         
     end
 
-    // cache meta-data
+    // cache meta data flip flops
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
             for (int unsigned s = 0; s < NumSets; s++) begin
@@ -507,15 +616,51 @@ module data_cache #(
             end
             selected_way_q <= 0;
             rdata_cache_q <= 0;
-            block_refill_count_q <= 0;
+            line_record_index_q <= 0;
         end else begin
             cache_meta_q <= cache_meta_d;
             selected_way_q <= selected_way_d;
             rdata_cache_q <= rdata_cache_d;
             replace_way_q <= replace_way_d;
-            block_refill_count_q <= block_refill_count_d;
+            line_record_index_q <= line_record_index_d;
         end
     end
+
+    // fifo flip flops 
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (!rst_ni) begin
+            wb_read_valid_q <= 1'b0;
+            wb_read_last_q  <= 1'b0;
+        end else begin
+            wb_read_valid_q <= wb_read_valid_d;
+            wb_read_last_q  <= wb_read_last_d;
+        end
+    end
+
+    // fifo for writeback case #TODO STILL NEED TO EVALUATE IF ITS WORTH 
+    // REGARDING AREA VS PERFORMANCE 
+
+    stream_fifo #(
+        .DEPTH        (WritebackFifoDepth),
+        .T            (cache_mem_data_t),
+        .FALL_THROUGH (1'b1)
+    ) i_writeback_fifo (
+        .clk_i        (clk_i),
+        .rst_ni       (rst_ni),
+        .flush_i      (1'b0),
+        .testmode_i   (1'b0),
+        .usage_o      (wb_fifo_usage),
+
+        .data_i       (wb_fifo_in),
+        .valid_i      (wb_fifo_in_valid),
+        .ready_o      (wb_fifo_in_ready),
+
+        .data_o       (wb_fifo_out),
+        .valid_o      (wb_fifo_out_valid),
+        .ready_i      (wb_fifo_out_ready)
+    );
+
+    // sram physcial mmemory for cache 
 
     for (genvar way = 0; way < NumWays; ++way) begin : gen_sram_ways
         cache_data_sram #(
@@ -533,34 +678,6 @@ module data_cache #(
             .rdata_o(sram_rdata[way])
         );
     end
-    // synthesis translate_off
-    assert_cap_store_second_addr: assert property (
-        @(posedge clk_i) disable iff (!rst_ni)
-        (
-            (state_q == CACHE_LOOKUP ||
-            state_q == WAIT_FOR_SECOND_WORD) &&
-            obi_is_cap_access_q &&
-            obi_req_write_q &&
-            obi_req_i.req &&
-            obi_rsp_o.gnt
-        )
-        |-> (obi_req_i.a.addr == obi_req_addr_q + AddrWidth'(4))
-    ) else $fatal(
-        1,
-        "Capability store: expected second address 0x%0h, got 0x%0h",
-        obi_req_addr_q + AddrWidth'(4),
-        obi_req_i.a.addr
-    );
-
-    assert_write_be_nonzero: assert property (
-        @(posedge clk_i) disable iff (!rst_ni)
-        (obi_req_i.req && obi_rsp_o.gnt && obi_req_i.a.we)
-        |-> (obi_req_i.a.be != '0)
-        ) else $fatal(
-            1,
-            "data_cache: accepted write with empty byte enable"
-        );
-// synthesis translate_on
-
+    `include "data_cache_param_checks.svh"
 
 endmodule

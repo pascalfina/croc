@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: SHL-0.51
-// Included in data_cache's parameter and port scope for elaboration checks.
+// Included in data_cache's module scope for elaboration and simulation checks.
 
     if (NumWays == 0 || (NumWays & (NumWays - 1)) != 0) begin : gen_invalid_ways
         $error("data_cache: NumWays must be a positive power of two.");
@@ -61,3 +61,62 @@
         $bits(mem_rsp_i.done_valid) != 1 || $bits(mem_req_o.done_ready) != 1) begin : gen_invalid_mem_handshake_widths
         $error("data_cache: memory valid and ready fields must each be one bit wide.");
     end
+
+    // synthesis translate_off
+    assert_writeback_success: assert property (
+        @(posedge clk_i) disable iff (!rst_ni)
+        (
+            state_q == WAIT_WRITEBACK_DONE &&
+            mem_rsp_i.done_valid &&
+            mem_req_o.done_ready
+        )
+        |-> !mem_rsp_i.done.error
+    ) else $fatal(
+        1,
+        "data_cache: writeback failed for set %0d, way %0d; error handling is not implemented",
+        set_index,
+        selected_way_q
+    );
+
+    assert_refill_success: assert property (
+        @(posedge clk_i) disable iff (!rst_ni)
+        (
+            state_q == WAIT_REFILL_DONE &&
+            mem_rsp_i.done_valid &&
+            mem_req_o.done_ready
+        )
+        |-> !mem_rsp_i.done.error
+    ) else $fatal(
+        1,
+        "data_cache: refill failed for set %0d, way %0d; error handling is not implemented",
+        set_index,
+        selected_way_q
+    );
+
+    assert_cap_store_second_addr: assert property (
+        @(posedge clk_i) disable iff (!rst_ni)
+        (
+            (state_q == CACHE_LOOKUP ||
+            state_q == WAIT_FOR_SECOND_WORD) &&
+            obi_is_cap_access_q &&
+            obi_req_write_q &&
+            obi_req_i.req &&
+            obi_rsp_o.gnt
+        )
+        |-> (obi_req_i.a.addr == obi_req_addr_q + AddrWidth'(4))
+    ) else $fatal(
+        1,
+        "Capability store: expected second address 0x%0h, got 0x%0h",
+        obi_req_addr_q + AddrWidth'(4),
+        obi_req_i.a.addr
+    );
+
+    assert_write_be_nonzero: assert property (
+        @(posedge clk_i) disable iff (!rst_ni)
+        (obi_req_i.req && obi_rsp_o.gnt && obi_req_i.a.we)
+        |-> (obi_req_i.a.be != '0)
+        ) else $fatal(
+            1,
+            "data_cache: accepted write with empty byte enable"
+        );
+    // synthesis translate_on
