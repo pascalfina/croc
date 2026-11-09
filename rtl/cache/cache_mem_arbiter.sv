@@ -52,8 +52,8 @@ module cache_mem_arbiter #(
         ISSUE_COMMAND,
         SEND_WRITE,
         RECEIVE_READ,
-        WAIT_WRITE_RESPONSE
-
+        WAIT_WRITE_RESPONSE, 
+        COMPLETE_READ
 
     } state_t;
 
@@ -71,6 +71,8 @@ module cache_mem_arbiter #(
     logic [31:0] numb_burst_beats;
     logic [HostBeatCountWidth-1:0] total_host_beats;
     logic [HostBeatCountWidth-1:0] count_beat_d, count_beat_q;
+
+    logic err_r_q, err_r_d;
 
     logic [AddrWidth-1:0] current_addr;
 
@@ -114,6 +116,8 @@ module cache_mem_arbiter #(
 
         count_beat_d = count_beat_q;
 
+        err_r_d = err_r_q;
+
         found_port = 0;
         port = 0;
 
@@ -124,6 +128,7 @@ module cache_mem_arbiter #(
         current_addr = '0;
 
         write_buffer_d = write_buffer_q;
+
 
 
         case (state_q)
@@ -174,6 +179,7 @@ module cache_mem_arbiter #(
                     end
                     else begin
                         state_d = RECEIVE_READ;
+                        err_r_d = 1'b0;
                     end     
                 end  
             end
@@ -197,7 +203,46 @@ module cache_mem_arbiter #(
             end
 
             RECEIVE_READ: begin
-                //Todo
+           
+                if (write_buffer_q.valid_bits <= WriteBufferCountWidth'(WriteBufferBits - HostDataWidth)) begin //buffer still has space
+
+                    host_req_o.r_ready = 1'b1;
+
+                    if (host_rsp_i.r_valid && host_req_o.r_ready) begin // cache has data for us
+
+                        count_beat_d = count_beat_q + 1'b1;
+                        write_buffer_d.data[WriteBufferIndexWidth'(write_buffer_q.valid_bits) +: HostDataWidth] = host_rsp_i.r.data;
+                        write_buffer_d.valid_bits = write_buffer_q.valid_bits + WriteBufferCountWidth'(HostDataWidth); // update valid bits
+                        err_r_d = err_r_q | (host_rsp_i.r.resp != hyperbus_pkg::HyperRespOkay);
+                    end  
+                end
+
+                if (write_buffer_d.valid_bits >= cache_pkg::CacheRecordBits) begin //we have bits to send to cache
+
+                    cache_rsp_o[selected_port_q].r.record = write_buffer_d.data[cache_pkg::CacheRecordBits-1:0];
+                    cache_rsp_o[selected_port_q].r_valid = 1;
+                    cache_rsp_o[selected_port_q].r.last = (count_beat_d == total_host_beats) && (write_buffer_d.valid_bits == WriteBufferCountWidth'(cache_pkg::CacheRecordBits)); //check if its last 80 bit message
+                    
+                    if (cache_rsp_o[selected_port_q].r_valid && cache_req_i[selected_port_q].r_ready) begin
+                        write_buffer_d.data = write_buffer_d.data >> cache_pkg::CacheRecordBits;
+                        write_buffer_d.valid_bits = write_buffer_d.valid_bits - WriteBufferCountWidth'(cache_pkg::CacheRecordBits);
+
+                        if (cache_rsp_o[selected_port_q].r.last) begin
+                            state_d = COMPLETE_READ;
+                        end
+                    end
+                    
+                end
+            end
+
+            COMPLETE_READ: begin
+                cache_rsp_o[selected_port_q].done_valid = 1;
+                cache_rsp_o[selected_port_q].done.error = err_r_q;
+
+                if (cache_rsp_o[selected_port_q].done_valid && cache_req_i[selected_port_q].done_ready) begin
+                    rr_start_port_d = selected_port_q + 1;
+                    state_d = IDLE;
+                end
             end
 
             default: begin
@@ -234,9 +279,6 @@ module cache_mem_arbiter #(
         
     end
 
-
-
-
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
             state_q <= IDLE;
@@ -244,6 +286,7 @@ module cache_mem_arbiter #(
             selected_port_q <= 0;
             cache_data_q <= '0;
             count_beat_q <= 0;
+            err_r_q <= 0;
         end
         else begin
             state_q <= state_d;
@@ -251,6 +294,7 @@ module cache_mem_arbiter #(
             selected_port_q <= selected_port_d;
             cache_data_q <= cache_data_d;
             count_beat_q <= count_beat_d;
+            err_r_q <= err_r_d;
         end
         
     end

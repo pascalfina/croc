@@ -594,6 +594,27 @@ configuration requires a new elaboration/build, not a runtime setting.
 The previous 4 KiB I-cache / 8 KiB D-cache / 16-byte lines / two ways remain
 possible measurement starting points, not fixed requirements or proven optima.
 
+## Deferred Optimization: Midend Read Throughput
+
+- [ ] Evaluate removing unnecessary `CollectPhy` cycles in the
+  [HyperBus read adapter](../rtl/vendor/hyperbus/src/hyperbus_read_adapter.sv).
+  When an accepted input already completes a host word, transition directly
+  to `EmitHost`. When the current word is accepted and the next complete word
+  arrives simultaneously, consider remaining in `EmitHost` instead of taking
+  another collection cycle. This is a possible optimization, not implemented.
+
+The existing readiness fix prevents overwriting a complete buffered word;
+it does not yet maximize throughput. Preserve stable data, response status
+and `last` under backpressure, and retain correct assembly for narrower input
+words and single-PHY operation. Do not replace bursts with individual accesses.
+
+Before adopting the optimization, measure accepted host words per cycle,
+backend receive-buffer occupancy, HyperRAM clock pauses, pin-level burst
+utilization, line-fill latency and workload runtime. Compare area and timing
+as well. Buffers can absorb short internal stalls, but sustained backpressure
+can pause the memory clock. Actual HyperRAM-pin utilization has not yet been
+measured; burst support alone does not establish full bandwidth utilization.
+
 ## Required Follow-Up Decisions
 
 - Freeze the shared data-plus-tag ECC codec and implement read unpacking that
