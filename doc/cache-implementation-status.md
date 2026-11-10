@@ -8,10 +8,15 @@ sections retain their earlier D-cache/arbiter snapshot unless noted otherwise.
 
 The [crossbar routing contract](cache-design-constraints.md#crossbar-routing-for-instruction-and-data-accesses)
 was added on 10 November 2026: CPU instruction input 3 overrides the decoded
-`XbarHyperbus` target with `XbarICache`; other routes stay unchanged. The
+`XbarHyperbus` target with `XbarICache`; JTAG debug input 1 now overrides it with
+`XbarJtagHyperram`. Register/peripheral routes stay unchanged. The
 input-specific override is present in `obi_xbar.sv` and configured in
-`croc_domain.sv`. Cache port wiring and end-to-end SoC verification remain
-in progress; this note does not supersede the integration limitations below.
+`croc_domain.sv`. Both caches and the JTAG adapter are wired to the shared
+arbiter and listed in Bender. The adapter's rationale, posted-write barrier and
+current verification boundary are documented in
+[JTAG HyperRAM Adapter](jtag-hyperram-adapter.md). This integration update
+supersedes older wiring limitations below; end-to-end firmware boot, ECC and
+cache coherence remain separate work.
 
 This document describes the in-progress data-cache sources, the read/store-hit
 and refill/write-back paths, replacement state, SRAM design decisions and the
@@ -32,7 +37,9 @@ implementation accurately.
 | [data_cache.sv](../rtl/cache/data_cache.sv) | OBI request capture, lookup, hit paths, refill/replacement control and FIFO-buffered dirty write-back |
 | [instruction_cache.sv](../rtl/cache/instruction_cache.sv) | Read-only OBI instruction requests, SRAM lookup/read, full-line refill and replacement without write-back |
 | [instruction_cache_param_checks.svh](../rtl/cache/instruction_cache_param_checks.svh) | I-cache geometry/interface checks and simulation-only fetch/refill assertions |
-| [cache_mem_arbiter.sv](../rtl/cache/cache_mem_arbiter.sv) | Shared port ownership, round-robin handover, address expansion, write packing and final write completion; read path unfinished |
+| [jtag_hyperram_adapter.sv](../rtl/cache/jtag_hyperram_adapter.sv) | Uncached JTAG OBI access, encoded-word buffering, masked commits, partial-write merging, readback and loader completion barrier |
+| [jtag_hyperram_adapter_param_checks.svh](../rtl/cache/jtag_hyperram_adapter_param_checks.svh) | Adapter data/block/interface elaboration checks, included inside the module |
+| [cache_mem_arbiter.sv](../rtl/cache/cache_mem_arbiter.sv) | Shared port ownership, round-robin handover, address expansion, masked write packing, read unpacking and final completion |
 | [cache_pkg.sv](../rtl/cache/cache_pkg.sv) | Stored-word and line-stream structs, completion status, record dimensions and partial-store ECC function |
 | [cache_typedef.svh](../rtl/cache/cache_typedef.svh) | Instance-dependent metadata, write-buffer and cache/arbiter command, request and response structs |
 | [cache_data_sram.sv](../rtl/cache/cache_data_sram.sv) | Masked 80-bit SRAM interface and physical macro packing |
@@ -44,10 +51,11 @@ implementation accurately.
 | [Ibex load/store unit](../ibex/rtl/ibex_load_store_unit.sv) | Core byte-enable generation and existing data ECC encoder/checker |
 | [Ibex LSU protocol](../ibex/doc/03_reference/load_store_unit.rst) | Grant/response timing and split capability transfers |
 
-Only the cache package is currently listed in the root Bender sources. The
-data-cache, instruction-cache, SRAM-wrapper and shared-arbiter module files are not, and these
-modules are not connected in the SoC. A generate loop instantiates one SRAM
-wrapper per way; the default configuration still has two wrappers.
+The cache package, data-cache, instruction-cache, SRAM-wrapper, shared-arbiter
+and JTAG-adapter module files are listed in the root Bender sources. In
+`croc_domain.sv`, the caches occupy arbiter ports 0/1 and the adapter occupies
+port 2. A generate loop instantiates one SRAM wrapper per way; the default
+configuration still has two wrappers per cache.
 
 The core still has `MemECC = 0`. Its write-integrity output is not connected,
 its read-integrity input is tied to zero, and OBI request ECC is tied to zero

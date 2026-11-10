@@ -12,6 +12,16 @@ or HyperRAM-model sign-off.
 Related documents: [Cache Design Constraints](cache-design-constraints.md) and
 [Cache Implementation Status](cache-implementation-status.md).
 
+Integration update, 10 November 2026: `croc_domain` now uses three arbiter ports:
+D-cache 0, I-cache 1 and the uncached [JTAG HyperRAM Adapter](jtag-hyperram-adapter.md)
+on port 2. That page documents why the loader bypasses the write-back D-cache,
+its completion barrier and its partial-word handling. The current write stream
+includes `w_strb`, packed alongside data: D-cache write-back supplies all ones,
+whereas JTAG can mask unfilled words. The older snapshot below predates this
+mask extension, read-path completion and removal of the old OBI frontend from
+the SoC memory path; those older statements are not the current integration
+status.
+
 ## Position and Interfaces
 
 The module combines the shared cache arbiter and write transfer engine. Cache

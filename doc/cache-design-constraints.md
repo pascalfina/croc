@@ -55,6 +55,12 @@ The CPU data bus uses input 2. Give the caches separate crossbar outputs:
 target. The historical name `XbarHyperbus` does not imply that requests still
 pass through the old OBI frontend before reaching the D-cache.
 
+JTAG debug system-bus input 1 has its own uncached target,
+`XbarJtagHyperram = 6`. The [JTAG HyperRAM Adapter](jtag-hyperram-adapter.md)
+converts loader accesses to the same encoded-record interface as the caches.
+This avoids leaving loaded code only in dirty D-cache lines while the I-cache
+refills from HyperRAM.
+
 Keep the existing `CrocAddrMap` HyperRAM rule pointing to `XbarHyperbus`.
 Do not add an overlapping address rule for the I-cache. Instead, the existing
 `obi_xbar` applies an optional input-specific target override after address
@@ -63,14 +69,18 @@ decoding and before its existing demux/mux network:
 | Crossbar input | Address-decoder result | Final output |
 | --- | --- | --- |
 | 3: CPU instruction | `XbarHyperbus` | `XbarICache` |
-| Any other input | `XbarHyperbus` | `XbarHyperbus`, the D-cache target |
+| 1: JTAG debug system bus | `XbarHyperbus` | `XbarJtagHyperram` |
+| Any remaining input | `XbarHyperbus` | `XbarHyperbus`, the D-cache target |
 | Any input | Any other target, including boot ROM/peripherals | Unchanged |
 
 The main crossbar enables this with `RemapEnable = 1`, `RemapInputPort = 3`,
 `RemapFrom = XbarHyperbus` and `RemapTo = XbarICache`. The generic crossbar
-defaults `RemapEnable` to zero. Its output count must include both targets;
+defaults `RemapEnable` to zero. The second override uses `Remap2Enable = 1`,
+`Remap2InputPort = 1`, `Remap2From = XbarHyperbus` and
+`Remap2To = XbarJtagHyperram`; it is disabled by default in the generic crossbar.
+Its output count must include all three HyperRAM targets;
 with the current contiguous output indices,
-`NumXbarSubordinates = int'(XbarICache) + 1`, giving six outputs independently
+`NumXbarSubordinates = int'(XbarJtagHyperram) + 1`, giving seven outputs independently
 of the four address rules.
 
 This override changes only the selected output index, not the request address.
@@ -85,13 +95,17 @@ The override adds combinational target selection, not a new FSM or pipeline
 stage; timing still requires verification. Separate outputs avoid merging CPU
 instruction traffic with the D-cache's two-request capability sequence at a
 common downstream OBI port. They do not enforce capability-pair ownership
-against other D-cache requesters such as debug or DMA, and they do not provide
+against remaining D-cache requesters such as DMA, and they do not provide
 instruction/data coherence or cache maintenance. Both caches still connect
-downstream to the shared `cache_mem_arbiter` for HyperRAM line transfers.
+downstream to the shared `cache_mem_arbiter` for HyperRAM line transfers. The
+uncached JTAG adapter uses arbiter port 2, alongside D-cache port 0 and I-cache
+port 1. Its posted writes require a successful final read barrier before CPU
+start; see the [loader contract](jtag-hyperram-adapter.md#posted-responses-and-the-loader-barrier).
 
-This is the integration contract, not evidence of a completed or verified SoC
-connection. The old frontend must no longer drive the D-cache's crossbar
-response output when the cache takes over that connection.
+These connections are present in `croc_domain.sv`; standalone routing and
+adapter/midend regressions have passed. This does not establish a complete
+cached-SoC firmware boot or cache coherence. The old frontend no longer drives
+the D-cache's crossbar response output.
 
 ## Two Different Tags
 
