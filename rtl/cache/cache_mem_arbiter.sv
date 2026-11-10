@@ -258,6 +258,7 @@ module cache_mem_arbiter #(
                 
                 if (cache_req_i[selected_port_q].w_valid) begin // cache has data for us
                     write_buffer_d.data[WriteBufferIndexWidth'(write_buffer_q.valid_bits) +: cache_pkg::CacheRecordBits] = cache_req_i[selected_port_q].w.record;
+                    write_buffer_d.strb[WriteBufferIndexWidth'(write_buffer_q.valid_bits / 8) +: cache_pkg::CacheRecordBits/8] = cache_req_i[selected_port_q].w_strb;
                     write_buffer_d.valid_bits = write_buffer_q.valid_bits + WriteBufferCountWidth'(cache_pkg::CacheRecordBits); // update valid bits
                 end  
             end
@@ -266,11 +267,12 @@ module cache_mem_arbiter #(
 
                 host_req_o.w_valid = 1'b1;
                 host_req_o.w.data = write_buffer_d.data[HostDataWidth-1:0];
-                host_req_o.w.strb = '1;
+                host_req_o.w.strb = write_buffer_d.strb[HostBeatBytes-1:0];
                 host_req_o.w.last = (count_beat_q == total_host_beats - 1'b1);
 
                 if (host_rsp_i.w_ready) begin
                     write_buffer_d.data = write_buffer_d.data >> HostDataWidth;
+                    write_buffer_d.strb = write_buffer_d.strb >> HostBeatBytes;
                     write_buffer_d.valid_bits = write_buffer_d.valid_bits - WriteBufferCountWidth'(HostDataWidth);
                     count_beat_d = count_beat_q + 1'b1;
                 end  

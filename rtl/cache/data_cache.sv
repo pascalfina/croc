@@ -478,6 +478,7 @@ module data_cache #(
                 
                 mem_req_o.w_valid  = wb_fifo_out_valid; //fifo has valid data
                 mem_req_o.w        = wb_fifo_out;      // write data from fifo 
+                mem_req_o.w_strb   = '1;
                 wb_fifo_out_ready = mem_rsp_i.w_ready; // tell fifo ready to recive data
 
                 // fifo pops if ready_i & valid;

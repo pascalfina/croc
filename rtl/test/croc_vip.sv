@@ -195,6 +195,9 @@ module croc_vip #(
     int unsigned word_bytes;
     int active_access;
     bit [31:0] active_next_addr;
+    bit image_nonempty = 1'b0;
+    bit [31:0] last_byte_addr;
+    logic [31:0] flush_data;
     automatic dm::sbcs_t byte_sbcs = dm::sbcs_t'{sbautoincrement: 1'b1, sbaccess: 0, default: '0};
     automatic dm::sbcs_t word_sbcs = dm::sbcs_t'{sbautoincrement: 1'b1, sbaccess: 2, default: '0};
 
@@ -251,6 +254,8 @@ module croc_vip #(
         if (status != 1) begin
           break; // No more data to read on this line
         end
+        last_byte_addr = addr;
+        image_nonempty = 1'b1;
 
         // remove the byte from the line (2 numbers + 1 space)
         line = line.substr(3, line.len()-1);
@@ -300,6 +305,10 @@ module croc_vip #(
         active_next_addr += 1;
       end
     end
+
+    // The adapter drains its posted writes before completing a memory read.
+    if (image_nonempty)
+      jtag_read_reg32({last_byte_addr[31:2], 2'b00}, flush_data);
 
     jtag_dbg.write_dmi(dm::SBCS, JtagInitSbcs);
     $fclose(file);

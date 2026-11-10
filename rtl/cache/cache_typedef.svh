@@ -14,6 +14,7 @@
 `define CACHE_TYPEDEF_WRITE_BUFFER_T(type_name, buffer_bits) \
   typedef struct packed {                                  \
     logic [(buffer_bits)-1:0] data;                        \
+    logic [((buffer_bits)+7)/8-1:0] strb;                   \
     logic [$clog2((buffer_bits)+1)-1:0] valid_bits;         \
   } type_name;
 
@@ -30,6 +31,7 @@
     cmd_type                     cmd;              \
     logic                        cmd_valid;        \
     cache_pkg::cache_mem_data_t   w;                \
+    logic [cache_pkg::CacheRecordBits/8-1:0] w_strb; \
     logic                        w_valid;          \
     logic                        r_ready;          \
     logic                        done_ready;       \
