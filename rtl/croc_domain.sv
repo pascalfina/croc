@@ -457,6 +457,10 @@ module croc_domain import croc_pkg::*; #(
     .RemapInputPort     ( 3           ),
     .RemapFrom          ( XbarHyperbus ),
     .RemapTo            ( XbarICache   ),
+    .Remap2Enable       ( 1'b1        ),
+    .Remap2InputPort    ( 1           ),
+    .Remap2From         ( XbarHyperbus ),
+    .Remap2To           ( XbarJtagHyperram ),
     .NumMaxTrans        ( 2                    ),
     .NumAddrRules       ( $size(CrocAddrMap)   ),
     .addr_map_rule_t    ( addr_map_rule_t      ),
@@ -646,8 +650,8 @@ obi_to_reg #(
   // cache mem arbiter 
   //Todo replace hardcoded params with generic params for later param sweep
 
-  mem_req_t [1:0] arbiter_cache_req;
-  mem_rsp_t [1:0] arbiter_cache_rsp;
+  mem_req_t [2:0] arbiter_cache_req;
+  mem_rsp_t [2:0] arbiter_cache_rsp;
 
   `HYPERBUS_TYPEDEF_HOST_ALL_CT(hyperbus_host,logic [31:0],logic [31:0],logic [3:0])
 
@@ -657,7 +661,7 @@ obi_to_reg #(
   logic arbiter_idle;
 
   cache_mem_arbiter #(
-      .NumPorts(2),
+      .NumPorts(3),
       .AddrWidth(32),
       .HostDataWidth(32),
       .WriteBufferBits(96),
@@ -685,6 +689,34 @@ obi_to_reg #(
       .idle_o(arbiter_idle)
   );
 
+  // jtag adapter
+
+  sbr_obi_req_t jtag_hyperram_obi_req;
+  sbr_obi_rsp_t jtag_hyperram_obi_rsp;
+  mem_req_t jtag_hyperram_arbiter_req;
+  mem_rsp_t jtag_hyperram_arbiter_rsp;
+
+  assign jtag_hyperram_obi_req = all_sbr_obi_req[XbarJtagHyperram];
+  assign all_sbr_obi_rsp[XbarJtagHyperram] = jtag_hyperram_obi_rsp;
+  assign arbiter_cache_req[2] = jtag_hyperram_arbiter_req;
+  assign jtag_hyperram_arbiter_rsp = arbiter_cache_rsp[2];
+
+  jtag_hyperram_adapter #(
+    .AddrWidth(SbrObiCfg.AddrWidth),
+    .ObiDataWidth(SbrObiCfg.DataWidth),
+    .BlockDataBytes(16),
+    .obi_req_t(sbr_obi_req_t),
+    .obi_rsp_t(sbr_obi_rsp_t),
+    .mem_req_t(mem_req_t),
+    .mem_rsp_t(mem_rsp_t)
+  ) i_jtag_hyperram_adapter (
+    .clk_i,
+    .rst_ni,
+    .obi_req_i(jtag_hyperram_obi_req),
+    .obi_rsp_o(jtag_hyperram_obi_rsp),
+    .mem_req_o(jtag_hyperram_arbiter_req),
+    .mem_rsp_i(jtag_hyperram_arbiter_rsp)
+  );
 
 // hyperbus subordinate
 

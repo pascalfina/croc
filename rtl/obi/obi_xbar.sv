@@ -31,6 +31,10 @@ module obi_xbar #(
   parameter int unsigned RemapInputPort = 0,
   parameter int unsigned RemapFrom      = 0,
   parameter int unsigned RemapTo        = 0,
+  parameter bit          Remap2Enable    = 1'b0,
+  parameter int unsigned Remap2InputPort = 0,
+  parameter int unsigned Remap2From      = 0,
+  parameter int unsigned Remap2To        = 0,
   /// The maximum number of outstanding transactions.
   parameter int unsigned       NumMaxTrans        = 32'd0,
   /// The number of address rules.
@@ -80,6 +84,9 @@ module obi_xbar #(
       if (RemapEnable && (i == RemapInputPort) &&
           (decoded_select == select_t'(RemapFrom))) begin
         sbr_port_select[i] = select_t'(RemapTo);
+      end else if (Remap2Enable && (i == Remap2InputPort) &&
+                   (decoded_select == select_t'(Remap2From))) begin
+        sbr_port_select[i] = select_t'(Remap2To);
       end
     end
 
