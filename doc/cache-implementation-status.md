@@ -2,6 +2,10 @@
 
 Snapshot: 8 November 2026.
 
+The [instruction-cache section](#instruction-cache) was added on 10 November
+2026 and includes the standalone verification results from 9 November. Other
+sections retain their earlier D-cache/arbiter snapshot unless noted otherwise.
+
 This document describes the in-progress data-cache sources, the read/store-hit
 and refill/write-back paths, replacement state, SRAM design decisions and the
 partial-store ECC update. The shared arbiter's current write path, port
@@ -19,6 +23,8 @@ implementation accurately.
 | Source | Responsibility |
 | --- | --- |
 | [data_cache.sv](../rtl/cache/data_cache.sv) | OBI request capture, lookup, hit paths, refill/replacement control and FIFO-buffered dirty write-back |
+| [instruction_cache.sv](../rtl/cache/instruction_cache.sv) | Read-only OBI instruction requests, SRAM lookup/read, full-line refill and replacement without write-back |
+| [instruction_cache_param_checks.svh](../rtl/cache/instruction_cache_param_checks.svh) | I-cache geometry/interface checks and simulation-only fetch/refill assertions |
 | [cache_mem_arbiter.sv](../rtl/cache/cache_mem_arbiter.sv) | Shared port ownership, round-robin handover, address expansion, write packing and final write completion; read path unfinished |
 | [cache_pkg.sv](../rtl/cache/cache_pkg.sv) | Stored-word and line-stream structs, completion status, record dimensions and partial-store ECC function |
 | [cache_typedef.svh](../rtl/cache/cache_typedef.svh) | Instance-dependent metadata, write-buffer and cache/arbiter command, request and response structs |
@@ -32,7 +38,7 @@ implementation accurately.
 | [Ibex LSU protocol](../ibex/doc/03_reference/load_store_unit.rst) | Grant/response timing and split capability transfers |
 
 Only the cache package is currently listed in the root Bender sources. The
-data-cache, SRAM-wrapper and shared-arbiter module files are not, and these
+data-cache, instruction-cache, SRAM-wrapper and shared-arbiter module files are not, and these
 modules are not connected in the SoC. A generate loop instantiates one SRAM
 wrapper per way; the default configuration still has two wrappers.
 
@@ -61,13 +67,102 @@ build or test.
 | Dirty write-back | Old-line command, synchronous SRAM reads, parameterized fall-through FIFO, read-ahead capacity check, last-record handshake and separate completion wait | Shared packing/HyperBus engine, actual error recovery, FIFO area/performance evaluation and RTL tests |
 | Replacement/eviction | Per-set round-robin pointers reset to zero and advance after successful refill; dirty victims use the write-back states before refill | Functional tests and local/global policy comparison |
 | Shared HyperBus arbiter | Command selection, whole-operation ownership, round-robin handover, write packing and completion forwarding | Read path, complete interface guards, competing-port RTL tests, actual midend/HyperRAM tests and SoC integration; see [module documentation](cache-mem-arbiter.md) |
-| I-cache | Architectural decisions only | RTL, routing, maintenance, coherence and integration |
+| I-cache | Read-hit, full-line refill, invalid-way preference, per-set round-robin, captured OBI ID and stored ECC transport; standalone regression passed | SoC routing, core ECC wiring, hardware error recovery, invalidation and instruction/data consistency; see [I-cache details](#instruction-cache) |
 
 All valid bits reset to zero. The draft refill success path can now install a
 valid line at source level. The shared write path now has an implementation
 exercised in isolation, but its read counterpart and SoC connection remain
 missing.
 These modules do not yet form an end-to-end runnable, verified cached SoC.
+
+## Instruction Cache
+
+Updated: 10 November 2026.
+
+The external I-cache reuses the D-cache's geometry, metadata lookup, masked
+`cache_data_sram` wrapper, complete-line memory interface and refill/replay
+sequence. It accepts word-aligned 32-bit OBI reads and captures the request
+address and ID. The internal Ibex I-cache stays disabled.
+
+Current defaults are 8 KiB of usable payload, 16 logical bytes per line and two
+ways. Each 80-bit SRAM record holds two 32-bit payload words with their stored
+ECC and capability tags. Thus, a default line contains two records: 16 logical
+bytes in 20 stored bytes. Instructions use the same backing format as data;
+fetch does not interpret the capability tags as execution permission. The
+current response forwards the selected stored tag, but instruction integration
+must not interpret it as a capability load.
+
+The I-cache never modifies instructions. It therefore needs no dirty tracking,
+write-back states or write-back FIFO: evicting a line only discards a copy of
+data already held in HyperRAM. The shared metadata typedef currently retains
+an unused `dirty` field. Writing received refill records into the local SRAM
+does not constitute a HyperRAM write.
+
+### Read and Refill Sequence
+
+| State | Responsibility |
+| --- | --- |
+| `IDLE` | Assert OBI grant; capture address and ID on `req && gnt` |
+| `CACHE_LOOKUP` | Compare valid/address tags in the indexed set; on a hit, select the way and issue the SRAM read; on a miss, prefer an invalid way, otherwise use the set's round-robin candidate |
+| `ACCESS_SRAM` | Return the selected 32-bit word, stored ECC/tag and captured ID with one OBI response, then return to `IDLE` |
+| `SEND_REFILL_CMD` | Hold a line-aligned read command and `RecordsPerLine` until command acceptance |
+| `WAIT_REFILL_DATA` | Write each accepted 80-bit record into the selected way at `set * RecordsPerLine + record_index`; advance only on handshake |
+| `WAIT_REFILL_DONE` | On successful completion, install the address tag and valid bit, advance the replacement pointer with wrap and return to lookup to replay the pending request |
+
+The cache is blocking and assumes OBI without response backpressure, matching
+the current `UseRReady = 0` configuration. The SRAM read is requested during
+lookup; its one-cycle-latency output is used directly in `ACCESS_SRAM`, without
+an additional result register. Tested hits respond two clocks after request
+acceptance. The current FSM accepts continuous all-hit traffic once every three
+clocks, not one request per clock.
+
+### Code Changes and Invalidation
+
+Suppose the instruction at `0x80001000` is already resident in the I-cache.
+If that instruction is later replaced in backing memory, for example through
+JTAG, the I-cache does not detect the write. A subsequent hit still returns
+the old instruction from its SRAM copy.
+
+**Invalidation means marking the affected cache entry as invalid**, by clearing
+its valid bit. The next fetch then misses and loads the new instruction from
+HyperRAM. No I-cache write-back is needed: invalidation discards the old copy
+rather than writing it over the new code.
+
+There is currently no invalidation or maintenance interface. Initial bring-up
+therefore assumes the program is loaded before CPU start and remains unchanged
+afterwards. For later code changes through the write-back D-cache, the order
+must be: write the modified code back to HyperRAM, invalidate the affected
+I-cache entries, then fetch the modified code. A general `FENCE.I`/debug/DMA
+consistency mechanism remains to be designed and connected; disabling the
+internal Ibex I-cache does not provide invalidation for this external cache.
+
+### Assertions and Standalone Verification
+
+`instruction_cache_param_checks.svh` is included in the module scope. It checks
+geometry and interface widths, read-only and word-aligned accepted fetches,
+refill `last` against the record count, and early/final refill errors. Enable
+Verilator `--assert` to execute concurrent assertions. The current error policy
+is simulation fail-fast, not hardware recovery: without assertions, an accepted
+error completion leaves the unfinished error branch waiting indefinitely.
+
+For the actual IHP SRAM mapping, Verilator 5.042 requires the tested
+`--unroll-count 64 --unroll-stmts 1` settings. Count 1 fails while elaborating
+the 64-bit write-mask generate loop. This changes a simulator elaboration limit,
+not the hardware or the cache's cycle count.
+
+Standalone tests live outside Croc in the sibling `../croc-icache-tests`
+directory, alongside the D-cache and arbiter suites. The final matrix and
+stress run passed 102 functional simulations with 1,093,830 checked OBI fetch
+responses. Coverage includes generic/IHP SRAMs, 14 configurations, both record
+halves, ECC/tag/ID transport, replacement, long stalls, continuous requests and
+coordinated reset. Six injected faults triggered their expected assertion;
+eleven invalid configurations produced their parameter diagnostic. The local
+README and `REVIEW-2026-11-09.md` contain commands, logs and exact source hashes.
+
+These are cache unit tests with a memory-stream responder, not a complete
+Ibex/crossbar/arbiter/HyperBus/HyperRAM simulation. ECC is transported unchanged;
+core checking/correction and protection of the capability tag are not verified
+by these tests. SoC integration and cache-maintenance behavior remain open.
 
 ## Representation and Addressing
 

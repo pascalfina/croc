@@ -1,6 +1,6 @@
 # Cache Design Constraints
 
-Date: 8 November 2026
+Date: 10 November 2026
 
 Status: architectural baseline, not a claim of implemented or verified RTL.
 See [Cache Implementation Status](cache-implementation-status.md) for the current
@@ -31,6 +31,14 @@ The current record has two 40-bit words, each with its own stored tag.
 - Support burst transfers in the first cache implementation. The shared
   transaction arbiter also performs address expansion and record packing,
   connecting directly to the existing HyperBus midend host interface.
+
+Read-only does not imply automatic consistency after code changes. For initial
+bring-up, load the program before CPU start and leave it unchanged. Later code
+modification requires writing back any modified code held in the D-cache before
+invalidating the affected I-cache entries. Invalidation clears valid bits and
+forces a fresh read; it does not write instructions back. The maintenance
+interface is not implemented yet. See the [instruction-cache example and current
+implementation](cache-implementation-status.md#code-changes-and-invalidation).
 
 ## Two Different Tags
 
