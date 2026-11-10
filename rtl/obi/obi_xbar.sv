@@ -26,6 +26,11 @@ module obi_xbar #(
   parameter int unsigned       NumSbrPorts        = 32'd0,
   /// The number of manager ports (output ports).
   parameter int unsigned       NumMgrPorts        = 32'd0,
+
+  parameter bit          RemapEnable    = 1'b0,
+  parameter int unsigned RemapInputPort = 0,
+  parameter int unsigned RemapFrom      = 0,
+  parameter int unsigned RemapTo        = 0,
   /// The maximum number of outstanding transactions.
   parameter int unsigned       NumMaxTrans        = 32'd0,
   /// The number of address rules.
@@ -52,6 +57,9 @@ module obi_xbar #(
   input  logic [NumSbrPorts-1:0][cf_math_pkg::idx_width(NumMgrPorts)-1:0] default_idx_i
 );
 
+  typedef logic [cf_math_pkg::idx_width(NumMgrPorts)-1:0] select_t;
+
+
   logic [NumSbrPorts-1:0][cf_math_pkg::idx_width(NumMgrPorts)-1:0] sbr_port_select;
 
   // Signals from the demuxes
@@ -63,6 +71,20 @@ module obi_xbar #(
   sbr_port_obi_rsp_t [NumMgrPorts-1:0][NumSbrPorts-1:0] mgr_rsps;
 
   for (genvar i = 0; i < NumSbrPorts; i++) begin : gen_demux
+
+    select_t decoded_select;
+
+    always_comb begin
+      sbr_port_select[i] = decoded_select;
+
+      if (RemapEnable && (i == RemapInputPort) &&
+          (decoded_select == select_t'(RemapFrom))) begin
+        sbr_port_select[i] = select_t'(RemapTo);
+      end
+    end
+
+
+
     addr_decode #(
       .NoIndices ( NumMgrPorts                         ),
       .NoRules   ( NumAddrRules                        ),
@@ -71,7 +93,7 @@ module obi_xbar #(
     ) i_addr_decode (
       .addr_i          ( sbr_ports_req_i[i].a.addr ),
       .addr_map_i      ( addr_map_i                ),
-      .idx_o           ( sbr_port_select[i]        ),
+      .idx_o           ( decoded_select       ),
       .dec_valid_o     (),
       .dec_error_o     (),
       .en_default_idx_i( en_default_idx_i[i]       ),

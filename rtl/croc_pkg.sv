@@ -83,7 +83,8 @@ package croc_pkg;
     XbarPeriph = 1,
     XbarUser   = 2, 
     XbarRevBitmap = 3,
-    XbarHyperbus = 4
+    XbarHyperbus = 4,
+    XbarICache    = 5
   } croc_xbar_outputs_e;
 
   /// Address map given to the main crossbar
@@ -95,7 +96,7 @@ package croc_pkg;
   };
 
   // +1 for additional OBI error
-  localparam int unsigned NumXbarSubordinates = $size(CrocAddrMap) + 1;
+  localparam int unsigned NumXbarSubordinates = $int'(XbarICache) + 1;
 
   /// Connectivity matrix for the main crossbar [NumXbarManagers-1:0][NumXbarSubordinates-1:0]
   /// Default is fully connected. If you use the iDMA you may want to reduce this

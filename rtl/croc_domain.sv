@@ -451,6 +451,10 @@ module croc_domain import croc_pkg::*; #(
     .mgr_port_obi_rsp_t ( sbr_obi_rsp_t        ),
     .NumSbrPorts        ( NumXbarManagers      ),
     .NumMgrPorts        ( NumXbarSubordinates  ),
+    .RemapEnable        ( 1'b1        ),
+    .RemapInputPort     ( 3           ),
+    .RemapFrom          ( XbarHyperbus ),
+    .RemapTo            ( XbarICache   ),
     .NumMaxTrans        ( 2                    ),
     .NumAddrRules       ( $size(CrocAddrMap)   ),
     .addr_map_rule_t    ( addr_map_rule_t      ),
@@ -699,6 +703,78 @@ obi_to_reg #(
     .reg_req_o(hyperbus_reg_req),
     .reg_rsp_i(hyperbus_reg_rsp)
 );
+
+// data cache 
+//Todo replace hardcoded params with generic params for later param sweep
+
+  sbr_obi_req_t data_cache_obi_req;
+  sbr_obi_rsp_t data_cache_obi_rsp;
+
+  assign data_cache_obi_req = all_sbr_obi_req[XbarHyperbus];
+  assign all_sbr_obi_rsp[XbarHyperbus] = data_cache_obi_rsp;
+
+
+  data_cache #(
+    .AddrWidth(32),            
+    .CpuDataWidth (32),       
+    .CacheDataBytes(8 * 1024),       
+    .LineDataBytes (16),      
+    .NumWays(2),              
+    .WritebackFifoDepth(2),  
+    .obi_req_t(),
+    .obi_rsp_t(),
+    .mem_req_t(),
+    .mem_rsp_t()  
+  )i_data_cache( 
+
+    .clk_i(clk_i),
+    .rst_ni(rst_ni),
+
+    // obi signals data cache <-> crossbar <-> ibex
+    .obi_req_i(),
+    .obi_rsp_o(),
+
+    // Complete-line transfers to the shared memory arbiter.
+    .mem_req_o(),
+    .mem_rsp_i()
+);
+
+// instruction cache
+//Todo replace hardcoded params with generic params for later param sweep
+
+  sbr_obi_req_t instruction_cache_obi_req;
+  sbr_obi_rsp_t instruction_cache_obi_rsp;
+
+assign instruction_cache_obi_req = all_sbr_obi_req[XbarICache];
+assign all_sbr_obi_rsp[XbarICache] = instruction_cache_obi_rsp;
+
+
+instruction_cache #(
+    .AddrWidth(32),            
+    .CpuDataWidth (32),       
+    .CacheDataBytes(8 * 1024),       
+    .LineDataBytes (16),      
+    .NumWays(2),               
+    .obi_req_t(),
+    .obi_rsp_t(),
+    .mem_req_t(),
+    .mem_rsp_t()  
+  )i_instruction_cache( 
+
+    .clk_i(clk_i),
+    .rst_ni(rst_ni),
+
+    // obi signals data cache <-> crossbar <-> ibex
+    .obi_req_i(),
+    .obi_rsp_o(),
+
+    // Complete-line transfers to the shared memory arbiter.
+    .mem_req_o(),
+    .mem_rsp_i()
+);
+
+
+
 
 
 // hyperbus subordinate
