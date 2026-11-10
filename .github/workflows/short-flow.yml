@@ -49,6 +49,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+      # The RTOS needs magic_enum; its other nested submodule (microvium) is unused.
+      - name: Checkout CHERIoT-RTOS magic_enum
+        run: git -C cheriot-rtos submodule update --init --depth 1 sdk/third_party/magic_enum
       - name: Free disk space
         uses: ./.github/actions/free-space
       - name: Install HyperRAM model
