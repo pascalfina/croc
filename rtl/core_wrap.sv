@@ -84,6 +84,7 @@ module core_wrap
     output logic core_busy_o,
 
     output logic data_tag_o,
+    output logic data_is_cap_access_o,
     input  logic data_tag_i,
 
     output logic        trvk_revbm_req_o,
@@ -187,6 +188,7 @@ module core_wrap
       .data_wdata_o(data_wdata_o),
       .data_wdata_intg_o(),
       .data_tag_o(data_tag_o),
+      .data_is_cap_access_o(data_is_cap_access_o),
       .data_rdata_i(data_rdata_i),
       .data_rdata_intg_i(7'd0),
       .data_tag_i(data_tag_i),

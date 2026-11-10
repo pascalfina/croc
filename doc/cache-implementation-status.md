@@ -43,10 +43,14 @@ modules are not connected in the SoC. A generate loop instantiates one SRAM
 wrapper per way; the default configuration still has two wrappers.
 
 The core still has `MemECC = 0`. Its write-integrity output is not connected,
-its read-integrity input is tied to zero, and the OBI request ECC and
-`is_cap_access` fields are tied to zero in `croc_domain.sv`. These are integration
-TODOs, not functional ECC or capability-access signaling. Existing HyperRAM
-tests do not verify this new cache.
+its read-integrity input is tied to zero, and OBI request ECC is tied to zero
+in `croc_domain.sv`. ECC wiring remains an integration TODO. The capability-access
+marker now travels from the LSU through `ibex_core`, `ibex_top` and TRVK to
+`core_wrap.data_is_cap_access_o`, connected directly to the OBI request's
+`a_optional.is_cap_access` field. It marks both words of capability loads and
+stores, independently of the capability-validity tag. Ordinary accesses,
+including split misaligned word accesses, have marker zero. This adds no
+pipeline stage. Existing HyperRAM tests do not verify this new cache.
 
 ## Current Coverage
 
@@ -58,11 +62,11 @@ build or test.
 | Request acceptance | `req && gnt` captures address, write flag, byte-enable, capability-access flag, ID and first write word | Verify response accounting and the capability-pair input contract |
 | Set lookup | Valid/address-tag comparison across all ways; a miss is decided after the scan; invalid ways are preferred over the set's round-robin candidate | Functional verification and integration |
 | Full 32-bit store hit | Places the buffered 40-bit word in the selected half, marks dirty and answers in the SRAM-write cycle | RTL verification and end-to-end ECC wiring |
-| Capability store hit | Buffers both words, writes all 80 bits, captures the second request ID in both receive paths and answers once in the write cycle and once in `IDLE` using `cap_flag_q` | Pair-contract enforcement, core flag wiring and regression of distinct IDs in both receive paths |
+| Capability store hit | Buffers both words, writes all 80 bits, captures the second request ID in both receive paths and answers once in the write cycle and once in `IDLE` using `cap_flag_q` | Pair-contract enforcement, SoC integration and regression of distinct IDs in both receive paths |
 | Byte/halfword store hit | Reads the old word, merges bytes/tag/ECC, writes the selected half, marks dirty and answers | RTL verification; empty masks are excluded by a simulation assertion, not a hardware no-op policy |
 | ECC merge helper | `ecc_merge_partial32()` calls the original inverted Ibex encoder and is used in `ACCESS_SRAM` | End-to-end integration and tag protection are not implemented |
 | Ordinary read hit | Reads one record, selects one stored word and returns data, stored tag/ECC and the saved ID | RTL verification and core ECC wiring |
-| Capability read hit | Reuses the 80-bit store buffer; sends one response per accepted half; an extra flag prevents repeated first responses | RTL verification, SRAM output-hold validation during waiting, pair-contract enforcement and core flag wiring |
+| Capability read hit | Reuses the 80-bit store buffer; sends one response per accepted half; an extra flag prevents repeated first responses | RTL verification, SRAM output-hold validation during waiting, pair-contract enforcement and SoC integration |
 | Refill | Command handshake, full-record SRAM writes, record index, completion wait, metadata installation and lookup replay; an assertion stops on an accepted error completion | Shared transfer engine, actual error/abort recovery, record-count/`last` verification and functional tests |
 | Dirty write-back | Old-line command, synchronous SRAM reads, parameterized fall-through FIFO, read-ahead capacity check, last-record handshake and separate completion wait | Shared packing/HyperBus engine, actual error recovery, FIFO area/performance evaluation and RTL tests |
 | Replacement/eviction | Per-set round-robin pointers reset to zero and advance after successful refill; dirty victims use the write-back states before refill | Functional tests and local/global policy comparison |
@@ -1234,7 +1238,7 @@ Before functional cache testing:
 - Define the capability-pair input contract and conflicting JTAG/DMA accesses,
   plus I-cache/data-cache consistency and maintenance.
 - Finalize and connect the shared data-plus-tag codec in the core and cache;
-  remove the zero ECC and capability-access marker stubs.
+  remove the remaining zero ECC stubs.
 - Register the modules with Bender and connect the cache only after focused
   module tests pass.
 
