@@ -133,11 +133,11 @@ module cache_mem_arbiter #(
 
         case (state_q)
 
-            IDLE: begin
+            IDLE: begin //todo possible optimization drain not over getting first cache entry but annoying to do 
                 
-                idle_o = 1; // ready to receive messages
+                idle_o = 1; // tell hyperbus config that its the right time to update its configuration registers
 
-                if (!drain_i) begin
+                if (!drain_i) begin //dont ake new 
 
                     found_port = 0;
 

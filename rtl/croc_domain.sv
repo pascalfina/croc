@@ -6,6 +6,8 @@
 // - Philippe Sauter <phsauter@iis.ee.ethz.ch>
 
 `include "register_interface/typedef.svh"
+`include "cache_typedef.svh"
+`include "hyperbus/typedef.svh"
 
 module croc_domain import croc_pkg::*; #(
   parameter int unsigned GpioCount = 16,
@@ -477,158 +479,6 @@ module croc_domain import croc_pkg::*; #(
     .default_idx_i    ( '0 )
   );
 
-  // tag controller for sram 
-
-  // hyperbus signals
-  logic frontend_access;
-  logic [31:0] frontend_addr;
-  logic frontend_we;
-  logic frontend_write_tag;
-  logic frontend_data_done;
-  logic frontend_data_error;
-
-  logic tag_crtl_ready;
-
-  logic tag_crtl_read_tag;
-  logic tag_crtl_read_tag_valid;
-  logic tag_crtl_tag_error;
-  logic tag_crtl_tag_ready;
-
-  // sram signals
-
-  logic tag_sram_req;
-  logic tag_sram_we;
-  logic [31:0] tag_sram_addr;
-  logic [31:0] tag_sram_wdata;
-  logic [3:0] tag_sram_be;
-  logic [31:0] tag_sram_rdata;
-
-  logic [NumSramBanks-1:0][31:0] tag_bank_rdata;
-
-  
-
-  tag_sram_crtl #(
-    .DataBaseAddr     ( get_croc_start_addr(XbarHyperbus) ),
-    .DataSizeBytes    ( 4 * 1024 * 1024 ),
-    .DataAddrWidth    ( SbrObiCfg.AddrWidth ),
-    .DataWordWidth    ( SbrObiCfg.DataWidth ),
-    .TagSramDataWidth ( 32 ),
-    .TagSramNumWords  ( NumSramBanks * SramBankNumWords ),
-    .SramReadLatency  ( 1 )
-
-  ) i_tag_sram_crtl (
-    .clk_i(clk_i),
-    .rst_ni(rst_ni),
-
-    // signals from hyperbus frontend
-    .access_i(frontend_access),
-    .write_tag_i(frontend_write_tag),
-    .addr_i(frontend_addr),
-    .we_i(frontend_we),
-    .data_done_i(frontend_data_done),
-    .data_error_i(frontend_data_error),
-    //
-
-    .ready_o(tag_crtl_ready),
-    .read_tag_o(tag_crtl_read_tag),
-    .read_tag_valid_o(tag_crtl_read_tag_valid),
-    .tag_error_o(tag_crtl_tag_error), 
-
-    .tag_ready_o(tag_crtl_tag_ready), //tell hyperbus we are ready
-
-    .tag_sram_req_o(tag_sram_req),
-    .tag_sram_we_o(tag_sram_we),
-    .tag_sram_addr_o(tag_sram_addr),
-    .tag_sram_wdata_o(tag_sram_wdata),
-    .tag_sram_be_o(tag_sram_be),
-    .tag_sram_rdata_i(tag_sram_rdata)
-
-  );
-
-  logic tag_bank_sel;
-
-  assign tag_bank_sel   = tag_sram_addr[14];
-  assign tag_sram_rdata = tag_bank_rdata[tag_bank_sel];
-
-  // tag controller for sram 
-
-  // -----------------
-  // Memories
-  // -----------------
-  localparam int unsigned SramBankAddrWidth = cf_math_pkg::idx_width(SramBankNumWords);
-
-  for (genvar i = 0; i < NumSramBanks; i++) begin : gen_sram_bank
-    logic bank_req;
-    logic [SramBankAddrWidth-1:0] bank_word_addr;
-    
-
-    // obi_sram_shim #(
-    //   .ObiCfg    ( SbrObiCfg     ),
-    //   .obi_req_t ( sbr_obi_req_t ),
-    //   .obi_rsp_t ( sbr_obi_rsp_t )
-    // ) i_sram_shim (
-    //   .clk_i,
-    //   .rst_ni,
-
-    //   .obi_req_i ( xbar_mem_bank_obi_req[i] ),
-    //   .obi_rsp_o ( xbar_mem_bank_obi_rsp[i] ),
-
-    //   .req_o   ( bank_req       ),
-    //   .we_o    ( bank_we        ),
-    //   .addr_o  ( bank_byte_addr ),
-    //   .wdata_o ( bank_wdata     ),
-    //   .be_o    ( bank_be        ),
-
-    //   .gnt_i   ( bank_gnt   ),
-    //   .rdata_i ( bank_rdata ),
-    //   .tag_rdata_i(bank_tag_rdata)
-    // );
-
-    assign bank_req = tag_sram_req && (tag_bank_sel == 1'(i));
-    assign bank_word_addr = tag_sram_addr[SramBankAddrWidth-1:0];
-
-  
-    tc_sram_impl #(
-      .NumWords  ( SramBankNumWords ),
-      .DataWidth ( 32 ),
-      .NumPorts  (  1 ),
-      .Latency   (  1 )
-    ) i_sram (
-      .clk_i,
-      .rst_ni,
-
-      .impl_i  ( sram_impl      ),
-      .impl_o  (),
-
-      .req_i   ( bank_req       ),
-      .we_i    ( tag_sram_we    ),
-      .addr_i  ( bank_word_addr  ),
-
-      .wdata_i ( tag_sram_wdata ),
-      .be_i    ( tag_sram_be    ),
-      .rdata_o ( tag_bank_rdata[i] )
-    );
-
-    //assign bank_gnt = 1'b1; // always ready for request
-    // cheriot tag memory 
-    // tag_memory #(
-    //   .SRAM_OFFSET(BankBaseAddr),
-    //   .TAG_WIDTH(SramBankNumWords)
-    // ) i_tag_mem (
-    //   .clk_i(clk_i),
-    //   .rst_ni(rst_ni),
-    //   .data_req_i(bank_req),
-    //   .data_addr_i(bank_byte_addr),
-    //   .data_tag_i(xbar_mem_bank_obi_req[i].a.a_optional),
-    //   .data_we_i(bank_we),
-    //   .data_tag_o(bank_tag_rdata)
-    // );
-
-  end
-
-  
-
-
   // cheriot revocation bit map 
 
   assign all_sbr_obi_rsp[XbarRevBitmap].r.err = 1'b0;
@@ -707,11 +557,24 @@ obi_to_reg #(
 // data cache 
 //Todo replace hardcoded params with generic params for later param sweep
 
+  // Both caches currently use 16 logical bytes per line.
+  `CACHE_TYPEDEF_MEM_ALL(
+    mem,
+    SbrObiCfg.AddrWidth,
+    $clog2(16 / cache_pkg::CacheRecordDataBytes + 1)
+  )
+
   sbr_obi_req_t data_cache_obi_req;
   sbr_obi_rsp_t data_cache_obi_rsp;
 
+  mem_req_t data_cache_arbiter_req;
+  mem_rsp_t data_cache_arbiter_rsp;
+
   assign data_cache_obi_req = all_sbr_obi_req[XbarHyperbus];
   assign all_sbr_obi_rsp[XbarHyperbus] = data_cache_obi_rsp;
+
+  assign arbiter_cache_req[0] = data_cache_arbiter_req;
+  assign data_cache_arbiter_rsp = arbiter_cache_rsp[0];
 
 
   data_cache #(
@@ -721,78 +584,116 @@ obi_to_reg #(
     .LineDataBytes (16),      
     .NumWays(2),              
     .WritebackFifoDepth(2),  
-    .obi_req_t(),
-    .obi_rsp_t(),
-    .mem_req_t(),
-    .mem_rsp_t()  
+    .obi_req_t(sbr_obi_req_t),
+    .obi_rsp_t(sbr_obi_rsp_t),
+    .mem_req_t(mem_req_t),
+    .mem_rsp_t(mem_rsp_t)  
   )i_data_cache( 
 
     .clk_i(clk_i),
     .rst_ni(rst_ni),
 
     // obi signals data cache <-> crossbar <-> ibex
-    .obi_req_i(),
-    .obi_rsp_o(),
+    .obi_req_i(data_cache_obi_req),
+    .obi_rsp_o(data_cache_obi_rsp),
 
     // Complete-line transfers to the shared memory arbiter.
-    .mem_req_o(),
-    .mem_rsp_i()
-);
+    .mem_req_o(data_cache_arbiter_req),
+    .mem_rsp_i(data_cache_arbiter_rsp)
+  );
 
-// instruction cache
-//Todo replace hardcoded params with generic params for later param sweep
+  // instruction cache
+  //Todo replace hardcoded params with generic params for later param sweep
 
   sbr_obi_req_t instruction_cache_obi_req;
   sbr_obi_rsp_t instruction_cache_obi_rsp;
 
-assign instruction_cache_obi_req = all_sbr_obi_req[XbarICache];
-assign all_sbr_obi_rsp[XbarICache] = instruction_cache_obi_rsp;
+  mem_req_t instruction_cache_arbiter_req;
+  mem_rsp_t instruction_cache_arbiter_rsp;
+
+  assign instruction_cache_obi_req = all_sbr_obi_req[XbarICache];
+  assign all_sbr_obi_rsp[XbarICache] = instruction_cache_obi_rsp;
 
 
-instruction_cache #(
-    .AddrWidth(32),            
-    .CpuDataWidth (32),       
-    .CacheDataBytes(8 * 1024),       
-    .LineDataBytes (16),      
-    .NumWays(2),               
-    .obi_req_t(),
-    .obi_rsp_t(),
-    .mem_req_t(),
-    .mem_rsp_t()  
-  )i_instruction_cache( 
-
-    .clk_i(clk_i),
-    .rst_ni(rst_ni),
-
-    // obi signals data cache <-> crossbar <-> ibex
-    .obi_req_i(),
-    .obi_rsp_o(),
-
-    // Complete-line transfers to the shared memory arbiter.
-    .mem_req_o(),
-    .mem_rsp_i()
-);
+  assign arbiter_cache_req[1] = instruction_cache_arbiter_req;
+  assign instruction_cache_arbiter_rsp = arbiter_cache_rsp[1];
 
 
+  instruction_cache #(
+      .AddrWidth(32),            
+      .CpuDataWidth (32),       
+      .CacheDataBytes(8 * 1024),       
+      .LineDataBytes (16),      
+      .NumWays(2),               
+      .obi_req_t(sbr_obi_req_t),
+      .obi_rsp_t(sbr_obi_rsp_t),
+      .mem_req_t(mem_req_t),
+      .mem_rsp_t(mem_rsp_t)  
+    )i_instruction_cache( 
 
+      .clk_i(clk_i),
+      .rst_ni(rst_ni),
+
+      // obi signals data cache <-> crossbar <-> ibex
+      .obi_req_i(instruction_cache_obi_req),
+      .obi_rsp_o(instruction_cache_obi_rsp),
+
+      // Complete-line transfers to the shared memory arbiter.
+      .mem_req_o(instruction_cache_arbiter_req),
+      .mem_rsp_i(instruction_cache_arbiter_rsp)
+  );
+
+  // cache mem arbiter 
+  //Todo replace hardcoded params with generic params for later param sweep
+
+  mem_req_t [1:0] arbiter_cache_req;
+  mem_rsp_t [1:0] arbiter_cache_rsp;
+
+  `HYPERBUS_TYPEDEF_HOST_ALL_CT(hyperbus_host,logic [31:0],logic [31:0],logic [3:0])
+
+  hyperbus_host_req_t hyperbus_host_req;
+  hyperbus_host_rsp_t hyperbus_host_rsp;
+  logic hyperbus_drain;
+  logic arbiter_idle;
+
+  cache_mem_arbiter #(
+      .NumPorts(2),
+      .AddrWidth(32),
+      .HostDataWidth(32),
+      .WriteBufferBits(96),
+      .LogicalBaseAddr(32'h8000_0000),
+      .PhysicalBaseAddr(32'h8000_0000),
+      .mem_req_t(mem_req_t),
+      .mem_rsp_t(mem_rsp_t),
+      .host_req_t(hyperbus_host_req_t),
+      .host_rsp_t(hyperbus_host_rsp_t)
+
+  ) i_cache_mem_arbiter(
+      .clk_i(clk_i),
+      .rst_ni(rst_ni),
+
+      // Connections to the caches
+      .cache_req_i(arbiter_cache_req),
+      .cache_rsp_o(arbiter_cache_rsp),
+
+      // Connection to the HyperBus midend
+      .host_req_o(hyperbus_host_req),
+      .host_rsp_i(hyperbus_host_rsp),
+
+      // Connection to the HyperBus configuration frontend
+      .drain_i(hyperbus_drain),
+      .idle_o(arbiter_idle)
+  );
 
 
 // hyperbus subordinate
 
-sbr_obi_req_t hyperbus_obi_req;
-sbr_obi_rsp_t hyperbus_obi_rsp;
-
-assign hyperbus_obi_req = all_sbr_obi_req[XbarHyperbus];
-assign all_sbr_obi_rsp[XbarHyperbus] = hyperbus_obi_rsp;
-
-
   hyperbus_synchronous #(
     .NumPhys(NumPhys),
-    .ObiAddrWidth(SbrObiCfg.AddrWidth),
-    .ObiDataWidth(SbrObiCfg.DataWidth),
-    .ObiIdWidth(SbrObiCfg.IdWidth),
-    .obi_req_t(sbr_obi_req_t),
-    .obi_rsp_t(sbr_obi_rsp_t),
+    .HostAddrWidth(32),
+    .HostDataWidth(32),
+    .host_req_t(hyperbus_host_req_t),
+    .host_rsp_t(hyperbus_host_rsp_t),
     .RegDataWidth(32),
     .RegAddrWidth(32),
     .reg_req_t(hyperbus_reg_req_t),
@@ -809,8 +710,10 @@ assign all_sbr_obi_rsp[XbarHyperbus] = hyperbus_obi_rsp;
 `endif
     .test_mode_i(testmode_i),
 
-    .obi_req_i(hyperbus_obi_req),
-    .obi_rsp_o(hyperbus_obi_rsp),
+    .host_req_i(hyperbus_host_req),
+    .host_rsp_o(hyperbus_host_rsp),
+    .drain_o(hyperbus_drain),
+    .host_idle_i(arbiter_idle),
 
     .reg_req_i(hyperbus_reg_req),
     .reg_rsp_o(hyperbus_reg_rsp),
@@ -824,29 +727,9 @@ assign all_sbr_obi_rsp[XbarHyperbus] = hyperbus_obi_rsp;
     .hyper_dq_i             ( hyper_dq_i),
     .hyper_dq_o             ( hyper_dq_o),
     .hyper_dq_oe_o          ( hyper_dq_oe_o),
-    .hyper_reset_no         ( hyper_reset_no ),
-
-
-    .tag_req_ready_i(tag_crtl_ready),
-    .tag_ready_i(tag_crtl_tag_ready), 
-    .tag_error_i(tag_crtl_tag_error),
-    .read_tag_i(tag_crtl_read_tag),
-    .read_tag_valid_i(tag_crtl_read_tag_valid),
-
-
-    .tag_access_o(frontend_access), 
-    .tag_addr_o(frontend_addr),
-    .tag_we_o(frontend_we),
-    .tag_write_tag_o(frontend_write_tag),
-    .data_done_o(frontend_data_done), 
-    .data_error_o(frontend_data_error)
-
-
-
+    .hyper_reset_no         ( hyper_reset_no )
 
 );
-
-
 
   // Xbar space error subordinate
   obi_err_sbr #(
