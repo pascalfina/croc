@@ -6,6 +6,13 @@ The [instruction-cache section](#instruction-cache) was added on 10 November
 2026 and includes the standalone verification results from 9 November. Other
 sections retain their earlier D-cache/arbiter snapshot unless noted otherwise.
 
+The [crossbar routing contract](cache-design-constraints.md#crossbar-routing-for-instruction-and-data-accesses)
+was added on 10 November 2026: CPU instruction input 3 overrides the decoded
+`XbarHyperbus` target with `XbarICache`; other routes stay unchanged. The
+input-specific override is present in `obi_xbar.sv` and configured in
+`croc_domain.sv`. Cache port wiring and end-to-end SoC verification remain
+in progress; this note does not supersede the integration limitations below.
+
 This document describes the in-progress data-cache sources, the read/store-hit
 and refill/write-back paths, replacement state, SRAM design decisions and the
 partial-store ECC update. The shared arbiter's current write path, port

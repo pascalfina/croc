@@ -40,6 +40,59 @@ forces a fresh read; it does not write instructions back. The maintenance
 interface is not implemented yet. See the [instruction-cache example and current
 implementation](cache-implementation-status.md#code-changes-and-invalidation).
 
+## Crossbar Routing for Instruction and Data Accesses
+
+Both caches serve the same CPU-visible HyperRAM address range,
+`0x80000000 <= address < 0x90000000`. An address alone cannot distinguish an
+instruction fetch from a data access: the CPU can fetch an instruction at
+`0x80001000` or read that same address as data. The crossbar input identifies
+the requester; the routing logic does not inspect instruction opcodes.
+
+In `croc_domain.sv`, `core_instr_obi_req` is connected to
+`xbar_mgr_obi_req[3]`, and its responses return through `xbar_mgr_obi_rsp[3]`.
+The CPU data bus uses input 2. Give the caches separate crossbar outputs:
+`XbarHyperbus = 4` is the D-cache target, while `XbarICache = 5` is the I-cache
+target. The historical name `XbarHyperbus` does not imply that requests still
+pass through the old OBI frontend before reaching the D-cache.
+
+Keep the existing `CrocAddrMap` HyperRAM rule pointing to `XbarHyperbus`.
+Do not add an overlapping address rule for the I-cache. Instead, the existing
+`obi_xbar` applies an optional input-specific target override after address
+decoding and before its existing demux/mux network:
+
+| Crossbar input | Address-decoder result | Final output |
+| --- | --- | --- |
+| 3: CPU instruction | `XbarHyperbus` | `XbarICache` |
+| Any other input | `XbarHyperbus` | `XbarHyperbus`, the D-cache target |
+| Any input | Any other target, including boot ROM/peripherals | Unchanged |
+
+The main crossbar enables this with `RemapEnable = 1`, `RemapInputPort = 3`,
+`RemapFrom = XbarHyperbus` and `RemapTo = XbarICache`. The generic crossbar
+defaults `RemapEnable` to zero. Its output count must include both targets;
+with the current contiguous output indices,
+`NumXbarSubordinates = int'(XbarICache) + 1`, giving six outputs independently
+of the four address rules.
+
+This override changes only the selected output index, not the request address.
+An instruction fetch goes directly to the I-cache; it does not first enter
+the D-cache, copy data between caches or change the backing-memory layout.
+The existing crossbar demuxes/muxes track accepted transactions and route their
+responses. Do not select a delayed response using the currently presented new
+request. Each cache drives its own response connection, with exactly one
+driver for each `all_sbr_obi_rsp` entry.
+
+The override adds combinational target selection, not a new FSM or pipeline
+stage; timing still requires verification. Separate outputs avoid merging CPU
+instruction traffic with the D-cache's two-request capability sequence at a
+common downstream OBI port. They do not enforce capability-pair ownership
+against other D-cache requesters such as debug or DMA, and they do not provide
+instruction/data coherence or cache maintenance. Both caches still connect
+downstream to the shared `cache_mem_arbiter` for HyperRAM line transfers.
+
+This is the integration contract, not evidence of a completed or verified SoC
+connection. The old frontend must no longer drive the D-cache's crossbar
+response output when the cache takes over that connection.
+
 ## Two Different Tags
 
 | Name | Meaning | Granularity |
