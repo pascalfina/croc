@@ -16,6 +16,12 @@ module soc_ctrl_regs #(
   input  logic             rst_ni,
   input  obi_req_t         obi_req_i,
   output obi_rsp_t         obi_rsp_o,
+
+  // for hyperram initalisation
+  input logic hyperram_init_busy_i,
+  input logic hyperram_init_done_i,
+  input logic hyperram_init_err_i,
+  
   // To hardware
   output logic             fetch_en_o,
   output logic             sram_dly_o,
@@ -146,6 +152,13 @@ module soc_ctrl_regs #(
           SOC_CTRL_EXCEPTION_CAUSE_OFFSET: obi_rsp_o.r.rdata = exception_cause_q;
           SOC_CTRL_EXCEPTION_TVAL_OFFSET:  obi_rsp_o.r.rdata = exception_tval_q;
           SOC_CTRL_EXCEPTION_MEPC_OFFSET:  obi_rsp_o.r.rdata = exception_mepc_q;
+          SOC_CTRL_HYPERRAM_INIT_STATUS_OFFSET:
+            obi_rsp_o.r.rdata = {
+              29'b0,
+              hyperram_init_err_i,
+              hyperram_init_done_i,
+              hyperram_init_busy_i
+            };
           default: begin
             obi_rsp_o.r.rdata = 32'hBADCAB1E;
             obi_rsp_o.r.err   = 1'b1;

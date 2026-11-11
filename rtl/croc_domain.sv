@@ -565,7 +565,7 @@ obi_to_reg #(
   `CACHE_TYPEDEF_MEM_ALL(
     mem,
     SbrObiCfg.AddrWidth,
-    $clog2(16 / cache_pkg::CacheRecordDataBytes + 1)
+    $clog2(1024 / cache_pkg::CacheRecordDataBytes + 1)
   )
 
   sbr_obi_req_t data_cache_obi_req;
@@ -592,7 +592,7 @@ obi_to_reg #(
     .obi_rsp_t(sbr_obi_rsp_t),
     .mem_req_t(mem_req_t),
     .mem_rsp_t(mem_rsp_t)  
-  )i_data_cache( 
+  ) i_data_cache ( 
 
     .clk_i(clk_i),
     .rst_ni(rst_ni),
@@ -633,7 +633,7 @@ obi_to_reg #(
       .obi_rsp_t(sbr_obi_rsp_t),
       .mem_req_t(mem_req_t),
       .mem_rsp_t(mem_rsp_t)  
-    )i_instruction_cache( 
+    ) i_instruction_cache ( 
 
       .clk_i(clk_i),
       .rst_ni(rst_ni),
@@ -647,11 +647,74 @@ obi_to_reg #(
       .mem_rsp_i(instruction_cache_arbiter_rsp)
   );
 
+  // jtag adapter
+  //Todo replace hardcoded params with generic params for later param sweep
+
+  sbr_obi_req_t jtag_hyperram_obi_req;
+  sbr_obi_rsp_t jtag_hyperram_obi_rsp;
+  mem_req_t jtag_hyperram_arbiter_req;
+  mem_rsp_t jtag_hyperram_arbiter_rsp;
+
+  assign jtag_hyperram_obi_req = all_sbr_obi_req[XbarJtagHyperram];
+  assign all_sbr_obi_rsp[XbarJtagHyperram] = jtag_hyperram_obi_rsp;
+  assign arbiter_cache_req[2] = jtag_hyperram_arbiter_req;
+  assign jtag_hyperram_arbiter_rsp = arbiter_cache_rsp[2];
+
+  jtag_hyperram_adapter #(
+    .AddrWidth(SbrObiCfg.AddrWidth),
+    .ObiDataWidth(SbrObiCfg.DataWidth),
+    .BlockDataBytes(16),
+    .obi_req_t(sbr_obi_req_t),
+    .obi_rsp_t(sbr_obi_rsp_t),
+    .mem_req_t(mem_req_t),
+    .mem_rsp_t(mem_rsp_t)
+  ) i_jtag_hyperram_adapter (
+    .clk_i(clk_i),
+    .rst_ni(rst_ni),
+    .obi_req_i(jtag_hyperram_obi_req),
+    .obi_rsp_o(jtag_hyperram_obi_rsp),
+    .mem_req_o(jtag_hyperram_arbiter_req),
+    .mem_rsp_i(jtag_hyperram_arbiter_rsp)
+  );
+
+  // hyperram initalisation
+  //Todo replace hardcoded params with generic params for later param sweep 
+
+  mem_req_t init_hyperram_arbiter_req;
+  mem_rsp_t init_hyperram_arbiter_rsp;
+
+  logic hyperram_init_busy, hyperram_init_done, hyperram_init_err;
+
+  assign arbiter_cache_req[3] = init_hyperram_arbiter_req;
+  assign init_hyperram_arbiter_rsp = arbiter_cache_rsp[3]; 
+
+  hyperram_init #(
+    .AddrWidth(32),
+    .LogicalBaseAddr(32'h8000_0000),
+
+    .InitDataBytes(4 * 1024 * 1024),
+    .InitBurstDataBytes(1024),
+
+    .mem_req_t(mem_req_t),
+    .mem_rsp_t(mem_rsp_t)
+  ) i_hyperram_init (
+    .clk_i(clk_i),
+    .rst_ni(rst_ni),
+
+    .cfg_ready_i(hyperbus_cfg_ready),
+
+    .mem_req_o(init_hyperram_arbiter_req),
+    .mem_rsp_i(init_hyperram_arbiter_rsp),
+
+    .busy_o(hyperram_init_busy),
+    .done_o(hyperram_init_done),
+    .error_o(hyperram_init_err)
+  );
   // cache mem arbiter 
   //Todo replace hardcoded params with generic params for later param sweep
 
-  mem_req_t [2:0] arbiter_cache_req;
-  mem_rsp_t [2:0] arbiter_cache_rsp;
+  mem_req_t [3:0] arbiter_cache_req;
+  mem_rsp_t [3:0] arbiter_cache_rsp;
 
   `HYPERBUS_TYPEDEF_HOST_ALL_CT(hyperbus_host,logic [31:0],logic [31:0],logic [3:0])
 
@@ -661,7 +724,7 @@ obi_to_reg #(
   logic arbiter_idle;
 
   cache_mem_arbiter #(
-      .NumPorts(3),
+      .NumPorts(4),
       .AddrWidth(32),
       .HostDataWidth(32),
       .WriteBufferBits(96),
@@ -689,36 +752,9 @@ obi_to_reg #(
       .idle_o(arbiter_idle)
   );
 
-  // jtag adapter
+  // hyperbus subordinate
 
-  sbr_obi_req_t jtag_hyperram_obi_req;
-  sbr_obi_rsp_t jtag_hyperram_obi_rsp;
-  mem_req_t jtag_hyperram_arbiter_req;
-  mem_rsp_t jtag_hyperram_arbiter_rsp;
-
-  assign jtag_hyperram_obi_req = all_sbr_obi_req[XbarJtagHyperram];
-  assign all_sbr_obi_rsp[XbarJtagHyperram] = jtag_hyperram_obi_rsp;
-  assign arbiter_cache_req[2] = jtag_hyperram_arbiter_req;
-  assign jtag_hyperram_arbiter_rsp = arbiter_cache_rsp[2];
-
-  jtag_hyperram_adapter #(
-    .AddrWidth(SbrObiCfg.AddrWidth),
-    .ObiDataWidth(SbrObiCfg.DataWidth),
-    .BlockDataBytes(16),
-    .obi_req_t(sbr_obi_req_t),
-    .obi_rsp_t(sbr_obi_rsp_t),
-    .mem_req_t(mem_req_t),
-    .mem_rsp_t(mem_rsp_t)
-  ) i_jtag_hyperram_adapter (
-    .clk_i,
-    .rst_ni,
-    .obi_req_i(jtag_hyperram_obi_req),
-    .obi_rsp_o(jtag_hyperram_obi_rsp),
-    .mem_req_o(jtag_hyperram_arbiter_req),
-    .mem_rsp_i(jtag_hyperram_arbiter_rsp)
-  );
-
-// hyperbus subordinate
+  logic hyperbus_cfg_ready;
 
   hyperbus_synchronous #(
     .NumPhys(NumPhys),
@@ -746,6 +782,7 @@ obi_to_reg #(
     .host_rsp_o(hyperbus_host_rsp),
     .drain_o(hyperbus_drain),
     .host_idle_i(arbiter_idle),
+    .cfg_ready_o(hyperbus_cfg_ready),
 
     .reg_req_i(hyperbus_reg_req),
     .reg_rsp_o(hyperbus_reg_rsp),
@@ -830,6 +867,9 @@ obi_to_reg #(
     .rst_ni,
     .obi_req_i  ( soc_ctrl_obi_req ),
     .obi_rsp_o  ( soc_ctrl_obi_rsp ),
+    .hyperram_init_busy_i ( hyperram_init_busy ),
+    .hyperram_init_done_i ( hyperram_init_done ),
+    .hyperram_init_err_i  ( hyperram_init_err  ),
     .fetch_en_o       ( fetch_enable   ),
     .sram_dly_o       ( sram_impl      ),
     .cheriot_enable_o ( cheriot_enable )

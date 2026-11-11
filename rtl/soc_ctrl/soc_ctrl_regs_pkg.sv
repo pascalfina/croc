@@ -7,7 +7,7 @@
 
 package soc_ctrl_regs_pkg;
 
-  // Internal address width. 6 bits covers offsets 0x00–0x24.
+  // Internal address width. 6 bits covers offsets 0x00–0x28.
   localparam int unsigned IntAddrWidth = 6;
 
   // Register offsets
@@ -21,5 +21,6 @@ package soc_ctrl_regs_pkg;
   parameter logic [IntAddrWidth-1:0] SOC_CTRL_EXCEPTION_CAUSE_OFFSET = 6'h1c;
   parameter logic [IntAddrWidth-1:0] SOC_CTRL_EXCEPTION_TVAL_OFFSET  = 6'h20;
   parameter logic [IntAddrWidth-1:0] SOC_CTRL_EXCEPTION_MEPC_OFFSET  = 6'h24;
+  parameter logic [IntAddrWidth-1:0] SOC_CTRL_HYPERRAM_INIT_STATUS_OFFSET = 6'h28;
 
 endpackage
