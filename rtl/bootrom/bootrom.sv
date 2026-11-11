@@ -14,7 +14,7 @@
 /// 3. Sets mtvec to bootrom trap vector table
 /// 4. Reads boot address from soc_ctrl, jumps there with jalr zero (ra = &_eoc)
 /// 5. On main() return: _eoc packs retval, writes CORESTATUS, halts
-/// Trap handler dispatches to SRAM function pointer table at 0x1000_0000.
+/// Trap handler dispatches to HyperRAM function pointer table at 0x8000_0000.
 /// Source: bootrom.S
 module bootrom #(
     /// The OBI configuration for all ports.
@@ -164,11 +164,11 @@ module bootrom #(
 
 
     // Contiguous block starting at 0x02000600:
-    // CHERIoT trap trampoline to SRAM exception handler
+    // CHERIoT trap trampoline to HyperRAM exception handler
     localparam int unsigned CheriotTrapHandlerRomWords = 7;
     localparam logic [31:0] CheriotTrapHandlerRom [CheriotTrapHandlerRomWords] = '{
         32'h03D0025B, // 0x02000600: cspecialr c4, mtdc
-        32'h100002B7, // 0x02000604: lui t0, 0x10000
+        32'h800002B7, // 0x02000604: lui t0, 0x80000
         32'h2052025B, // 0x02000608: csetaddr c4, c4, t0
         32'h00422303, // 0x0200060C: lw t1, 4(x4)
         32'h03C002DB, // 0x02000610: cspecialr c5, mtcc
@@ -193,15 +193,15 @@ module bootrom #(
         32'h00D12823, // 0x02000320: sw a3,16(sp)
         32'h00E12423, // 0x02000324: sw a4,8(sp)
         32'h00F12023, // 0x02000328: sw a5,0(sp)
-        32'h100002B7, // 0x0200032C: lui t0,0x10000
+        32'h800002B7, // 0x0200032C: lui t0,0x80000
         32'h34202573, // 0x02000330: csrr a0,mcause
         32'h00054863, // 0x02000334: bltz a0,2000344 <_handle_interrupt>
-        32'h0042A303, // 0x02000338: lw t1,4(t0) # 10000004 <__global_pointer$+0xdffe4d4>
+        32'h0042A303, // 0x02000338: lw t1,4(t0) # 0x80000004
         32'h000300E7, // 0x0200033C: jalr t1
         32'h0C00006F, // 0x02000340: j 2000400 <_trap_exit>
         32'h00151513, // 0x02000344: slli a0,a0,0x1
         32'h00155513, // 0x02000348: srli a0,a0,0x1
-        32'h0082A303, // 0x0200034C: lw t1,8(t0)  0x10000008
+        32'h0082A303, // 0x0200034C: lw t1,8(t0) # 0x80000008
         32'h000300E7, // 0x02000350: jalr t1
         32'h0AC0006F // 0x02000354: j 2000400 <_trap_exit>
     };

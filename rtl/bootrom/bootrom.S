@@ -11,7 +11,7 @@
 # Boot flow:
 # 1. Enable MSIE, WFI (wait until woken by JTAG via msip)
 # 2. Wake: clear msip, disable interrupts
-# 3. Clear registers x1, x3-x15 (x2/SP set by SRAM stub)
+# 3. Clear registers x1, x3-x15 (x2/SP set by program startup)
 # 4. Set mtvec to bootrom trap vector table
 # 5. Read boot address from soc_ctrl, jump there with jalr zero
 #    (ra is set to &_eoc so main() returning goes to _eoc)
@@ -20,9 +20,9 @@
 # Trap handling:
 # The bootrom trap handler saves/restores caller-saved registers and dispatches
 # to user handlers via a function pointer vector table at fixed addresses:
-# - 0x1000_0000: j _start (skip table)
-# - 0x1000_0004: .word croc_exception_handler (function pointer)
-# - 0x1000_0008: .word croc_interrupt_handler (function pointer)
+# - 0x8000_0000: j _start (skip table)
+# - 0x8000_0004: .word croc_exception_handler (function pointer)
+# - 0x8000_0008: .word croc_interrupt_handler (function pointer)
 #
 # Fixed section offsets (from base 0x0200_0000):
 # 0x000  _start                 (WFI trampoline + boot)
@@ -31,7 +31,7 @@
 # 0x300  _trap_handler_wrapper  (save regs, dispatch)
 # 0x400  _trap_exit             (restore regs, mret)
 # 0x500  _cheriot_trap_vector_base (CHERIoT direct-mode entry)
-# 0x600  _cheriot_trap_handler   (CHERIoT trampoline to SRAM handler)
+# 0x600  _cheriot_trap_handler   (CHERIoT trampoline to HyperRAM handler)
 
 # -----------------------------------------------------------------------------
 # WFI Trampoline (entry point after reset)
@@ -47,10 +47,10 @@ _start:
 
 # -----------------------------------------------------------------------------
 # Register Initialization
-# Clear x1, x3-x15. Skip x2 stack pointer, set by main sw (needs SRAM size)
+# Clear x1, x3-x15. Skip x2 stack pointer, set by program startup.
 # -----------------------------------------------------------------------------
 # addi    x1,  zero, 0 # x1 is ra, used later, so we can skip clearing it
-# addi    x2,  zero, 0 # x2 is sp, set by SRAM stub, so we can skip clearing it
+# addi    x2,  zero, 0 # x2 is sp, set by program startup, so we can skip clearing it
   addi    x3,  zero, 0
   addi    x4,  zero, 0
 # addi    x5,  zero, 0 # x5 is t0, used later, so we can skip clearing it
@@ -119,7 +119,7 @@ _trap_vector_base:
 # -----------------------------------------------------------------------------
 # Trap Handler Wrapper
 # Saves caller-saved registers, reads mcause,
-# dispatches to interrupt/exception handler in SRAM via function pointer table
+# dispatches to interrupt/exception handler in HyperRAM via function pointer table
 # -----------------------------------------------------------------------------
 .org 0x300
 _trap_handler_wrapper:
@@ -138,23 +138,23 @@ _trap_handler_wrapper:
   # Read trap cause
   # mcause[31] == 1 -> Interrupt
   # mcause[31] == 0 -> Exception
-  lui     t0, 0x10000  # t0 = SRAM base (0x1000_0000)
+  lui     t0, 0x80000  # t0 = HyperRAM base (0x8000_0000)
   csrr    a0, mcause
   blt     a0, zero, _handle_interrupt
 
-  # Exception: call handler via SRAM vector table
-  lw      t1, 4(t0)    # t1 = *(0x1000_0004)
+  # Exception: call handler via HyperRAM vector table
+  lw      t1, 4(t0)    # t1 = *(0x8000_0004)
   jalr    ra, 0(t1)    # Call exception handler
   j       _trap_exit
 
 # -----------------------------------------------------------------------------
 # Interrupt Handler
-# Strips mcause MSB to get interrupt ID, dispatches to user handler in SRAM
+# Strips mcause MSB to get interrupt ID, dispatches to user handler in HyperRAM
 # -----------------------------------------------------------------------------
 _handle_interrupt:
   slli    a0, a0, 1    # Strip MSB (shift left)
   srli    a0, a0, 1    # Restore (shift right) -> a0 = interrupt ID
-  lw      t1, 8(t0)    # t1 = *(0x1000_0008)
+  lw      t1, 8(t0)    # t1 = *(0x8000_0008)
   jalr    ra, 0(t1)    # Call interrupt handler
   j       _trap_exit
 
@@ -189,15 +189,15 @@ _cheriot_trap_vector_base:
 
 # -----------------------------------------------------------------------------
 # CHERIoT Trap Handler Trampoline
-# Reads the raw exception-handler address from the SRAM vector table, creates
-# a valid executable capability from mtcc, and enters the SRAM handler with
+# Reads the raw exception-handler address from the HyperRAM vector table, creates
+# a valid executable capability from mtcc, and enters the HyperRAM handler with
 # CJALR. No stack access is performed here.
 # -----------------------------------------------------------------------------
 .org 0x600
 .globl _cheriot_trap_handler
 _cheriot_trap_handler:
   .word   0x03D0025B  # cspecialr c4, mtdc
-  .word   0x100002B7  # lui t0, 0x10000
+  .word   0x800002B7  # lui t0, 0x80000
   .word   0x2052025B  # csetaddr c4, c4, t0
   # Keep the handler address in x6; cspecialr c5 also overwrites x5/t0.
   .word   0x00422303  # lw t1, 4(x4)
