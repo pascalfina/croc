@@ -11,8 +11,11 @@
 
 module croc_domain import croc_pkg::*; #(
   parameter int unsigned GpioCount = 16,
-  parameter int unsigned NumExternalIrqs = 4, 
-  parameter int unsigned NumPhys   = 2 
+  parameter int unsigned NumExternalIrqs = 4,
+  parameter int unsigned NumPhys   = 2,
+  // Logical HyperRAM bytes zeroed (with valid ECC and clear tags) after reset.
+  // Simulations may use less to shorten start-up.
+  parameter int unsigned HyperramInitBytes = 4 * 1024 * 1024
 ) (
   input  logic      clk_i,
   input  logic      rst_ni,
@@ -706,7 +709,7 @@ obi_to_reg #(
   hyperram_init #(
     .AddrWidth(32),
     .LogicalBaseAddr(32'h8000_0000),
-    .InitDataBytes(4 * 1024 * 1024),
+    .InitDataBytes(HyperramInitBytes),
     .InitBurstDataBytes(1024),
     .mem_req_t(mem_req_t),
     .mem_rsp_t(mem_rsp_t)

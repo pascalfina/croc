@@ -6,9 +6,10 @@
 // - Philippe Sauter <phsauter@iis.ee.ethz.ch>
 
 module croc_soc import croc_pkg::*; #(
-  parameter int unsigned GpioCount = 16, 
-  parameter int unsigned NumPhys   = 2 
-
+  parameter int unsigned GpioCount = 16,
+  parameter int unsigned NumPhys   = 2,
+  // See croc_domain; simulations may initialise less HyperRAM.
+  parameter int unsigned HyperramInitBytes = 4 * 1024 * 1024
 ) (
   input  logic clk_i,
   input  logic rst_ni,
@@ -67,7 +68,8 @@ logic [      GpioCount-1:0] gpio_in_sync;
 croc_domain #(
   .GpioCount       ( GpioCount       ),
   .NumExternalIrqs ( NumExternalIrqs ),
-  .NumPhys        ( NumPhys         )
+  .NumPhys        ( NumPhys         ),
+  .HyperramInitBytes ( HyperramInitBytes )
 ) i_croc (
   .clk_i,
   .rst_ni ( synced_rst_n ),

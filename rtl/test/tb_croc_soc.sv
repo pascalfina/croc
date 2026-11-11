@@ -10,6 +10,11 @@
 
 module tb_croc_soc #(
   parameter int unsigned GpioCount = 32,
+  // RTOS programs use 0x8000_0000-0x8002_0000; zeroing the hardware default
+  // of 4 MiB would add ~70 ms of simulated start-up to every test. Programs
+  // touching more HyperRAM need a larger value (the legacy tag-SRAM test
+  // probes up to 4 MiB).
+  parameter int unsigned HyperramInitBytes = 256 * 1024,
   parameter time HyperramInitTimeout = 500ms,
   parameter time HyperramInitPollInterval = 1ms
 );
@@ -95,7 +100,8 @@ module tb_croc_soc #(
   \croc_soc$croc_chip.i_croc_soc i_croc_soc (
   `else
   croc_soc #(
-    .GpioCount ( GpioCount )
+    .GpioCount         ( GpioCount         ),
+    .HyperramInitBytes ( HyperramInitBytes )
   ) i_croc_soc (
   `endif
     .clk_i                  ( sys_clk     ),
