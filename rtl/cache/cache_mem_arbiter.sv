@@ -62,7 +62,9 @@ module cache_mem_arbiter #(
     logic[PortIndexWidth-1:0] rr_start_port_q, rr_start_port_d;
     logic[PortIndexWidth-1:0] selected_port_q, selected_port_d;
 
-    int unsigned port;
+    // 4-state on purpose: a 2-state int gets an implicit init value that
+    // conflicts with its constant upper bits in Yosys opt_merge.
+    logic [31:0] port;
     logic found_port;
 
     typedef type(cache_req_i[0].cmd) cache_cmd_t;
