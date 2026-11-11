@@ -65,6 +65,7 @@ sources:
       - rtl/cache/instruction_cache.sv
       - rtl/cache/cache_mem_arbiter.sv
       - rtl/cache/jtag_hyperram_adapter.sv
+      - rtl/cache/hyperram_init.sv
       - rtl/croc_domain.sv
       - rtl/user_domain.sv
       # add your design files with modules here

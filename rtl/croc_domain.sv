@@ -691,21 +691,18 @@ obi_to_reg #(
   hyperram_init #(
     .AddrWidth(32),
     .LogicalBaseAddr(32'h8000_0000),
-
     .InitDataBytes(4 * 1024 * 1024),
     .InitBurstDataBytes(1024),
-
     .mem_req_t(mem_req_t),
     .mem_rsp_t(mem_rsp_t)
+
   ) i_hyperram_init (
+
     .clk_i(clk_i),
     .rst_ni(rst_ni),
-
     .cfg_ready_i(hyperbus_cfg_ready),
-
     .mem_req_o(init_hyperram_arbiter_req),
     .mem_rsp_i(init_hyperram_arbiter_rsp),
-
     .busy_o(hyperram_init_busy),
     .done_o(hyperram_init_done),
     .error_o(hyperram_init_err)

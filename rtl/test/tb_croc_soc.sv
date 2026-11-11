@@ -9,7 +9,9 @@
 `define TRACE_WAVE
 
 module tb_croc_soc #(
-  parameter int unsigned GpioCount = 32
+  parameter int unsigned GpioCount = 32,
+  parameter time HyperramInitTimeout = 500ms,
+  parameter time HyperramInitPollInterval = 1ms
 );
 
   import tb_croc_pkg::*;
@@ -203,6 +205,16 @@ module tb_croc_soc #(
   localparam logic [31:0] HyperbusCfgBaseAddr =
       croc_pkg::get_periph_start_addr(croc_pkg::PeriphHyperbusCrtl);
 
+  bit hyperram_init_waiting = 1'b0;
+
+  // Independent of the polling task so a stalled JTAG read also times out.
+  initial begin
+    wait (hyperram_init_waiting);
+    #(HyperramInitTimeout);
+    if (hyperram_init_waiting)
+      $fatal(1, "HyperRAM initialization timeout after %t", HyperramInitTimeout);
+  end
+
   task automatic hyperbus_wait_ready();
     logic [31:0] status;
 
@@ -233,11 +245,11 @@ module tb_croc_soc #(
           HyperbusCfgBaseAddr + 32'h408 + chip * 32'h40, 32'h0, 1'b1);
     end
 
-    // CS0 exposes only the 4 MiB covered by the tag SRAM.
+    // 4 MiB logical data needs 5 MiB encoded storage; ranges align to 4 MiB.
     i_vip.jtag_write_reg32(
         HyperbusCfgBaseAddr + 32'h400, HyperRamBaseAddr, 1'b1);
     i_vip.jtag_write_reg32(
-        HyperbusCfgBaseAddr + 32'h404, HyperRamBaseAddr + 32'h0040_0000, 1'b1);
+        HyperbusCfgBaseAddr + 32'h404, HyperRamBaseAddr + 32'h0080_0000, 1'b1);
     i_vip.jtag_write_reg32(
         HyperbusCfgBaseAddr + 32'h408, 32'h0001_1800, 1'b1);
 
@@ -246,6 +258,33 @@ module tb_croc_soc #(
     hyperbus_wait_ready();
 
     $display("@%t | [HyperBus] Configuration applied", $time);
+  endtask
+
+  task automatic hyperram_wait_initialized();
+    logic [31:0] status;
+
+    hyperram_init_waiting = 1'b1;
+    $display("@%t | [HyperRAM] Waiting for memory initialization", $time);
+
+    forever begin
+      i_vip.jtag_read_reg32(HyperramInitStatusAddr, status);
+
+      if ($isunknown(status))
+        $fatal(1, "HyperRAM initialization status contains X/Z: STATUS=0x%08h", status);
+
+      if (status[2])
+        $fatal(1, "HyperRAM initialization failed: STATUS=0x%08h", status);
+
+      if (status[1]) begin
+        if (status[0])
+          $fatal(1, "HyperRAM initialization reports both busy and done: STATUS=0x%08h", status);
+        hyperram_init_waiting = 1'b0;
+        $display("@%t | [HyperRAM] Memory initialization complete", $time);
+        return;
+      end
+
+      #(HyperramInitPollInterval);
+    end
   endtask
 
   logic [31:0] tb_data;
@@ -264,11 +303,12 @@ module tb_croc_soc #(
     // init jtag
     i_vip.jtag_init();
     hyperbus_init();
+    hyperram_wait_initialized();
 
     // write test value to hyperram
     i_vip.jtag_write_reg32(HyperRamBaseAddr, 32'h1234_5678, 1'b1);
 
-    // Load the program image after HyperBus configuration.
+    // Load only after initialization so it cannot overwrite the program image.
     i_vip.jtag_load_hex(binary_path);
 
     // wake core from WFI by writing to CLINT msip

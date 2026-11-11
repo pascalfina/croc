@@ -29,6 +29,8 @@ localparam bit [31:0] HyperRamBaseAddr = croc_pkg::get_croc_start_addr(croc_pkg:
   localparam bit [31:0] BootAddrAddr    = SocCtrlBaseAddr + soc_ctrl_regs_pkg::SOC_CTRL_BOOTADDR_OFFSET;
   localparam bit [31:0] FetchEnAddr     = SocCtrlBaseAddr + soc_ctrl_regs_pkg::SOC_CTRL_FETCHEN_OFFSET;
   localparam bit [31:0] CoreStatusAddr  = SocCtrlBaseAddr + soc_ctrl_regs_pkg::SOC_CTRL_CORESTATUS_OFFSET;
+  localparam bit [31:0] HyperramInitStatusAddr =
+      SocCtrlBaseAddr + soc_ctrl_regs_pkg::SOC_CTRL_HYPERRAM_INIT_STATUS_OFFSET;
   localparam bit [31:0] ExceptionCauseAddr = SocCtrlBaseAddr + soc_ctrl_regs_pkg::SOC_CTRL_EXCEPTION_CAUSE_OFFSET;
   localparam bit [31:0] ExceptionTvalAddr  = SocCtrlBaseAddr + soc_ctrl_regs_pkg::SOC_CTRL_EXCEPTION_TVAL_OFFSET;
   localparam bit [31:0] ExceptionMepcAddr  = SocCtrlBaseAddr + soc_ctrl_regs_pkg::SOC_CTRL_EXCEPTION_MEPC_OFFSET;
