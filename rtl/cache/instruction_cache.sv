@@ -236,8 +236,9 @@ module instruction_cache #(
             ACCESS_SRAM: begin
                 obi_rsp_o.r.rdata = read_word.data;
                 obi_rsp_o.r.rid = obi_aid_q;
-                obi_rsp_o.r.r_optional.ecc = read_word.ecc;
-                obi_rsp_o.r.r_optional.cap_tag = read_word.cap_tag;
+                obi_rsp_o.r.r_optional.ecc = read_word.ecc ^
+                    ({EccBits{read_word.cap_tag}} & ibex_mem_ecc_pkg::MemEccTagSyndrome);
+                obi_rsp_o.r.r_optional.cap_tag = 1'b0;
                 obi_rsp_o.rvalid = 1;
                 state_d = IDLE;
             end
