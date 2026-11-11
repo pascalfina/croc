@@ -106,8 +106,6 @@ module croc_domain import croc_pkg::*; #(
   mgr_obi_rsp_t core_data_obi_rsp;
   assign core_data_obi_req.a.aid = '0;
   assign core_data_obi_req.a.a_optional.cap_tag = data_tag_out;
-  // TODO: Connect the core write-integrity output when enabling ECC.
-  assign core_data_obi_req.a.a_optional.ecc = '0;
 
   // dbg req bus
   mgr_obi_req_t dbg_req_obi_req;
@@ -259,6 +257,7 @@ module croc_domain import croc_pkg::*; #(
     .instr_rvalid_i ( core_instr_obi_rsp.rvalid  ),
     .instr_addr_o   ( core_instr_obi_req.a.addr  ),
     .instr_rdata_i  ( core_instr_obi_rsp.r.rdata ),
+    .instr_rdata_intg_i(core_instr_obi_rsp.r.r_optional.ecc),
     .instr_err_i    ( core_instr_obi_rsp.r.err   ),
 
     .data_req_o     ( core_data_obi_req.req      ),
@@ -269,7 +268,9 @@ module croc_domain import croc_pkg::*; #(
     .data_be_o      ( core_data_obi_req.a.be     ),
     .data_addr_o    ( core_data_obi_req.a.addr   ),
     .data_wdata_o   ( core_data_obi_req.a.wdata  ),
+    .data_wdata_intg_o(core_data_obi_req.a.a_optional.ecc),
     .data_rdata_i   ( core_data_obi_rsp.r.rdata  ),
+    .data_rdata_intg_i(core_data_obi_rsp.r.r_optional.ecc),
     .data_err_i     ( core_data_obi_rsp.r.err    ),
 
     .debug_req_i    ( debug_req    ),
