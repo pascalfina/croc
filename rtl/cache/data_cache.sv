@@ -93,7 +93,6 @@ module data_cache #(
     logic [WayIndexWidth-1:0] selected_way_q, selected_way_d;
     logic [WayIndexWidth-1:0] replace_way_q [NumSets];
     logic [WayIndexWidth-1:0] replace_way_d [NumSets];
-    logic [RecordBits-1:0] rdata_cache_q,rdata_cache_d;
     logic [$clog2(RecordsPerLine)-1:0] line_record_index_q, line_record_index_d;
 
     // obi singals 
@@ -163,7 +162,6 @@ module data_cache #(
         // cache logic signals
         cache_meta_d        = cache_meta_q;
         selected_way_d      = selected_way_q;
-        rdata_cache_d       = rdata_cache_q;
         replace_way_d       = replace_way_q;
         line_record_index_d = line_record_index_q;
         cap_flag_d              = cap_flag_q;
@@ -622,12 +620,10 @@ module data_cache #(
                 end
             end
             selected_way_q <= 0;
-            rdata_cache_q <= 0;
             line_record_index_q <= 0;
         end else begin
             cache_meta_q <= cache_meta_d;
             selected_way_q <= selected_way_d;
-            rdata_cache_q <= rdata_cache_d;
             replace_way_q <= replace_way_d;
             line_record_index_q <= line_record_index_d;
         end

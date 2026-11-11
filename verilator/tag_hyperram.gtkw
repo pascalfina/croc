@@ -1,0 +1,169 @@
+[*]
+[*] GTKWave Analyzer v4.0.0-prealpha (a6aae77) (w)1999-2022 BSI
+[*] Wed Nov 11 18:11:06 2026
+[*]
+[dumpfile] "/fosic/designs/croc/verilator/croc.fst"
+[dumpfile_mtime] "Wed Nov 11 16:46:38 2026"
+[dumpfile_size] 113805681
+[savefile] "/fosic/designs/croc/verilator/tag_hyperram.gtkw"
+[timestart] 0
+[size] 1920 1043
+[pos] -1 -1
+*-33.000000 154100000000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[markername] AA
+[markername] BB
+[markername] CC
+[markername] DD
+[markername] EE
+[markername] FF
+[markername] GG
+[markername] HH
+[markername] II
+[markername] JJ
+[markername] KK
+[markername] LL
+[markername] MM
+[markername] NN
+[markername] OO
+[markername] PP
+[markername] QQ
+[markername] RR
+[markername] SS
+[markername] TT
+[markername] UU
+[markername] VV
+[markername] WW
+[markername] XX
+[markername] YY
+[markername] ZZ
+[treeopen] tb_croc_soc.
+[treeopen] tb_croc_soc.i_croc_soc.
+[treeopen] tb_croc_soc.i_croc_soc.i_croc.
+[treeopen] tb_croc_soc.i_croc_soc.i_croc.i_jtag_hyperram_adapter.mem_req_o.
+[treeopen] tb_croc_soc.i_croc_soc.i_croc.i_jtag_hyperram_adapter.mem_req_o.w.
+[treeopen] tb_croc_soc.i_croc_soc.i_croc.i_jtag_hyperram_adapter.mem_req_o.w.record.
+[sst_width] 348
+[signals_width] 347
+[sst_expanded] 1
+[sst_vpaned_height] 560
+@200
+-
+-ibex core
+@22
+tb_croc_soc.i_croc_soc.i_croc.i_core_wrap.i_core.u_ibex_core.csr_mtval[31:0]
+tb_croc_soc.i_croc_soc.i_croc.i_core_wrap.i_core.u_ibex_core.cheriot_enable_i[3:0]
+tb_croc_soc.i_croc_soc.i_croc.i_core_wrap.i_core.u_ibex_core.pc_if[31:0]
+tb_croc_soc.i_croc_soc.i_croc.i_core_wrap.i_core.u_ibex_core.csr_mepc[31:0]
+@200
+-
+-
+-hyperram init signals
+@28
+[color] 1
+tb_croc_soc.i_croc_soc.i_croc.i_hyperram_init.clk_i
+@22
+[color] 1
+tb_croc_soc.i_croc_soc.i_croc.i_hyperram_init.addr_d[31:0]
+@420
+[color] 1
+tb_croc_soc.i_croc_soc.i_croc.i_hyperram_init.NumbRecordsLast
+@24
+[color] 1
+tb_croc_soc.i_croc_soc.i_croc.i_hyperram_init.burst_index_d[11:0]
+[color] 1
+tb_croc_soc.i_croc_soc.i_croc.i_hyperram_init.record_index_d[6:0]
+@100000028
+[color] 1
+tb_croc_soc.i_croc_soc.i_croc.i_hyperram_init.state_d[3:0]
+@28
+[color] 1
+tb_croc_soc.i_croc_soc.i_croc.i_hyperram_init.last_burst
+[color] 1
+tb_croc_soc.i_croc_soc.i_croc.i_hyperram_init.last_record
+@200
+-
+@20000
+-
+@200
+-jtag-hyperram adapter
+@28
+[color] 2
+tb_croc_soc.i_croc_soc.i_croc.i_jtag_hyperram_adapter.clk_i
+@100000028
+[color] 2
+tb_croc_soc.i_croc_soc.i_croc.i_jtag_hyperram_adapter.state_d[3:0]
+@22
+[color] 2
+tb_croc_soc.i_croc_soc.i_croc.i_jtag_hyperram_adapter.block_addr[31:0]
+[color] 2
+tb_croc_soc.i_croc_soc.i_croc.i_jtag_hyperram_adapter.mem_req_o.w.record.lower.data[31:0]
+@28
+[color] 2
+tb_croc_soc.i_croc_soc.i_croc.i_jtag_hyperram_adapter.write_record_index_d[0]
+@20000
+-
+@200
+-
+-cache arbiter
+@28
+[color] 3
+tb_croc_soc.i_croc_soc.i_croc.i_cache_mem_arbiter.clk_i
+@24
+[color] 3
+tb_croc_soc.i_croc_soc.i_croc.i_cache_mem_arbiter.selected_port_d[1:0]
+@100000028
+[color] 3
+tb_croc_soc.i_croc_soc.i_croc.i_cache_mem_arbiter.state_d[3:0]
+@22
+[color] 3
+tb_croc_soc.i_croc_soc.i_croc.i_cache_mem_arbiter.current_addr[31:0]
+@24
+[color] 3
+tb_croc_soc.i_croc_soc.i_croc.i_cache_mem_arbiter.count_beat_d[9:0]
+@200
+-
+-
+-instruction cache 
+@28
+[color] 5
+tb_croc_soc.i_croc_soc.i_croc.i_instruction_cache.clk_i
+@100000028
+[color] 5
+tb_croc_soc.i_croc_soc.i_croc.i_instruction_cache.state_d[3:0]
+@22
+[color] 5
+tb_croc_soc.i_croc_soc.i_croc.i_instruction_cache.obi_req_addr_d[31:0]
+@28
+[color] 5
+tb_croc_soc.i_croc_soc.i_croc.i_instruction_cache.hit_found
+@22
+[color] 5
+tb_croc_soc.i_croc_soc.i_croc.i_instruction_cache.sram_word_addr[8:0]
+@200
+-
+-
+-data cache
+@28
+[color] 6
+tb_croc_soc.i_croc_soc.i_croc.i_data_cache.clk_i
+@100000028
+[color] 6
+tb_croc_soc.i_croc_soc.i_croc.i_data_cache.state_d[3:0]
+@22
+[color] 6
+tb_croc_soc.i_croc_soc.i_croc.i_data_cache.obi_req_addr_d[31:0]
+@28
+[color] 6
+tb_croc_soc.i_croc_soc.i_croc.i_data_cache.obi_req_write_d
+[color] 6
+tb_croc_soc.i_croc_soc.i_croc.i_data_cache.hit_found
+[color] 6
+tb_croc_soc.i_croc_soc.i_croc.i_data_cache.selected_way_q[0]
+@200
+-
+-
+-hyperbus wrapper
+@201
+-
+[pattern_trace] 1
+[pattern_trace] 0

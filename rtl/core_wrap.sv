@@ -109,6 +109,9 @@ module core_wrap
   localparam bit [31:0] DebugExceptionAddress = DebugAddrOffset + dm::ExceptionAddress[31:0];
 
   logic core_sleep;
+  // Only observed by the simulation integrity monitor at the end of this module.
+  ibex_pkg::crash_dump_t crash_dump;
+  logic alert_minor, alert_major_internal, alert_major_bus;
   // logic trvk_revbm_req;
   // logic trvk_revbm_rvalid_q;
 
@@ -153,7 +156,7 @@ module core_wrap
       .DbgTriggerEn             (1'b1),
       .DbgHwBreakNum            (1),
       .SecureIbex               (1'b0),
-      .MemECC                   (1'b0),
+      .MemECC                   (1'b1), // enabled ecc
 
       .DmBaseAddr     (DebugAddrOffset),
       .DmAddrMask     (32'h0003_FFFF),
@@ -219,14 +222,14 @@ module core_wrap
       .scramble_req_o      (),
 
       .debug_req_i        (debug_req_i),
-      .crash_dump_o       (),
+      .crash_dump_o       (crash_dump),
       .double_fault_seen_o(),
 
       .fetch_enable_i        (fetch_enable_i ? ibex_pkg::IbexMuBiOn : ibex_pkg::IbexMuBiOff),
       .mcounteren_writable_i (ibex_pkg::IbexMuBiOn),
-      .alert_minor_o         (),
-      .alert_major_internal_o(),
-      .alert_major_bus_o     (),
+      .alert_minor_o         (alert_minor),
+      .alert_major_internal_o(alert_major_internal),
+      .alert_major_bus_o     (alert_major_bus),
       .core_sleep_o          (core_sleep),
 
       .lockstep_cmp_en_o(),
@@ -242,5 +245,179 @@ module core_wrap
       .instr_addr_shadow_o()
   );
 
+`ifndef SYNTHESIS
+  // pragma translate_off
+
+  // Simulation-only memory-integrity monitor. Ibex's own ECC assertions use the prim_assert
+  // macros, which are dummies under Verilator, so every bus codeword is decoded here with the
+  // shared codec. Each report is followed by $fatal; run with +ecc_nofatal to only report.
+
+  typedef struct packed {
+    logic [31:0] addr;
+    logic        we;
+    logic [3:0]  be;
+    logic        cap;
+  } ecc_mon_data_req_t;
+
+  ecc_mon_data_req_t ecc_mon_data_q[$];
+  logic [31:0]       ecc_mon_instr_q[$];
+  logic [31:0]       ecc_mon_trvk_q[$];
+
+  bit          ecc_mon_fatal;
+  int unsigned ecc_mon_errors, ecc_mon_instr_cnt, ecc_mon_data_cnt, ecc_mon_trvk_cnt;
+
+  initial begin
+    ecc_mon_fatal     = !$test$plusargs("ecc_nofatal");
+    ecc_mon_errors    = 0;
+    ecc_mon_instr_cnt = 0;
+    ecc_mon_data_cnt  = 0;
+    ecc_mon_trvk_cnt  = 0;
+  end
+
+  function automatic string ecc_mon_kind(input ibex_mem_ecc_pkg::mem_ecc_dec_t dec);
+    if (dec.syndrome == ibex_mem_ecc_pkg::MemEccTagSyndrome)
+      return "single-bit error on the TAG column (stored tag and ECC disagree)";
+    return dec.err[1] ? "double-bit error" : "single-bit error";
+  endfunction
+
+  always @(posedge clk_i or negedge rst_ni) begin : ecc_monitor
+    ibex_mem_ecc_pkg::mem_ecc_dec_t dec;
+    ecc_mon_data_req_t              data_req;
+    logic [31:0]                    addr;
+    logic [39:0]                    expected;
+    bit                             failed;
+
+    if (!rst_ni) begin
+      ecc_mon_data_q.delete();
+      ecc_mon_instr_q.delete();
+      ecc_mon_trvk_q.delete();
+    end else begin
+      failed = 1'b0;
+
+      // OBI responses are in order: each one completes the oldest accepted request.
+      if (instr_rvalid_i) begin
+        ecc_mon_instr_cnt++;
+        addr = '1;
+        if (ecc_mon_instr_q.size() == 0) begin
+          $error("@%t | [ECC-MON] Instruction response without an outstanding request", $time);
+          failed = 1'b1;
+        end else begin
+          addr = ecc_mon_instr_q.pop_front();
+        end
+        // Instruction responses carry data-only ECC (tag zero), see instruction_cache.sv.
+        dec = ibex_mem_ecc_pkg::mem_ecc_decode({instr_rdata_intg_i, 1'b0, instr_rdata_i});
+        if (dec.err != 2'b00) begin
+          $error({"@%t | [ECC-MON] Instruction fetch %s: addr=0x%08h rdata=0x%08h ecc=0x%02h ",
+                  "syndrome=0x%02h bus_err=%0b pc_id=0x%08h cheriot=%0b"},
+                 $time, ecc_mon_kind(dec), addr, instr_rdata_i, instr_rdata_intg_i,
+                 dec.syndrome, instr_err_i, crash_dump.current_pc, cheriot_enable_i);
+          failed = 1'b1;
+        end
+      end
+
+      if (data_rvalid_i) begin
+        ecc_mon_data_cnt++;
+        data_req = '1;
+        if (ecc_mon_data_q.size() == 0) begin
+          $error("@%t | [ECC-MON] Data response without an outstanding request", $time);
+          failed = 1'b1;
+        end else begin
+          data_req = ecc_mon_data_q.pop_front();
+        end
+        // Bus-side codeword: ECC covers the 32 data bits plus the returned capability tag.
+        dec = ibex_mem_ecc_pkg::mem_ecc_decode({data_rdata_intg_i, data_tag_i, data_rdata_i});
+        if (dec.err != 2'b00) begin
+          $error({"@%t | [ECC-MON] Data %s response %s: addr=0x%08h be=0b%04b cap_access=%0b ",
+                  "rdata=0x%08h tag=%0b ecc=0x%02h syndrome=0x%02h bus_err=%0b ",
+                  "pc_id=0x%08h last_data_addr=0x%08h cheriot=%0b"},
+                 $time, data_req.we ? "store" : "load", ecc_mon_kind(dec), data_req.addr,
+                 data_req.be, data_req.cap, data_rdata_i, data_tag_i, data_rdata_intg_i,
+                 dec.syndrome, data_err_i, crash_dump.current_pc, crash_dump.last_data_addr,
+                 cheriot_enable_i);
+          failed = 1'b1;
+        end
+      end
+
+      if (trvk_revbm_rvalid_i) begin
+        ecc_mon_trvk_cnt++;
+        addr = '1;
+        if (ecc_mon_trvk_q.size() == 0) begin
+          $error("@%t | [ECC-MON] Revocation-bitmap response without an outstanding request",
+                 $time);
+          failed = 1'b1;
+        end else begin
+          addr = ecc_mon_trvk_q.pop_front();
+        end
+        dec = ibex_mem_ecc_pkg::mem_ecc_decode({trvk_revbm_rdata_intg_i, 1'b0,
+                                                trvk_revbm_rdata_i});
+        if (dec.err != 2'b00) begin
+          $error({"@%t | [ECC-MON] Revocation-bitmap %s: addr=0x%08h rdata=0x%08h ecc=0x%02h ",
+                  "syndrome=0x%02h bus_err=%0b pc_id=0x%08h"},
+                 $time, ecc_mon_kind(dec), addr, trvk_revbm_rdata_i, trvk_revbm_rdata_intg_i,
+                 dec.syndrome, trvk_revbm_err_i, crash_dump.current_pc);
+          failed = 1'b1;
+        end
+      end
+
+      // Record accepted requests after the responses of this cycle have been matched.
+      if (instr_req_o && instr_gnt_i) begin
+        ecc_mon_instr_q.push_back(instr_addr_o);
+      end
+
+      if (data_req_o && data_gnt_i) begin
+        ecc_mon_data_q.push_back('{addr: data_addr_o, we: data_we_o, be: data_be_o,
+                                   cap: data_is_cap_access_o});
+        // The core's own write encoding must match the shared codec.
+        if (data_we_o) begin
+          expected = ibex_mem_ecc_pkg::mem_ecc_encode(data_wdata_o, data_tag_o);
+          if (data_wdata_intg_o != expected[39:33]) begin
+            $error({"@%t | [ECC-MON] Core write ECC mismatch: addr=0x%08h be=0b%04b ",
+                    "wdata=0x%08h tag=%0b ecc=0x%02h expected=0x%02h pc_id=0x%08h"},
+                   $time, data_addr_o, data_be_o, data_wdata_o, data_tag_o,
+                   data_wdata_intg_o, expected[39:33], crash_dump.current_pc);
+            failed = 1'b1;
+          end
+        end
+      end
+
+      if (trvk_revbm_req_o && trvk_revbm_gnt_i) begin
+        ecc_mon_trvk_q.push_back(trvk_revbm_addr_o);
+      end
+
+      // Ibex's own detection, independent of the checks above.
+      if (alert_major_bus) begin
+        $error({"@%t | [ECC-MON] Ibex alert_major_bus (core detected a bus integrity error): ",
+                "pc_id=0x%08h last_data_addr=0x%08h exception_pc=0x%08h exception_addr=0x%08h"},
+               $time, crash_dump.current_pc, crash_dump.last_data_addr,
+               crash_dump.exception_pc, crash_dump.exception_addr);
+        failed = 1'b1;
+      end
+      if (alert_major_internal) begin
+        $error("@%t | [ECC-MON] Ibex alert_major_internal: pc_id=0x%08h", $time,
+               crash_dump.current_pc);
+        failed = 1'b1;
+      end
+      if (alert_minor) begin
+        $warning("@%t | [ECC-MON] Ibex alert_minor: pc_id=0x%08h", $time,
+                 crash_dump.current_pc);
+      end
+
+      if (failed) begin
+        ecc_mon_errors++;
+        if (ecc_mon_fatal) begin
+          $fatal(1, "@%t | [ECC-MON] Stopping after integrity error (+ecc_nofatal to continue)",
+                 $time);
+        end
+      end
+    end
+  end
+
+  final begin
+    $display("[ECC-MON] Checked %0d instruction, %0d data and %0d bitmap responses: %0d errors",
+             ecc_mon_instr_cnt, ecc_mon_data_cnt, ecc_mon_trvk_cnt, ecc_mon_errors);
+  end
+
+  // pragma translate_on
+`endif
 
 endmodule
