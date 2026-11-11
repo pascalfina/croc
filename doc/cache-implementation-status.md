@@ -57,10 +57,11 @@ and JTAG-adapter module files are listed in the root Bender sources. In
 port 2. A generate loop instantiates one SRAM wrapper per way; the default
 configuration still has two wrappers per cache.
 
-The core still has `MemECC = 0`. Its write-integrity output is not connected,
-its read-integrity input is tied to zero, and OBI request ECC is tied to zero
-in `croc_domain.sv`. ECC wiring remains an integration TODO. The capability-access
-marker now travels from the LSU through `ibex_core`, `ibex_top` and TRVK to
+The core still has `MemECC = 0`. Its write-integrity output and instruction/data
+read-integrity inputs are now connected through `core_wrap` to the OBI ECC
+fields. The direct TRVK bitmap response also carries ECC instead of a zero
+tie-off. This is source-level integration, not a verified activation of ECC.
+The capability-access marker travels from the LSU through `ibex_core`, `ibex_top` and TRVK to
 `core_wrap.data_is_cap_access_o`, connected directly to the OBI request's
 `a_optional.is_cap_access` field. It marks both words of capability loads and
 stores, independently of the capability-validity tag. Ordinary accesses,
@@ -1037,6 +1038,36 @@ The output contains 32 payload bits, one tag and seven ECC bits; the helper
 extracts bits [39:33]. For tag zero, ECC matches the original encoder,
 including `7'h2A` for zero data. All other producers and response paths must
 use the same contract before `MemECC` is enabled.
+
+### MMIO and Bitmap Response Integrity
+
+`croc_pkg::mmio_rsp_with_ecc()` copies a subordinate response and supplies ECC
+for its actual 32-bit response data with tag zero. It changes no grant, valid,
+ID, error or payload fields and adds no registers or protocol states.
+`croc_domain.sv` applies it before the peripheral demultiplexer to SoC control,
+UART, GPIO, timer, CLINT, iDMA configuration, debug memory and HyperBus
+configuration responses. Peripheral and main-crossbar error responders are
+covered too. The current user-domain error responders use the same helper.
+This covers reads, store acknowledgements and error response payloads alike.
+
+Boot-ROM responses already generate their ECC locally and bypass the helper.
+I-cache, D-cache and JTAG memory responses also bypass it: their stored ECC
+must not be regenerated from observed read data. A future user-domain encoded
+memory must likewise return its own ECC instead of using this MMIO helper.
+
+`revc_bitmap_memory.sv` encodes both registered response words with tag zero.
+Its new `data_rdata_intg_o` output connects to the bitmap's OBI response; its
+`trvk_revbm_rdata_intg_o` output reaches `ibex_top` through `croc_domain` and
+`core_wrap`. Tag-zero encoding remains compatible with TRVK's existing
+32-data-bit bitmap checker. Response latency and bitmap arbitration are
+unchanged, and no bitmap ECC storage or extra flipflops were added.
+
+These encoders protect response transfers only from their encoding boundary.
+They do not detect corruption of peripheral registers, bitmap storage or
+bitmap response registers before encoding, and do not validate write-request
+ECC. Protecting stored bitmap state requires a separate stored-ECC or parity
+design. These integration changes have not been built or simulated;
+`MemECC` remains disabled.
 
 ### Merge Equation
 

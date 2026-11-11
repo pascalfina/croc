@@ -161,6 +161,14 @@ returns tag zero. This preserves the fault syndrome and lets the existing
 The stored 40-bit codewords and 80-bit records remain unchanged; the cache
 does not regenerate ECC from fetched data or perform an integrity check.
 
+MMIO responses use `croc_pkg::mmio_rsp_with_ecc()` at the device-side boundary
+to provide ECC for the actual response data and tag zero, preserving the
+existing handshakes, IDs and errors. This helper must not wrap encoded-memory
+responses. Boot ROM and caches retain their own response ECC. The revocation
+bitmap supplies tag-zero ECC on both its OBI and direct TRVK response ports.
+MMIO and bitmap response encoding adds no pipeline stage or ECC storage and
+does not protect their stored state before encoding or check write-request ECC.
+
 ## Partial Stores and ECC Fault Model
 
 A full 32-bit store replaces its complete 40-bit stored word and forwards the
