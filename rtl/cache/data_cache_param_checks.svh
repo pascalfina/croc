@@ -78,12 +78,12 @@
         selected_way_q
     );
 
+    // Catch early error completions too, even before done_ready is asserted.
     assert_refill_success: assert property (
         @(posedge clk_i) disable iff (!rst_ni)
         (
-            state_q == WAIT_REFILL_DONE &&
-            mem_rsp_i.done_valid &&
-            mem_req_o.done_ready
+            (state_q == WAIT_REFILL_DATA || state_q == WAIT_REFILL_DONE) &&
+            mem_rsp_i.done_valid
         )
         |-> !mem_rsp_i.done.error
     ) else $fatal(
