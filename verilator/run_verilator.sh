@@ -99,7 +99,8 @@ build_rtl_verilator() {
         --timing \
         --autoflush \
         $VERILATOR_TRACE_ARGS \
-        --unroll-count 1 \
+        --assert \
+        --unroll-count 64 \
         --unroll-stmts 1 \
         --x-assign fast \
         --x-initial fast \
