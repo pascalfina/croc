@@ -256,6 +256,7 @@ module bootrom #(
     logic [ 6:0] rom_size;
     logic        rom_error;
     logic [31:0] rom_rdata;
+    logic [39:0] encoded_response;
 
     assign rom_req    = req_q && !we_q;
     assign rom_select = word_addr_q[WordAddressWidth-1 -: 4];
@@ -305,6 +306,9 @@ module bootrom #(
             obi_rsp_o.r.rdata = rom_rdata;
             obi_rsp_o.r.err   = rom_error;
         end
+
+        encoded_response = ibex_mem_ecc_pkg::mem_ecc_encode(obi_rsp_o.r.rdata, 1'b0);
+        obi_rsp_o.r.r_optional.ecc = encoded_response[39:33];
     end
 
 endmodule
