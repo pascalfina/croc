@@ -79,7 +79,7 @@ build or test.
 | Full 32-bit store hit | Places the buffered 40-bit word in the selected half, marks dirty and answers in the SRAM-write cycle | RTL verification and end-to-end ECC wiring |
 | Capability store hit | Buffers both words, writes all 80 bits, captures the second request ID in both receive paths and answers once in the write cycle and once in `IDLE` using `cap_flag_q` | Pair-contract enforcement, SoC integration and regression of distinct IDs in both receive paths |
 | Byte/halfword store hit | Reads the old word, merges bytes/tag/ECC, writes the selected half, marks dirty and answers | RTL verification; empty masks are excluded by a simulation assertion, not a hardware no-op policy |
-| ECC merge helper | `ecc_merge_partial32()` calls the original inverted Ibex encoder and is used in `ACCESS_SRAM` | End-to-end integration and tag protection are not implemented |
+| ECC merge helper | `ecc_merge_partial32()` uses the shared data-plus-tag codec in `ACCESS_SRAM`, including the old tag in its unused term | End-to-end integration and regression of the tag-aware update remain open |
 | Ordinary read hit | Reads one record, selects one stored word and returns data, stored tag/ECC and the saved ID | RTL verification and core ECC wiring |
 | Capability read hit | Reuses the 80-bit store buffer; sends one response per accepted half; an extra flag prevents repeated first responses | RTL verification, SRAM output-hold validation during waiting, pair-contract enforcement and SoC integration |
 | Refill | Command handshake, full-record SRAM writes, record index, completion wait, metadata installation and lookup replay; an assertion stops on an accepted error completion | Shared transfer engine, actual error/abort recovery, record-count/`last` verification and functional tests |
@@ -107,9 +107,12 @@ Current defaults are 8 KiB of usable payload, 16 logical bytes per line and two
 ways. Each 80-bit SRAM record holds two 32-bit payload words with their stored
 ECC and capability tags. Thus, a default line contains two records: 16 logical
 bytes in 20 stored bytes. Instructions use the same backing format as data;
-fetch does not interpret the capability tags as execution permission. The
-current response forwards the selected stored tag, but instruction integration
-must not interpret it as a capability load.
+fetch does not interpret the capability tags as execution permission. On the
+OBI response, the cache removes the stored tag's parity contribution with
+`stored_ecc ^ ({7{stored_tag}} & ibex_mem_ecc_pkg::MemEccTagSyndrome)` and returns
+tag zero. This preserves the original fault syndrome while allowing the
+existing 32-data-bit Ibex instruction checker to remain unchanged. Stored
+records are not modified, and no instruction-tag input or extra cycle is needed.
 
 The I-cache never modifies instructions. It therefore needs no dirty tracking,
 write-back states or write-back FIFO: evicting a line only discards a copy of
@@ -123,7 +126,7 @@ does not constitute a HyperRAM write.
 | --- | --- |
 | `IDLE` | Assert OBI grant; capture address and ID on `req && gnt` |
 | `CACHE_LOOKUP` | Compare valid/address tags in the indexed set; on a hit, select the way and issue the SRAM read; on a miss, prefer an invalid way, otherwise use the set's round-robin candidate |
-| `ACCESS_SRAM` | Return the selected 32-bit word, stored ECC/tag and captured ID with one OBI response, then return to `IDLE` |
+| `ACCESS_SRAM` | Return the selected 32-bit word, ECC with the tag contribution removed, tag zero and captured ID with one OBI response, then return to `IDLE` |
 | `SEND_REFILL_CMD` | Hold a line-aligned read command and `RecordsPerLine` until command acceptance |
 | `WAIT_REFILL_DATA` | Write each accepted 80-bit record into the selected way at `set * RecordsPerLine + record_index`; advance only on handshake |
 | `WAIT_REFILL_DONE` | On successful completion, install the address tag and valid bit, advance the replacement pointer with wrap and return to lookup to replay the pending request |
@@ -179,9 +182,11 @@ eleven invalid configurations produced their parameter diagnostic. The local
 README and `REVIEW-2026-11-09.md` contain commands, logs and exact source hashes.
 
 These are cache unit tests with a memory-stream responder, not a complete
-Ibex/crossbar/arbiter/HyperBus/HyperRAM simulation. ECC is transported unchanged;
-core checking/correction and protection of the capability tag are not verified
-by these tests. SoC integration and cache-maintenance behavior remain open.
+Ibex/crossbar/arbiter/HyperBus/HyperRAM simulation. At that tested revision ECC
+was transported unchanged. The instruction-response ECC adaptation above was
+added later and is not covered by that run. Core checking/correction and
+protection of the capability tag are not verified by these tests. SoC
+integration and cache-maintenance behavior remain open.
 
 ## Representation and Addressing
 
@@ -205,9 +210,10 @@ one aligned 8-byte value. Ibex reconstructs its validity using the AND of the
 tags returned with its two words. Normal stores produce tag zero; the cache
 uses the saved incoming tag rather than sampling a later live request.
 
-The target is seven ECC bits protecting each word's 32 payload bits plus tag.
-The current helper protects only the 32 payload bits. Storing a tag next to an
-ECC field does not mean that tag is covered by the code.
+The shared `ibex_mem_ecc_pkg` codec protects each word's 32 payload bits plus
+tag with seven ECC bits. The partial-store helper uses this codec as well.
+End-to-end activation still requires consistent wiring and encoding on every
+response path; `MemECC` remains disabled.
 
 ### Geometry and Lookup
 
@@ -1022,34 +1028,36 @@ not a valid initialization rule for the inverted Ibex code.
 
 ### Codec Consistency
 
-`ecc_merge_partial32()` calls
-`prim_secded_pkg::prim_secded_inv_39_32_enc()`, the package-function equivalent
-of the module used by the Ibex load/store unit. There is no copied parity matrix
+`ecc_merge_partial32()` calls `ibex_mem_ecc_pkg::mem_ecc_encode()`, shared with
+the Ibex LSU write path. This codec extends the original inverted 39/32 matrix
+with the capability-tag column `7'h43`. There is no copied data parity matrix
 or substitution of a different Hamming code just because its width matches.
 
-The output contains 32 payload bits plus seven ECC bits; the helper extracts
-bits [38:32]. The inverted code's ECC for zero data is `7'h2A`, not zero.
-The function currently ignores `cap_tag`. Extending to data plus tag requires
-one consistent 33-input-bit codec in store generation, partial updates, core
-checking, initialization and all memory-image/packing logic.
+The output contains 32 payload bits, one tag and seven ECC bits; the helper
+extracts bits [39:33]. For tag zero, ECC matches the original encoder,
+including `7'h2A` for zero data. All other producers and response paths must
+use the same contract before `MemECC` is enabled.
 
 ### Merge Equation
 
 Let `O` be the observed old 32-bit payload, `N` the incoming payload, and
-`eO` and `eN` their supplied ECC fields. Let `E(x)` mean the seven ECC
-bits produced by the exact inverted Ibex encoder. For every byte:
+`eO` and `eN` their supplied ECC fields. Their tags are `tO` and `tN`.
+Let `E(data, tag)` mean the seven ECC bits from the shared encoder. For every byte:
 
 ```text
 Result byte = byte_enable ? incoming byte : old byte
 Unused byte = byte_enable ? old byte      : incoming byte
 
-eResult = eO XOR eN XOR E(Unused)
+Result tag = tN
+Unused tag = tO
+eResult = eO XOR eN XOR E(Unused, tO)
 ```
 
 `Unused` contains the bytes not selected into the result. Its reversed
 selection is intentional, not a second data result or a stored extra word.
 For the halfword example above, `Result = 0x1122AABB` and
-`Unused = 0x00003344`.
+`Unused = 0x00003344`. The unused term includes the old tag so its contribution
+cancels out, leaving the incoming tag's contribution in the result ECC.
 
 The inverted encoding is affine: it is a linear parity mapping plus a fixed
 inversion constant. Using the original encoder for the third term preserves
@@ -1059,16 +1067,16 @@ non-inverted encoder for the third term, would not implement this equation.
 For analysis, define the seven-bit syndrome as:
 
 ```text
-S(data, ecc) = ecc XOR E(data)
+S(data, tag, ecc) = ecc XOR E(data, tag)
 
-S(Result, eResult) = S(O, eO) XOR S(N, eN)
+S(Result, tN, eResult) = S(O, tO, eO) XOR S(N, tN, eN)
 ```
 
 This follows from `Result XOR Unused = O XOR N`. The hardware does not compute
 or test these syndromes. It implements byte selection, one encoding operation
 and XORs. It has no decoder, correction action or ECC-error branch.
 
-Blindly setting `eResult = E(Result)` would instead make every observed result
+Blindly setting `eResult = E(Result, tN)` would instead make every observed result
 look valid, including corrupted preserved bytes. That is not the chosen update.
 
 ### Fault Model and Silent-Corruption Limit
@@ -1122,9 +1130,9 @@ During design, an ad hoc JavaScript model using the local encoder matrix
 checked 262,248 cases: twelve deterministic data pairs, all fourteen nonempty
 partial byte masks, and clean, single-bit and double-bit faults within each
 input separately. It also demonstrated the two-input cancellation example.
-This checks the merge identity, not SystemVerilog compilation, RTL simulation,
-formal equivalence, core integration or timing. No checked-in RTL regression
-for this helper exists yet.
+This checked the earlier data-only merge identity, not the tag-aware extension,
+SystemVerilog compilation, RTL simulation, formal equivalence, core integration
+or timing. No checked-in RTL regression for this helper exists yet.
 
 ## Hardware, Timing and Sweep Trade-Offs
 

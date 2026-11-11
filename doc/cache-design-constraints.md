@@ -144,29 +144,32 @@ There is no reserved bit in this representation. The source struct packs the
 lower word as data [31:0], tag [32], ECC [39:33], and the upper word as data
 [71:40], tag [72], ECC [79:73].
 
-The target is two independent 40-bit SECDED codewords, each protecting 32 data
-bits plus one tag. However, the current Ibex encoder and
-`ecc_merge_partial32()` protect only 32 data bits with seven ECC bits; they do
-not protect the tag. A common 33-bit codec, including its bit ordering and
-initialization values, still has to be implemented consistently in core and
-cache. Merely enabling `MemECC` does not supply this extension. The initial
-policy is detection in the core, not correction in the cache.
+The format uses two independent 40-bit SECDED codewords, each protecting 32 data
+bits plus one tag. The shared `ibex_mem_ecc_pkg` codec extends the original
+inverted Ibex 39/32 matrix with the tag column `7'h43`. The LSU write/read paths
+and `ecc_merge_partial32()` use it. Every remaining producer and response path
+must follow this contract before `MemECC` is enabled. For tag zero, the seven
+ECC bits match the original code. The initial policy is detection in the core,
+not correction in the cache.
 
 The backing format applies to both instruction and data views of the same
 memory. Instruction fetch does not interpret a capability tag as execution
-permission. The instruction path's checking and adaptation to the shared
-encoded backing format must also be specified; its current 32-bit Ibex checker
-must not be assumed to check a future data-plus-tag codeword unchanged.
+permission. At its OBI response, the I-cache removes the stored tag's ECC
+contribution by XORing `MemEccTagSyndrome` when the stored tag is one, and
+returns tag zero. This preserves the fault syndrome and lets the existing
+32-bit Ibex instruction checker operate without an instruction-tag input.
+The stored 40-bit codewords and 80-bit records remain unchanged; the cache
+does not regenerate ECC from fetched data or perform an integrity check.
 
 ## Partial Stores and ECC Fault Model
 
 A full 32-bit store replaces its complete 40-bit stored word and forwards the
 incoming ECC. A partial store preserves some existing bytes, so the cache first
 reads the record, merges bytes and updates ECC for that combination. The helper
-uses the original inverted Ibex encoder function rather than a second encoding
-matrix. It performs no ECC check or correction.
+uses the shared data-plus-tag encoder. Its unused-data term takes the old tag,
+while the result takes the incoming tag. It performs no ECC check or correction.
 
-For the current 32-bit codec, the update preserves the XOR of the two input
+For the shared data-plus-tag codec, the update preserves the XOR of the two input
 syndromes. If one input is valid, an existing nonzero syndrome in the other input
 remains nonzero. If both inputs are faulty, equal syndromes can cancel and
 corrupted output data can pass the core's later check. This is deterministic
