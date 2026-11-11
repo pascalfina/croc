@@ -23,56 +23,68 @@ CROC_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 show_help() {
     cat <<EOF
-Usage: $0 [--rtl | --software | --shard INDEX/COUNT | --netlist]
+Usage: $0 [--rtl | --software | --netlist] [--shard INDEX/COUNT]
 
-    --rtl                Build software and the RTL simulator, run all tests (default)
+    --rtl                Build software and the RTL simulator, run the tests (default)
     --software           Build the software only
-    --shard INDEX/COUNT  Build the RTL simulator and run every COUNT-th test,
-                         starting at INDEX (0-based); expects built software
-    --netlist            Run the hello_world smoke test on the post-Yosys netlist
+    --netlist            Run the tests on the post-Yosys netlist; expects built
+                         software and yosys/out/croc_yosys_debug.v
+    --shard INDEX/COUNT  Run only every COUNT-th test, starting at INDEX
+                         (0-based); with --rtl the software must already be built
 EOF
 }
 
 mode="rtl"
+sharded=false
 shard_index=0
 shard_count=1
 
-case "${1:-}" in
-    ""|--rtl)
-        ;;
-    --software)
-        mode="software"
-        ;;
-    --shard)
-        mode="shard"
-        if [[ ! "${2:-}" =~ ^([0-9]+)/([1-9][0-9]*)$ ]]; then
-            echo "[ERROR] --shard expects INDEX/COUNT, e.g. 0/6" >&2
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --rtl)
+            mode="rtl"
+            shift
+            ;;
+        --software)
+            mode="software"
+            shift
+            ;;
+        --netlist)
+            mode="netlist"
+            shift
+            ;;
+        --shard)
+            if [[ ! "${2:-}" =~ ^([0-9]+)/([1-9][0-9]*)$ ]]; then
+                echo "[ERROR] --shard expects INDEX/COUNT, e.g. 0/6" >&2
+                exit 1
+            fi
+            shard_index=${BASH_REMATCH[1]}
+            shard_count=${BASH_REMATCH[2]}
+            if (( shard_index >= shard_count )); then
+                echo "[ERROR] Shard index $shard_index must be below $shard_count" >&2
+                exit 1
+            fi
+            sharded=true
+            shift 2
+            ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        *)
+            echo "[ERROR] Unknown argument: $1" >&2
+            show_help >&2
             exit 1
-        fi
-        shard_index=${BASH_REMATCH[1]}
-        shard_count=${BASH_REMATCH[2]}
-        if (( shard_index >= shard_count )); then
-            echo "[ERROR] Shard index $shard_index must be below $shard_count" >&2
-            exit 1
-        fi
-        ;;
-    --netlist)
-        mode="netlist"
-        ;;
-    -h|--help)
-        show_help
-        exit 0
-        ;;
-    *)
-        echo "[ERROR] Unknown argument: $1" >&2
-        show_help >&2
-        exit 1
-        ;;
-esac
+            ;;
+    esac
+done
 
 # Each RTL test may use up to 90 minutes; the cache stress test alone takes
-# about 45 minutes. The enclosing GitHub job still has a six-hour limit.
+# about 45 minutes. The netlist keeps the hardware default of 4 MiB HyperRAM
+# initialisation and is much slower, so its tests may use almost the whole
+# six-hour job limit.
 rtos_test_timeout=5400
+netlist_test_timeout=19800
 
 cd "$CROC_ROOT"
 
@@ -134,38 +146,13 @@ if [[ "$mode" == "software" ]]; then
     exit 0
 fi
 
-if [[ "$mode" == "netlist" ]]; then
-    export CROC_PDK=sg13cmos5l
-
-    default_netlist="yosys/out/croc_yosys_debug.v"
-    smoke_test="sw/bin/cheriot-rtos/hello_world.hex"
-    for required_file in "$default_netlist" "$smoke_test"; do
-        if [[ ! -f "$required_file" ]]; then
-            echo "[ERROR] Missing netlist simulation input: $required_file" >&2
-            exit 1
-        fi
-    done
-    cp "$default_netlist" yosys/out/netlist_debug.v
-
-    cd verilator
-    ./run_verilator.sh --no-trace --build-netlist
-
-    echo ""
-    echo "============================================="
-    echo "Netlist smoke test"
-    echo "============================================="
-    # The netlist keeps the hardware default of 4 MiB HyperRAM initialisation
-    # and is substantially slower than RTL simulation.
-    run_hex_files obj_dir_netlist_yosys/Vtb_croc_soc 18000 "$CROC_ROOT/$smoke_test"
-    exit 0
-fi
-
-# Always restore the checked-in default after a configuration-specific run.
-trap '"$SCRIPT_DIR/set_croc_config.sh"' EXIT
-"$SCRIPT_DIR/set_croc_config.sh"
-
 if [[ "$mode" == "rtl" ]]; then
-    build_software
+    # Always restore the checked-in default after a configuration-specific run.
+    trap '"$SCRIPT_DIR/set_croc_config.sh"' EXIT
+    "$SCRIPT_DIR/set_croc_config.sh"
+    if [[ "$sharded" == false ]]; then
+        build_software
+    fi
 fi
 
 collect_rtos_tests
@@ -180,18 +167,39 @@ if [[ ${#selected_tests[@]} -eq 0 ]]; then
     exit 1
 fi
 
+if [[ "$mode" == "netlist" ]]; then
+    export CROC_PDK=sg13cmos5l
+
+    default_netlist="yosys/out/croc_yosys_debug.v"
+    if [[ ! -f "$default_netlist" ]]; then
+        echo "[ERROR] Missing netlist simulation input: $default_netlist" >&2
+        exit 1
+    fi
+    cp "$default_netlist" yosys/out/netlist_debug.v
+
+    simulation_label="post-Yosys netlist"
+    build_option="--build-netlist"
+    simulation_binary="obj_dir_netlist_yosys/Vtb_croc_soc"
+    test_timeout=$netlist_test_timeout
+else
+    simulation_label="RTL"
+    build_option="--build"
+    simulation_binary="obj_dir_rtl/Vtb_croc_soc"
+    test_timeout=$rtos_test_timeout
+fi
+
 echo "============================================="
-echo "Build RTL simulator"
+echo "Build $simulation_label simulator"
 echo "============================================="
 cd verilator
 # CI keeps simulator logs, but does not need an interactive waveform.
-./run_verilator.sh --no-trace --build
+./run_verilator.sh --no-trace "$build_option"
 
 echo ""
 echo "============================================="
-echo "CHERIoT-RTOS tests (shard $shard_index/$shard_count)"
+echo "CHERIoT-RTOS tests on $simulation_label (shard $shard_index/$shard_count)"
 echo "============================================="
-run_hex_files obj_dir_rtl/Vtb_croc_soc "$rtos_test_timeout" "${selected_tests[@]}"
+run_hex_files "$simulation_binary" "$test_timeout" "${selected_tests[@]}"
 
 cd "$CROC_ROOT"
 

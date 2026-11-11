@@ -148,14 +148,24 @@ jobs:
             yosys/reports
             yosys/out
 
-  # Gate-level smoke test. The netlist keeps the hardware default of 4 MiB
-  # HyperRAM initialisation, which alone takes hours at gate level, so this
-  # job only runs when the workflow is started manually.
+  # Gate-level regression, sharded like the RTL simulation. The netlist keeps
+  # the hardware default of 4 MiB HyperRAM initialisation, so each test takes
+  # much longer than at RTL; a shard that exceeds the job limit is cancelled.
   netlist-simulation:
     needs: [hyperram-model, software, synthesis]
-    if: github.event_name == 'workflow_dispatch' && needs.hyperram-model.outputs.available == 'true'
+    if: needs.hyperram-model.outputs.available == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    permissions:
+      contents: read
+      packages: read
+    env:
+      COMPOSE_FILE: docker-compose.yml:docker-compose.cheriot-ci.yml
+      CHERIOT_CI_IMAGE: ghcr.io/${{ github.repository_owner }}/croc-iic-osic-tools:2025.12-cheriot
     steps:
       - name: Checkout repository (with submodules)
         uses: actions/checkout@v4
@@ -177,13 +187,19 @@ jobs:
         with:
           name: croc-synth-reports
           path: yosys
-      - name: Run CMOS5L netlist smoke test in OSEDA
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run CMOS5L netlist test shard in OSEDA
         uses: ./.github/actions/oseda-cmd
         with:
-          cmd: ".github/scripts/run_sim_flow.sh --netlist"
+          cmd: ".github/scripts/run_sim_flow.sh --netlist --shard ${{ matrix.shard }}/${{ strategy.job-total }}"
       - name: Upload netlist simulation logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: netlist-simulation-logs
+          name: netlist-simulation-logs-${{ matrix.shard }}
           path: verilator/*.log
