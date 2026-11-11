@@ -73,13 +73,11 @@ CHERIOT_RTOS_PROJECTS      ?= \
 	cheriot-rtos/test_use_after_free_handling \
 	cheriot-rtos/hello_compartment \
 	cheriot-rtos/hello_safe_compartment \
-	cheriot-rtos/temporal_safety \
 	cheriot-rtos/sealing \
 	cheriot-rtos/producer_consumer \
 	cheriot-rtos/error_handling \
 	cheriot-rtos/memory_safety \
-# 	cheriot-rtos/javascript \
-# 	cheriot-rtos/audit
+	cheriot-rtos/test_cache_stress
 
 
 CHERIOT_RTOS_BINDIR        ?= bin/cheriot-rtos

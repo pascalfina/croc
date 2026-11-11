@@ -100,4 +100,45 @@
         set_index,
         selected_way_q
     );
+
+`ifndef SYNTHESIS
+    // Coverage counters, reported at the end of simulation. A fresh lookup
+    // follows IDLE; the replay lookup after a refill is not counted again.
+    state_t      cov_prev_state_q;
+    logic        cov_cmd_waiting_q;
+    int unsigned cov_fetches, cov_hits, cov_misses, cov_miss_invalid, cov_miss_valid;
+    int unsigned cov_refills, cov_cmd_waits, cov_cmd_wait_cycles;
+
+    always @(posedge clk_i) begin
+        if (rst_ni) begin
+            if (state_q == IDLE && obi_req_i.req && obi_rsp_o.gnt) cov_fetches++;
+
+            if (state_q == CACHE_LOOKUP && cov_prev_state_q == IDLE) begin
+                if (hit_found) begin
+                    cov_hits++;
+                end else begin
+                    cov_misses++;
+                    if (cache_meta_q[set_index][selected_way_d].valid) cov_miss_valid++;
+                    else                                               cov_miss_invalid++;
+                end
+            end
+
+            if (state_q != cov_prev_state_q && state_q == SEND_REFILL_CMD) cov_refills++;
+
+            if (mem_req_o.cmd_valid && !mem_rsp_i.cmd_ready) begin
+                cov_cmd_wait_cycles++;
+                if (!cov_cmd_waiting_q) cov_cmd_waits++;
+            end
+        end
+        cov_prev_state_q  <= state_q;
+        cov_cmd_waiting_q <= rst_ni && mem_req_o.cmd_valid && !mem_rsp_i.cmd_ready;
+    end
+
+    final begin
+        $display("[CACHE-COV] %m: %0d fetches, %0d hits, %0d misses (victim invalid %0d, evicted %0d), %0d refills",
+                 cov_fetches, cov_hits, cov_misses, cov_miss_invalid, cov_miss_valid, cov_refills);
+        $display("[CACHE-COV] %m: %0d line commands waited for the arbiter (%0d cycles)",
+                 cov_cmd_waits, cov_cmd_wait_cycles);
+    end
+`endif
     // synthesis translate_on

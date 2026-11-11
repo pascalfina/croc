@@ -119,4 +119,88 @@
             1,
             "data_cache: accepted write with empty byte enable"
         );
+
+`ifndef SYNTHESIS
+    // Coverage counters, reported at the end of simulation. A fresh lookup
+    // follows IDLE; the replay lookup after a refill is not counted again.
+    state_t      cov_prev_state_q;
+    logic        cov_cmd_waiting_q;
+    int unsigned cov_requests, cov_cap_pairs, cov_partial_stores;
+    int unsigned cov_hits, cov_misses, cov_miss_invalid, cov_miss_clean, cov_miss_dirty;
+    int unsigned cov_writebacks, cov_refills, cov_partial_store_misses, cov_cap_misses;
+    int unsigned cov_cap_store_direct, cov_cap_store_delayed;
+    int unsigned cov_cap_load_direct, cov_cap_load_delayed;
+    int unsigned cov_cmd_waits, cov_cmd_wait_cycles;
+
+    always @(posedge clk_i) begin
+        if (rst_ni) begin
+            if (state_q == IDLE && obi_req_i.req && obi_rsp_o.gnt) begin
+                cov_requests++;
+                if (obi_req_i.a.a_optional.is_cap_access) begin
+                    cov_cap_pairs++;
+                end else if (obi_req_i.a.we && obi_req_i.a.be != '1) begin
+                    cov_partial_stores++;
+                end
+            end
+
+            if (state_q == CACHE_LOOKUP && cov_prev_state_q == IDLE) begin
+                if (hit_found) begin
+                    cov_hits++;
+                end else begin
+                    cov_misses++;
+                    if (!cache_meta_q[set_index][selected_way_d].valid) begin
+                        cov_miss_invalid++;
+                    end else if (cache_meta_q[set_index][selected_way_d].dirty) begin
+                        cov_miss_dirty++;
+                    end else begin
+                        cov_miss_clean++;
+                    end
+                    if (obi_is_cap_access_q) begin
+                        cov_cap_misses++;
+                    end else if (obi_req_write_q && obi_req_be_q != '1) begin
+                        cov_partial_store_misses++;
+                    end
+                end
+            end
+
+            if (state_q != cov_prev_state_q) begin
+                if (state_q == SEND_WRITEBACK_CMD) cov_writebacks++;
+                if (state_q == SEND_REFILL_CMD)    cov_refills++;
+            end
+
+            // Second capability half already present at the hit, or late.
+            if (state_q == CACHE_LOOKUP && hit_found &&
+                obi_is_cap_access_q && obi_req_write_q) begin
+                if (obi_req_i.req && obi_rsp_o.gnt) cov_cap_store_direct++;
+                else                                cov_cap_store_delayed++;
+            end
+            if (state_q == ACCESS_SRAM && cap_flag_read_valid_q &&
+                obi_is_cap_access_q && !obi_req_write_q) begin
+                if (obi_req_i.req && obi_rsp_o.gnt) cov_cap_load_direct++;
+                else                                cov_cap_load_delayed++;
+            end
+
+            // Line commands the arbiter did not accept immediately.
+            if (mem_req_o.cmd_valid && !mem_rsp_i.cmd_ready) begin
+                cov_cmd_wait_cycles++;
+                if (!cov_cmd_waiting_q) cov_cmd_waits++;
+            end
+        end
+        cov_prev_state_q  <= state_q;
+        cov_cmd_waiting_q <= rst_ni && mem_req_o.cmd_valid && !mem_rsp_i.cmd_ready;
+    end
+
+    final begin
+        $display("[CACHE-COV] %m: %0d requests, %0d capability pairs, %0d partial stores",
+                 cov_requests, cov_cap_pairs, cov_partial_stores);
+        $display("[CACHE-COV] %m: %0d hits, %0d misses (victim invalid %0d, clean %0d, dirty %0d)",
+                 cov_hits, cov_misses, cov_miss_invalid, cov_miss_clean, cov_miss_dirty);
+        $display("[CACHE-COV] %m: %0d dirty write-backs, %0d refills, %0d partial-store misses, %0d capability misses",
+                 cov_writebacks, cov_refills, cov_partial_store_misses, cov_cap_misses);
+        $display("[CACHE-COV] %m: capability stores second half direct %0d / delayed %0d, loads direct %0d / delayed %0d",
+                 cov_cap_store_direct, cov_cap_store_delayed, cov_cap_load_direct, cov_cap_load_delayed);
+        $display("[CACHE-COV] %m: %0d line commands waited for the arbiter (%0d cycles)",
+                 cov_cmd_waits, cov_cmd_wait_cycles);
+    end
+`endif
     // synthesis translate_on

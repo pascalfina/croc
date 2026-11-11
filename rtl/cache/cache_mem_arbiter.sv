@@ -308,9 +308,52 @@ module cache_mem_arbiter #(
         else begin
             write_buffer_q <= write_buffer_d;
         end
-        
+
     end
 
+`ifndef SYNTHESIS
+    // synthesis translate_off
+    // Coverage counters, reported at the end of simulation: operations per
+    // port, operations accepted while another port was also requesting, cycles
+    // a port's command waited, and consecutive operations of different ports.
+    int unsigned cov_ops [NumPorts];
+    int unsigned cov_ops_contended [NumPorts];
+    int unsigned cov_wait_cycles [NumPorts];
+    int unsigned cov_handovers;
+    logic [PortIndexWidth-1:0] cov_last_port_q;
+    logic                      cov_seen_op_q;
 
+    always @(posedge clk_i) begin
+        if (rst_ni) begin
+            for (int p = 0; p < NumPorts; p++) begin
+                if (cache_req_i[p].cmd_valid && !cache_rsp_o[p].cmd_ready) cov_wait_cycles[p]++;
+            end
+
+            if (state_q == IDLE && found_port) begin
+                cov_ops[selected_port_d]++;
+                for (int p = 0; p < NumPorts; p++) begin
+                    if (p != int'(selected_port_d) && cache_req_i[p].cmd_valid) begin
+                        cov_ops_contended[selected_port_d]++;
+                        break;
+                    end
+                end
+                if (cov_seen_op_q && cov_last_port_q != selected_port_d) cov_handovers++;
+                cov_last_port_q <= selected_port_d;
+                cov_seen_op_q   <= 1'b1;
+            end
+        end else begin
+            cov_seen_op_q <= 1'b0;
+        end
+    end
+
+    final begin
+        for (int p = 0; p < NumPorts; p++) begin
+            $display("[CACHE-COV] %m: port %0d: %0d operations, %0d accepted while another port requested, %0d wait cycles",
+                     p, cov_ops[p], cov_ops_contended[p], cov_wait_cycles[p]);
+        end
+        $display("[CACHE-COV] %m: %0d handovers between different ports", cov_handovers);
+    end
+    // synthesis translate_on
+`endif
 
 endmodule
