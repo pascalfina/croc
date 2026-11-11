@@ -169,6 +169,11 @@ bitmap supplies tag-zero ECC on both its OBI and direct TRVK response ports.
 MMIO and bitmap response encoding adds no pipeline stage or ECC storage and
 does not protect their stored state before encoding or check write-request ECC.
 
+The DMA manager boundary encodes its final write word with tag zero and marks
+the request as an ordinary access, preserving byte enables and handshakes.
+This adds no pipeline stage and does not add a DMA read-integrity checker:
+corrupt source data can still be copied with newly generated, consistent ECC.
+
 ## Partial Stores and ECC Fault Model
 
 A full 32-bit store replaces its complete 40-bit stored word and forwards the

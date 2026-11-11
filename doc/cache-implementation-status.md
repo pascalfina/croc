@@ -1069,6 +1069,25 @@ ECC. Protecting stored bitmap state requires a separate stored-ECC or parity
 design. These integration changes have not been built or simulated;
 `MemECC` remains disabled.
 
+### DMA Write Integrity
+
+At the DMA manager boundary in `croc_domain.sv`, the shared codec encodes the
+final `idma_obi_write_req.a.wdata` with tag zero. The crossbar request keeps
+the existing data, address, byte enables, ID and handshake; only its optional
+fields are supplied with ECC, tag zero and `is_cap_access = 0`. The generic
+DMA backend is unchanged. Partial stores use the D-cache's existing ECC merge,
+and no additional pipeline stage or buffer is introduced.
+
+This is write-side encoding, not DMA source validation: the DMA still does
+not check read-response ECC or preserve it through its byte buffer. A faulty
+source can therefore receive fresh, consistent ECC when copied. End-to-end
+DMA read integrity requires a separate checking/error-handling design.
+
+The data-integrity alert assertion in `ibex_top.sv` now uses the shared
+40-bit decoder with the tag and response data after TRVK, matching the LSU.
+The instruction-integrity assertion retains its 32-data-bit decoder, matching
+the I-cache response adaptation. Neither change has been built or simulated.
+
 ### Merge Equation
 
 Let `O` be the observed old 32-bit payload, `N` the incoming payload, and

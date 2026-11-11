@@ -296,6 +296,8 @@ module croc_domain import croc_pkg::*; #(
   // -----------------
   if (iDMAEnable) begin : gen_dma
 
+    logic [39:0] encoded_write_word;
+
     // iDMA
     croc_idma #(
       .ObiMrgCfg        ( MgrObiCfg           ),
@@ -321,7 +323,15 @@ module croc_domain import croc_pkg::*; #(
     );
 
     // IDMA managers going into crossbar
-    assign xbar_mgr_obi_req[4] = idma_obi_write_req;
+    assign encoded_write_word = ibex_mem_ecc_pkg::mem_ecc_encode(
+        idma_obi_write_req.a.wdata, 1'b0);
+
+    always_comb begin
+      xbar_mgr_obi_req[4] = idma_obi_write_req;
+      xbar_mgr_obi_req[4].a.a_optional.is_cap_access = 1'b0;
+      xbar_mgr_obi_req[4].a.a_optional.cap_tag = 1'b0;
+      xbar_mgr_obi_req[4].a.a_optional.ecc = encoded_write_word[39:33];
+    end
     assign idma_obi_write_rsp  = xbar_mgr_obi_rsp[4];
 
     assign xbar_mgr_obi_req[5] = idma_obi_read_req;
