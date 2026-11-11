@@ -57,9 +57,10 @@ module user_domain import user_pkg::*; import croc_pkg::*; #(
 
   // Fanout into more readable signals
   assign user_error_obi_req               = all_user_sbr_obi_req[UserError];
-  assign all_user_sbr_obi_rsp[UserError]  = user_error_obi_rsp;
+  assign all_user_sbr_obi_rsp[UserError]  = mmio_rsp_with_ecc(user_error_obi_rsp);
   assign user_design_obi_req              = all_user_sbr_obi_req[UserDesign];
-  assign all_user_sbr_obi_rsp[UserDesign] = user_design_obi_rsp;
+  // The current design placeholder is an error responder, not encoded memory.
+  assign all_user_sbr_obi_rsp[UserDesign] = mmio_rsp_with_ecc(user_design_obi_rsp);
 
 
   //-----------------------------------------------------------------------------------------------

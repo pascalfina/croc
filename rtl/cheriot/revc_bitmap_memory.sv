@@ -11,6 +11,7 @@ module revc_bitmap_memory #(
     input logic [3:0] data_be_i,
     output logic data_rvalid_o,
     output logic [31:0] data_rdata_o,
+    output logic [6:0] data_rdata_intg_o,
     output logic data_gnt_o,
 
     input logic trvk_revbm_req_i,
@@ -19,6 +20,7 @@ module revc_bitmap_memory #(
     output logic trvk_revbm_gnt_o,
     output logic trvk_revbm_rvalid_o,
     output logic [31:0] trvk_revbm_rdata_o,
+    output logic [6:0] trvk_revbm_rdata_intg_o,
     output logic trvk_revbm_err_o
 
 );
@@ -44,6 +46,14 @@ module revc_bitmap_memory #(
 
   logic [31:0] rev_bitmap_d[0:BitmapNumbWords - 1];
   logic [31:0] rev_bitmap_q[0:BitmapNumbWords - 1];
+
+  logic [39:0] encoded_data_response, encoded_trvk_response;
+
+  // Response-bus integrity only; the bitmap storage itself has no stored ECC.
+  assign encoded_data_response = ibex_mem_ecc_pkg::mem_ecc_encode(rdata_q, 1'b0);
+  assign encoded_trvk_response = ibex_mem_ecc_pkg::mem_ecc_encode(trvk_rdata_q, 1'b0);
+  assign data_rdata_intg_o = encoded_data_response[39:33];
+  assign trvk_revbm_rdata_intg_o = encoded_trvk_response[39:33];
 
   assign trvk_revbm_rdata_o = trvk_rdata_q;
   assign trvk_revbm_rvalid_o = trvk_rvalid_q;

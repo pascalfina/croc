@@ -95,6 +95,7 @@ module core_wrap
     input  logic        trvk_revbm_rvalid_i,
     output logic [31:0] trvk_revbm_addr_o,
     input  logic [31:0] trvk_revbm_rdata_i,
+    input  logic [ 6:0] trvk_revbm_rdata_intg_i,
     input  logic        trvk_revbm_err_i
 
 );
@@ -203,7 +204,7 @@ module core_wrap
       .trvk_revbm_rvalid_i    (trvk_revbm_rvalid_i),
       .trvk_revbm_addr_o      (trvk_revbm_addr_o),
       .trvk_revbm_rdata_i     (trvk_revbm_rdata_i),
-      .trvk_revbm_rdata_intg_i(7'd0),
+      .trvk_revbm_rdata_intg_i(trvk_revbm_rdata_intg_i),
       .trvk_revbm_err_i       (trvk_revbm_err_i),
 
       .irq_software_i(software_irq_i),

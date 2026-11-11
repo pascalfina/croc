@@ -279,6 +279,18 @@ package croc_pkg;
     logic            rvalid;
   } sbr_obi_rsp_t;
 
+  // MMIO boundary only: memory responses must retain their stored ECC.
+  function automatic sbr_obi_rsp_t mmio_rsp_with_ecc(input sbr_obi_rsp_t response);
+    sbr_obi_rsp_t result;
+    logic [39:0] encoded_word;
+
+    result = response;
+    encoded_word = ibex_mem_ecc_pkg::mem_ecc_encode(response.r.rdata, 1'b0);
+    result.r.r_optional.cap_tag = 1'b0;
+    result.r.r_optional.ecc = encoded_word[39:33];
+    return result;
+  endfunction
+
   /* This is how we would usually define interconnects using the typedef.svh macros
    *
    * `OBI_TYPEDEF_A_CHAN_T(mgr_obi_a_chan_t, MgrObiCfg.AddrWidth, MgrObiCfg.DataWidth, MgrObiCfg.IdWidth, obi_a_optional_t)

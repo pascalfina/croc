@@ -157,7 +157,7 @@ module croc_domain import croc_pkg::*; #(
   sbr_obi_rsp_t xbar_error_obi_rsp;
 
   assign xbar_error_obi_req          = all_sbr_obi_req[XbarError];
-  assign all_sbr_obi_rsp[XbarError]  = xbar_error_obi_rsp;
+  assign all_sbr_obi_rsp[XbarError]  = mmio_rsp_with_ecc(xbar_error_obi_rsp);
 
   assign xbar_periph_obi_req         = all_sbr_obi_req[XbarPeriph];
   assign all_sbr_obi_rsp[XbarPeriph] = xbar_periph_obi_rsp;
@@ -216,21 +216,21 @@ module croc_domain import croc_pkg::*; #(
 
   // Fanout to individual peripherals
   assign error_obi_req                     = all_periph_obi_req[PeriphError];
-  assign all_periph_obi_rsp[PeriphError]   = error_obi_rsp;
+  assign all_periph_obi_rsp[PeriphError]   = mmio_rsp_with_ecc(error_obi_rsp);
   assign dbg_mem_obi_req                   = all_periph_obi_req[PeriphDebug];
-  assign all_periph_obi_rsp[PeriphDebug]   = dbg_mem_obi_rsp;
+  assign all_periph_obi_rsp[PeriphDebug]   = mmio_rsp_with_ecc(dbg_mem_obi_rsp);
   assign soc_ctrl_obi_req                  = all_periph_obi_req[PeriphSocCtrl];
-  assign all_periph_obi_rsp[PeriphSocCtrl] = soc_ctrl_obi_rsp;
+  assign all_periph_obi_rsp[PeriphSocCtrl] = mmio_rsp_with_ecc(soc_ctrl_obi_rsp);
   assign uart_obi_req                      = all_periph_obi_req[PeriphUart];
-  assign all_periph_obi_rsp[PeriphUart]    = uart_obi_rsp;
+  assign all_periph_obi_rsp[PeriphUart]    = mmio_rsp_with_ecc(uart_obi_rsp);
   assign gpio_obi_req                      = all_periph_obi_req[PeriphGpio];
-  assign all_periph_obi_rsp[PeriphGpio]    = gpio_obi_rsp;
+  assign all_periph_obi_rsp[PeriphGpio]    = mmio_rsp_with_ecc(gpio_obi_rsp);
   assign timer_obi_req                     = all_periph_obi_req[PeriphTimer];
-  assign all_periph_obi_rsp[PeriphTimer]   = timer_obi_rsp;
+  assign all_periph_obi_rsp[PeriphTimer]   = mmio_rsp_with_ecc(timer_obi_rsp);
   assign idma_obi_cfg_req                  = all_periph_obi_req[PeriphiDMA];
-  assign all_periph_obi_rsp[PeriphiDMA]    = idma_obi_cfg_rsp;
+  assign all_periph_obi_rsp[PeriphiDMA]    = mmio_rsp_with_ecc(idma_obi_cfg_rsp);
   assign clint_obi_req                     = all_periph_obi_req[PeriphClint];
-  assign all_periph_obi_rsp[PeriphClint]   = clint_obi_rsp;
+  assign all_periph_obi_rsp[PeriphClint]   = mmio_rsp_with_ecc(clint_obi_rsp);
   assign bootrom_obi_req                   = all_periph_obi_req[PeriphBootrom];
   assign all_periph_obi_rsp[PeriphBootrom] = bootrom_obi_rsp;
 
@@ -286,6 +286,7 @@ module croc_domain import croc_pkg::*; #(
     .trvk_revbm_rvalid_i(trvk_rvalid),
     .trvk_revbm_addr_o(trvk_addr),
     .trvk_revbm_rdata_i(trvk_rdata),
+    .trvk_revbm_rdata_intg_i(trvk_rdata_intg),
     .trvk_revbm_err_i(trvk_err)
 
   );
@@ -488,13 +489,14 @@ module croc_domain import croc_pkg::*; #(
 
   assign all_sbr_obi_rsp[XbarRevBitmap].r.err = 1'b0;
   assign all_sbr_obi_rsp[XbarRevBitmap].r.rid = '0;
-  assign all_sbr_obi_rsp[XbarRevBitmap].r.r_optional = 1'b0;
+  assign all_sbr_obi_rsp[XbarRevBitmap].r.r_optional.cap_tag = 1'b0;
 
   logic        trvk_req;
   logic        trvk_gnt;
   logic        trvk_rvalid;
   logic [31:0] trvk_addr;
   logic [31:0] trvk_rdata;
+  logic [6:0]  trvk_rdata_intg;
   logic        trvk_err;
 
 
@@ -511,12 +513,14 @@ module croc_domain import croc_pkg::*; #(
     .data_be_i(all_sbr_obi_req[XbarRevBitmap].a.be),
     .data_rvalid_o(all_sbr_obi_rsp[XbarRevBitmap].rvalid),
     .data_rdata_o(all_sbr_obi_rsp[XbarRevBitmap].r.rdata),
+    .data_rdata_intg_o(all_sbr_obi_rsp[XbarRevBitmap].r.r_optional.ecc),
     .data_gnt_o(all_sbr_obi_rsp[XbarRevBitmap].gnt),
     .trvk_revbm_req_i(trvk_req),
     .trvk_revbm_addr_i(trvk_addr),
     .trvk_revbm_gnt_o(trvk_gnt),
     .trvk_revbm_rvalid_o(trvk_rvalid),
     .trvk_revbm_rdata_o(trvk_rdata),
+    .trvk_revbm_rdata_intg_o(trvk_rdata_intg),
     .trvk_revbm_err_o(trvk_err)
 
   );
@@ -538,7 +542,7 @@ module croc_domain import croc_pkg::*; #(
 
   
 assign hyperbus_reg_obi_req = all_periph_obi_req[PeriphHyperbusCrtl];
-assign all_periph_obi_rsp[PeriphHyperbusCrtl]  = hyperbus_reg_obi_rsp;
+assign all_periph_obi_rsp[PeriphHyperbusCrtl]  = mmio_rsp_with_ecc(hyperbus_reg_obi_rsp);
 
 obi_to_reg #(
     .obi_req_t(sbr_obi_req_t),
