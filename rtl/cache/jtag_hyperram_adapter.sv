@@ -66,7 +66,7 @@ module jtag_hyperram_adapter #(
     logic [AddrWidth-1:0]      block_addr;
     logic [WordIndexWidth-1:0] word_index;
 
-    logic [38:0] encoded_word;
+    logic [39:0] encoded_word;
     logic [ObiDataWidth-1:0] merged_data;
     logic error_q, error_d;
 
@@ -85,7 +85,7 @@ module jtag_hyperram_adapter #(
         end
     end
 
-    assign encoded_word = prim_secded_pkg::prim_secded_inv_39_32_enc(merged_data);
+    assign encoded_word = ibex_mem_ecc_pkg::mem_ecc_encode(merged_data, 1'b0);
 
 
     always_comb begin
@@ -137,7 +137,7 @@ module jtag_hyperram_adapter #(
                     end else begin
                         write_buffer_d.words[word_index].data    = merged_data;
                         write_buffer_d.words[word_index].cap_tag = 1'b0;
-                        write_buffer_d.words[word_index].ecc     = encoded_word[38:32];
+                        write_buffer_d.words[word_index].ecc     = encoded_word[39:33];
 
                         write_buffer_d.word_valid[word_index] = 1'b1;
 
@@ -155,7 +155,7 @@ module jtag_hyperram_adapter #(
                 obi_rsp_o.r.rid = obi_a_q.aid;
                 obi_rsp_o.r.rdata = '0;
                 obi_rsp_o.r.err = error_q;
-                obi_rsp_o.r.r_optional.ecc = 7'h2A;
+                obi_rsp_o.r.r_optional.ecc = ibex_mem_ecc_pkg::MemEccZeroEcc;
 
                 if (!obi_a_q.we && !error_q) begin
                     obi_rsp_o.r.rdata = write_buffer_q.words[word_index].data;

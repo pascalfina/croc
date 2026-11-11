@@ -114,10 +114,10 @@ module hyperram_init #(
                 mem_req_o.w_strb = '1;
                 mem_req_o.w.record.lower.data = 0;
                 mem_req_o.w.record.lower.cap_tag = 0;
-                mem_req_o.w.record.lower.ecc = 7'h2A;
+                mem_req_o.w.record.lower.ecc = ibex_mem_ecc_pkg::MemEccZeroEcc;
                 mem_req_o.w.record.upper.data = 0;
                 mem_req_o.w.record.upper.cap_tag = 0;
-                mem_req_o.w.record.upper.ecc = 7'h2A;
+                mem_req_o.w.record.upper.ecc = ibex_mem_ecc_pkg::MemEccZeroEcc;
 
                 if (last_record) begin
                     mem_req_o.w.last = 1;

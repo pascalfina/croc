@@ -197,7 +197,7 @@ module data_cache #(
                 if (cap_flag_q) begin // after cap store we need to send 2. resp back
                     obi_rsp_o.r.rid = obi_aid_q;
                     obi_rsp_o.r.rdata = '0;
-                    obi_rsp_o.r.r_optional.ecc = 7'h2A;
+                    obi_rsp_o.r.r_optional.ecc = ibex_mem_ecc_pkg::MemEccZeroEcc;
                     obi_rsp_o.rvalid = 1;
                     cap_flag_d = 1'b0;
                 end
@@ -250,7 +250,7 @@ module data_cache #(
                                     obi_aid_d = obi_req_i.a.aid;
                                     obi_rsp_o.r.rid = obi_aid_q;
                                     obi_rsp_o.r.rdata = '0;
-                                    obi_rsp_o.r.r_optional.ecc = 7'h2A;
+                                    obi_rsp_o.r.r_optional.ecc = ibex_mem_ecc_pkg::MemEccZeroEcc;
                                     obi_rsp_o.rvalid = 1;
                                     cap_flag_d = 1;
                                     state_d = IDLE; 
@@ -285,7 +285,7 @@ module data_cache #(
                                     // respond back to obi to save cycles
                                     obi_rsp_o.r.rid = obi_aid_q;
                                     obi_rsp_o.r.rdata = '0;
-                                    obi_rsp_o.r.r_optional.ecc = 7'h2A;
+                                    obi_rsp_o.r.r_optional.ecc = ibex_mem_ecc_pkg::MemEccZeroEcc;
                                     obi_rsp_o.rvalid = 1;
                                     state_d = IDLE; 
 
@@ -341,7 +341,7 @@ module data_cache #(
                     obi_aid_d = obi_req_i.a.aid;
                     obi_rsp_o.r.rid = obi_aid_q;
                     obi_rsp_o.r.rdata = '0;
-                    obi_rsp_o.r.r_optional.ecc = 7'h2A;
+                    obi_rsp_o.r.r_optional.ecc = ibex_mem_ecc_pkg::MemEccZeroEcc;
                     obi_rsp_o.rvalid = 1; //already write response for the first request second response in idle
                     cap_flag_d = 1;
                     state_d = IDLE; 
@@ -375,7 +375,7 @@ module data_cache #(
 
                     obi_rsp_o.r.rid = obi_aid_q;
                     obi_rsp_o.r.rdata = '0;
-                    obi_rsp_o.r.r_optional.ecc = 7'h2A;
+                    obi_rsp_o.r.r_optional.ecc = ibex_mem_ecc_pkg::MemEccZeroEcc;
                     obi_rsp_o.rvalid = 1;
                     state_d = IDLE; 
                 end
