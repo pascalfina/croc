@@ -6,13 +6,13 @@ ENTRY(_start)
 MEMORY
 {
   /* Program code and static data. */
-  APP   (rwx) : ORIGIN = 0x10000000, LENGTH = 0xD00
+  APP   (rwx) : ORIGIN = 0x80000000, LENGTH = 0xD00
 
   /* Reserved heap region for capability allocations. */
-  HEAP  (rw)  : ORIGIN = 0x10000D00, LENGTH = 0x100
+  HEAP  (rw)  : ORIGIN = 0x80000D00, LENGTH = 0x100
 
-  /* Stack grows down from the top of SRAM. */
-  STACK (rw)  : ORIGIN = 0x10000E00, LENGTH = 0x200
+  /* Stack grows down from the top of its reserved HyperRAM region. */
+  STACK (rw)  : ORIGIN = 0x80000E00, LENGTH = 0x200
 }
 
 PHDRS
