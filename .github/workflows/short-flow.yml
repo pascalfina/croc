@@ -151,6 +151,7 @@ jobs:
   # Gate-level regression, sharded like the RTL simulation. The netlist keeps
   # the hardware default of 4 MiB HyperRAM initialisation, so each test takes
   # much longer than at RTL; a shard that exceeds the job limit is cancelled.
+  # Shards beyond the account's concurrent-job limit wait for free runners.
   netlist-simulation:
     needs: [hyperram-model, software, synthesis]
     if: needs.hyperram-model.outputs.available == 'true'
@@ -159,7 +160,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
     permissions:
       contents: read
       packages: read
