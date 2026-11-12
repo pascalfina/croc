@@ -39,9 +39,8 @@ jobs:
             echo "available=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # Builds all software once. The simulator is not shared as an artifact
-  # because it contains the compiled proprietary HyperRAM model; every
-  # simulation job builds its own.
+  # Builds all software once. Simulators contain the compiled proprietary
+  # HyperRAM model, so they are only shared as encrypted artifacts.
   software:
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -77,16 +76,14 @@ jobs:
           name: croc-sw
           path: sw/bin
 
-  # Each shard builds the RTL simulator and runs every job-total-th RTOS test.
-  simulation:
-    needs: [hyperram-model, software]
+  # Builds the RTL simulator once for all RTL shards. Artifacts of a public
+  # repository can be downloaded by anyone, so the binary is encrypted with the
+  # model's deploy key, which forks never get.
+  rtl-simulator:
+    needs: [hyperram-model]
     if: needs.hyperram-model.outputs.available == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [0, 1, 2, 3, 4, 5]
     permissions:
       contents: read
       packages: read
@@ -104,11 +101,72 @@ jobs:
         uses: ./.github/actions/hyperram-model
         with:
           ssh-key: ${{ secrets.HYPERRAM_MODEL_SSH_KEY }}
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build RTL simulator in OSEDA
+        uses: ./.github/actions/oseda-cmd
+        with:
+          cmd: ".github/scripts/run_sim_flow.sh --rtl --build-only"
+      - name: Encrypt RTL simulator
+        env:
+          HYPERRAM_MODEL_SSH_KEY: ${{ secrets.HYPERRAM_MODEL_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          tar -C verilator -czf - obj_dir_rtl/Vtb_croc_soc |
+            openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:HYPERRAM_MODEL_SSH_KEY \
+              -out rtl-simulator.tar.gz.enc
+      - name: Upload encrypted RTL simulator
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtl-simulator
+          path: rtl-simulator.tar.gz.enc
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+  # Each shard runs every job-total-th RTOS test on the shared RTL simulator.
+  simulation:
+    needs: [hyperram-model, software, rtl-simulator]
+    if: needs.hyperram-model.outputs.available == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    permissions:
+      contents: read
+      packages: read
+    env:
+      COMPOSE_FILE: docker-compose.yml:docker-compose.cheriot-ci.yml
+      CHERIOT_CI_IMAGE: ghcr.io/${{ github.repository_owner }}/croc-iic-osic-tools:2025.12-cheriot
+    steps:
+      # Running the prebuilt simulator needs neither submodules nor the model.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Free disk space
+        uses: ./.github/actions/free-space
       - name: Download built software
         uses: actions/download-artifact@v4
         with:
           name: croc-sw
           path: sw/bin
+      - name: Download encrypted RTL simulator
+        uses: actions/download-artifact@v4
+        with:
+          name: rtl-simulator
+      - name: Decrypt RTL simulator
+        env:
+          HYPERRAM_MODEL_SSH_KEY: ${{ secrets.HYPERRAM_MODEL_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          openssl enc -d -aes-256-cbc -pbkdf2 -pass env:HYPERRAM_MODEL_SSH_KEY \
+            -in rtl-simulator.tar.gz.enc | tar -C verilator -xzf -
+          rm rtl-simulator.tar.gz.enc
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -118,7 +176,7 @@ jobs:
       - name: Run RTOS test shard in OSEDA
         uses: ./.github/actions/oseda-cmd
         with:
-          cmd: ".github/scripts/run_sim_flow.sh --shard ${{ matrix.shard }}/${{ strategy.job-total }}"
+          cmd: ".github/scripts/run_sim_flow.sh --no-build --shard ${{ matrix.shard }}/${{ strategy.job-total }}"
       - name: Upload simulation logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -148,19 +206,14 @@ jobs:
             yosys/reports
             yosys/out
 
-  # Gate-level regression, sharded like the RTL simulation. The netlist keeps
-  # the hardware default of 4 MiB HyperRAM initialisation, so each test takes
-  # much longer than at RTL; a shard that exceeds the job limit is cancelled.
-  # Shards beyond the account's concurrent-job limit wait for free runners.
-  netlist-simulation:
-    needs: [hyperram-model, software, synthesis]
+  # Builds the netlist simulator once for all netlist shards. Artifacts of a
+  # public repository can be downloaded by anyone, so the binary is encrypted
+  # with the model's deploy key, which forks never get.
+  netlist-simulator:
+    needs: [hyperram-model, synthesis]
     if: needs.hyperram-model.outputs.available == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
     permissions:
       contents: read
       packages: read
@@ -178,11 +231,6 @@ jobs:
         uses: ./.github/actions/hyperram-model
         with:
           ssh-key: ${{ secrets.HYPERRAM_MODEL_SSH_KEY }}
-      - name: Download built software
-        uses: actions/download-artifact@v4
-        with:
-          name: croc-sw
-          path: sw/bin
       - name: Download synthesis outputs
         uses: actions/download-artifact@v4
         with:
@@ -194,10 +242,81 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build CMOS5L netlist simulator in OSEDA
+        uses: ./.github/actions/oseda-cmd
+        with:
+          cmd: ".github/scripts/run_sim_flow.sh --netlist --build-only"
+      - name: Encrypt netlist simulator
+        env:
+          HYPERRAM_MODEL_SSH_KEY: ${{ secrets.HYPERRAM_MODEL_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          tar -C verilator -czf - obj_dir_netlist_yosys/Vtb_croc_soc |
+            openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:HYPERRAM_MODEL_SSH_KEY \
+              -out netlist-simulator.tar.gz.enc
+      - name: Upload encrypted netlist simulator
+        uses: actions/upload-artifact@v4
+        with:
+          name: netlist-simulator
+          path: netlist-simulator.tar.gz.enc
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+  # Gate-level regression with one test per shard on the shared simulator. The
+  # netlist keeps the hardware default of 4 MiB HyperRAM initialisation, so
+  # each test takes much longer than at RTL and gets almost the whole job
+  # limit; shards without a test pass. Shards beyond the account's
+  # concurrent-job limit wait for free runners.
+  netlist-simulation:
+    needs: [hyperram-model, software, netlist-simulator]
+    if: needs.hyperram-model.outputs.available == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+                18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34]
+    permissions:
+      contents: read
+      packages: read
+    env:
+      COMPOSE_FILE: docker-compose.yml:docker-compose.cheriot-ci.yml
+      CHERIOT_CI_IMAGE: ghcr.io/${{ github.repository_owner }}/croc-iic-osic-tools:2025.12-cheriot
+    steps:
+      # Running the prebuilt simulator needs neither submodules nor the model.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Free disk space
+        uses: ./.github/actions/free-space
+      - name: Download built software
+        uses: actions/download-artifact@v4
+        with:
+          name: croc-sw
+          path: sw/bin
+      - name: Download encrypted netlist simulator
+        uses: actions/download-artifact@v4
+        with:
+          name: netlist-simulator
+      - name: Decrypt netlist simulator
+        env:
+          HYPERRAM_MODEL_SSH_KEY: ${{ secrets.HYPERRAM_MODEL_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          openssl enc -d -aes-256-cbc -pbkdf2 -pass env:HYPERRAM_MODEL_SSH_KEY \
+            -in netlist-simulator.tar.gz.enc | tar -C verilator -xzf -
+          rm netlist-simulator.tar.gz.enc
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Run CMOS5L netlist test shard in OSEDA
         uses: ./.github/actions/oseda-cmd
         with:
-          cmd: ".github/scripts/run_sim_flow.sh --netlist --shard ${{ matrix.shard }}/${{ strategy.job-total }}"
+          cmd: ".github/scripts/run_sim_flow.sh --netlist --no-build --shard ${{ matrix.shard }}/${{ strategy.job-total }}"
       - name: Upload netlist simulation logs
         if: always()
         uses: actions/upload-artifact@v4

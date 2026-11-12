@@ -24,13 +24,16 @@ CROC_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 show_help() {
     cat <<EOF
 Usage: $0 [--rtl | --software | --netlist] [--shard INDEX/COUNT]
+          [--build-only | --no-build]
 
     --rtl                Build software and the RTL simulator, run the tests (default)
     --software           Build the software only
     --netlist            Run the tests on the post-Yosys netlist; expects built
-                         software and yosys/out/croc_yosys_debug.v
+                         software and, for building, yosys/out/croc_yosys_debug.v
     --shard INDEX/COUNT  Run only every COUNT-th test, starting at INDEX
                          (0-based); with --rtl the software must already be built
+    --build-only         Build the simulator, but run no tests
+    --no-build           Run the tests on an already built simulator
 EOF
 }
 
@@ -38,6 +41,8 @@ mode="rtl"
 sharded=false
 shard_index=0
 shard_count=1
+build_simulator=true
+run_tests=true
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -67,6 +72,14 @@ while [[ $# -gt 0 ]]; do
             sharded=true
             shift 2
             ;;
+        --build-only)
+            run_tests=false
+            shift
+            ;;
+        --no-build)
+            build_simulator=false
+            shift
+            ;;
         -h|--help)
             show_help
             exit 0
@@ -78,6 +91,11 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+if [[ "$build_simulator" == false && "$run_tests" == false ]]; then
+    echo "[ERROR] --build-only and --no-build exclude each other" >&2
+    exit 1
+fi
 
 # Each RTL test may use up to 90 minutes; the cache stress test alone takes
 # about 45 minutes. The netlist keeps the hardware default of 4 MiB HyperRAM
@@ -150,32 +168,37 @@ if [[ "$mode" == "rtl" ]]; then
     # Always restore the checked-in default after a configuration-specific run.
     trap '"$SCRIPT_DIR/set_croc_config.sh"' EXIT
     "$SCRIPT_DIR/set_croc_config.sh"
-    if [[ "$sharded" == false ]]; then
+    if [[ "$sharded" == false && "$run_tests" == true ]]; then
         build_software
     fi
 fi
 
-collect_rtos_tests
-selected_tests=()
-for i in "${!all_tests[@]}"; do
-    if (( i % shard_count == shard_index )); then
-        selected_tests+=("${all_tests[$i]}")
+if [[ "$run_tests" == true ]]; then
+    collect_rtos_tests
+    selected_tests=()
+    for i in "${!all_tests[@]}"; do
+        if (( i % shard_count == shard_index )); then
+            selected_tests+=("${all_tests[$i]}")
+        fi
+    done
+    # More shards than tests leave the last shards empty, which is not an error.
+    if [[ ${#selected_tests[@]} -eq 0 ]]; then
+        echo "[INFO] Shard $shard_index/$shard_count selects no tests (${#all_tests[@]} in total)"
+        exit 0
     fi
-done
-if [[ ${#selected_tests[@]} -eq 0 ]]; then
-    echo "[ERROR] Shard $shard_index/$shard_count selects no tests" >&2
-    exit 1
 fi
 
 if [[ "$mode" == "netlist" ]]; then
     export CROC_PDK=sg13cmos5l
 
-    default_netlist="yosys/out/croc_yosys_debug.v"
-    if [[ ! -f "$default_netlist" ]]; then
-        echo "[ERROR] Missing netlist simulation input: $default_netlist" >&2
-        exit 1
+    if [[ "$build_simulator" == true ]]; then
+        default_netlist="yosys/out/croc_yosys_debug.v"
+        if [[ ! -f "$default_netlist" ]]; then
+            echo "[ERROR] Missing netlist simulation input: $default_netlist" >&2
+            exit 1
+        fi
+        cp "$default_netlist" yosys/out/netlist_debug.v
     fi
-    cp "$default_netlist" yosys/out/netlist_debug.v
 
     simulation_label="post-Yosys netlist"
     build_option="--build-netlist"
@@ -188,18 +211,25 @@ else
     test_timeout=$rtos_test_timeout
 fi
 
-echo "============================================="
-echo "Build $simulation_label simulator"
-echo "============================================="
 cd verilator
-# CI keeps simulator logs, but does not need an interactive waveform.
-./run_verilator.sh --no-trace "$build_option"
+if [[ "$build_simulator" == true ]]; then
+    echo "============================================="
+    echo "Build $simulation_label simulator"
+    echo "============================================="
+    # CI keeps simulator logs, but does not need an interactive waveform.
+    ./run_verilator.sh --no-trace "$build_option"
+elif [[ ! -x "$simulation_binary" ]]; then
+    echo "[ERROR] Missing prebuilt $simulation_label simulator: verilator/$simulation_binary" >&2
+    exit 1
+fi
 
-echo ""
-echo "============================================="
-echo "CHERIoT-RTOS tests on $simulation_label (shard $shard_index/$shard_count)"
-echo "============================================="
-run_hex_files "$simulation_binary" "$test_timeout" "${selected_tests[@]}"
+if [[ "$run_tests" == true ]]; then
+    echo ""
+    echo "============================================="
+    echo "CHERIoT-RTOS tests on $simulation_label (shard $shard_index/$shard_count)"
+    echo "============================================="
+    run_hex_files "$simulation_binary" "$test_timeout" "${selected_tests[@]}"
+fi
 
 cd "$CROC_ROOT"
 
