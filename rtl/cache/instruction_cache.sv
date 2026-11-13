@@ -71,11 +71,11 @@ module instruction_cache #(
     `CACHE_TYPEDEF_META_T(cache_meta_t, TagBits)
 
     cache_meta_t cache_meta_q [NumSets][NumWays];
-    cache_meta_t cache_meta_d [NumSets][NumWays];
+    cache_meta_t cache_meta_d [NumWays];
      
     logic [WayIndexWidth-1:0] selected_way_q, selected_way_d;
     logic [WayIndexWidth-1:0] replace_way_q [NumSets];
-    logic [WayIndexWidth-1:0] replace_way_d [NumSets];
+    logic [WayIndexWidth-1:0] replace_way_d;
 
     logic [TagBits-1:0] addr_tag;
     logic [SetIndexWidth-1:0] set_index;
@@ -124,9 +124,9 @@ module instruction_cache #(
         mem_req_o           = '0;
 
         // cache logic signals
-        cache_meta_d        = cache_meta_q;
+        cache_meta_d        = cache_meta_q[set_index];
         selected_way_d      = selected_way_q;
-        replace_way_d       = replace_way_q;
+        replace_way_d       = replace_way_q[set_index];
         line_record_index_d = line_record_index_q;
 
         hit_found           = 0;
@@ -218,14 +218,14 @@ module instruction_cache #(
                         // todo later somewhen maybe never
                     end
                     else begin //no error world is fine
-                        cache_meta_d[set_index][selected_way_q].valid = 1; //data also valid
-                        cache_meta_d[set_index][selected_way_q].addr_tag = addr_tag;
+                        cache_meta_d[selected_way_q].valid = 1; //data also valid
+                        cache_meta_d[selected_way_q].addr_tag = addr_tag;
 
                         if (selected_way_q != NumWays-1) begin //round robin way selection within a set
-                            replace_way_d[set_index] = selected_way_q + 1;
+                            replace_way_d = selected_way_q + 1;
                         end
                         else begin
-                            replace_way_d[set_index] = '0;
+                            replace_way_d = '0;
                         end
                         
                         state_d = CACHE_LOOKUP;
@@ -286,9 +286,13 @@ module instruction_cache #(
             selected_way_q <= 0;
             line_record_index_q <= 0;
         end else begin
-            cache_meta_q <= cache_meta_d;
+            for (int unsigned s = 0; s < NumSets; s++) begin
+                if (set_index == s) begin
+                    cache_meta_q[s] <= cache_meta_d;
+                    replace_way_q[s] <= replace_way_d;
+                end
+            end
             selected_way_q <= selected_way_d;
-            replace_way_q <= replace_way_d;
             line_record_index_q <= line_record_index_d;
         end
     end
