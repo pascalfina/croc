@@ -19,13 +19,17 @@ Simulates every combination of sets and line size whose SRAM holds 256 to
 cache, 2 ways.
 
 Environment variables:
-    SETS         set counts to combine (default: 2 4 8 16 32 64 128 256 512 1024)
-    LINES        line sizes in bytes   (default: 16 32 64 128 256 512 1024)
+    CACHE_SETS   set counts to combine (default: 2 4 8 16 32 64 128 256 512 1024)
+    CACHE_LINES  line sizes in bytes   (default: 16 32 64 128 256 512 1024)
     JOBS         parallel builds and simulations (default: number of CPUs)
+    VERILATOR_JOBS  compiler jobs per build (default: 1, as JOBS builds run at once)
     BENCH_HEX    prebuilt benchmark image; built with make if unset
     SIM_TIMEOUT  seconds per simulation (default: 21600)
 
-Results: cache_perf/<cache>_<ways>w.csv, logs in cache_perf/<run>/.
+Every call writes to its own directory cache_perf/<YYYYmmdd_HHMMSS>/, so older
+results stay as reference; cache_perf/latest points to the newest one.
+Results: cache_perf/<timestamp>/<cache>_<ways>w.csv, logs in
+cache_perf/<timestamp>/<config>/.
 EOF
 }
 
@@ -42,8 +46,12 @@ cache=${1:-data}
 ways=${2:-2}
 jobs=${JOBS:-$(nproc)}
 sim_timeout=${SIM_TIMEOUT:-21600}
-read -r -a set_counts <<< "${SETS:-2 4 8 16 32 64 128 256 512 1024}"
-read -r -a line_sizes <<< "${LINES:-16 32 64 128 256 512 1024}"
+# Not SETS/LINES: the shell sets LINES to the terminal height.
+read -r -a set_counts <<< "${CACHE_SETS:-2 4 8 16 32 64 128 256 512 1024}"
+read -r -a line_sizes <<< "${CACHE_LINES:-16 32 64 128 256 512 1024}"
+# All builds start together; one compiler per build keeps the memory use at
+# JOBS compilers instead of JOBS times run_verilator.sh's default of 4.
+export VERILATOR_JOBS=${VERILATOR_JOBS:-1}
 
 case "$cache" in
     data)        prefix=DCache ;;
@@ -104,13 +112,27 @@ fi
 # The benchmark's working set ends at 0x8006_0000.
 init_bytes=$(( 0x60000 ))
 
+# Each call gets a new directory, so that runs of older code stay for comparison.
+run_dir="cache_perf/$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$run_dir"
+ln -sfn "$(basename "$run_dir")" cache_perf/latest
+{
+    echo "date:   $(date '+%Y-%m-%d %H:%M:%S')"
+    echo "cache:  $cache, $ways ways"
+    echo "sets:   ${set_counts[*]}"
+    echo "lines:  ${line_sizes[*]}"
+    echo "commit: $(git -C .. rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    echo "uncommitted changes:"
+    git -C .. status --short --untracked-files=no 2>/dev/null | sed 's/^/    /'
+} > "$run_dir/run_info.txt"
+echo "[INFO][Cache perf] Results go to verilator/$run_dir"
+
 simulate() {
     local sets=$1
     local line=$2
     local name=$3
-    local dir="cache_perf/$name"
+    local dir="$run_dir/$name"
 
-    rm -rf -- "$dir"
     mkdir -p "$dir"
 
     VERILATOR_SKIP_FLIST=1 \
@@ -119,8 +141,14 @@ simulate() {
     VERILATOR_RTL_ARGS="-G${prefix}Ways=$ways -G${prefix}Sets=$sets -G${prefix}LineBytes=$line -GHyperramInitBytes=$init_bytes" \
         ./run_verilator.sh --no-trace --build > /dev/null
 
-    timeout "$sim_timeout" "$dir/obj_dir/Vtb_croc_soc" +binary="$bench_hex" > "$dir/sim.log" 2>&1
+    # --foreground keeps the simulator in this script's process group, so that
+    # the interrupt trap reaches it.
+    timeout --foreground "$sim_timeout" "$dir/obj_dir/Vtb_croc_soc" +binary="$bench_hex" > "$dir/sim.log" 2>&1
 }
+
+# Background jobs ignore SIGINT, so Ctrl-C has to stop the builds and
+# simulations explicitly.
+trap 'trap - INT TERM; echo "[INFO][Cache perf] Interrupted, stopping all builds and simulations" >&2; kill 0' INT TERM
 
 echo "[INFO][Cache perf] ${#runs[@]} configurations, $jobs in parallel"
 running=0
@@ -137,12 +165,13 @@ for run in "${runs[@]}"; do
 done
 wait || true
 
+# A failed build leaves no log; the missing value must not abort the summary.
 bench_value() {
-    grep -oE "BENCH $2 -?[0-9]+" "$1" 2>/dev/null | tail -n 1 | awk '{print $3}'
+    grep -oE "BENCH $2 -?[0-9]+" "$1" 2>/dev/null | tail -n 1 | awk '{print $3}' || true
 }
 
 phases=(init stream copy stride random chase capabilities code)
-csv="cache_perf/${cache}_${ways}w.csv"
+csv="$run_dir/${cache}_${ways}w.csv"
 status=0
 reference=""
 echo "sets,line_bytes,cache_bytes,total_cycles,$(IFS=,; echo "${phases[*]}"),checksum,status" > "$csv"
@@ -150,11 +179,11 @@ printf '\n%6s %10s %11s %14s %12s %8s\n' sets line_bytes cache_bytes total_cycle
 for run in "${runs[@]}"; do
     read -r sets line <<< "$run"
     name="${cache}_${ways}w_${sets}s_${line}b"
-    log="cache_perf/$name/sim.log"
+    log="$run_dir/$name/sim.log"
     bytes=$((ways * sets * line))
 
     total=$(bench_value "$log" total)
-    checksum=$(grep -oE "BENCH checksum 0x[0-9a-fA-F]+" "$log" 2>/dev/null | tail -n 1 | awk '{print $3}')
+    checksum=$(grep -oE "BENCH checksum 0x[0-9a-fA-F]+" "$log" 2>/dev/null | tail -n 1 | awk '{print $3}' || true)
     cycles=()
     for phase in "${phases[@]}"; do
         cycles+=("$(bench_value "$log" "$phase")")
@@ -171,7 +200,7 @@ for run in "${runs[@]}"; do
     else
         result=failed
         status=1
-        echo "[ERROR][Cache perf] $name failed, see verilator/cache_perf/$name/" >&2
+        echo "[ERROR][Cache perf] $name failed, see verilator/$run_dir/$name/" >&2
     fi
 
     echo "$sets,$line,$bytes,${total:-},$(IFS=,; echo "${cycles[*]}"),${checksum:-},$result" >> "$csv"

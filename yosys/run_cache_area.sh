@@ -18,9 +18,11 @@ Synthesizes every combination of sets and line size whose SRAM holds 256 to
 16384 records. Defaults: data cache, 2 ways.
 
 Environment variables:
-    SETS    set counts to combine (default: 2 4 8 16 32 64 128 256 512 1024)
-    LINES   line sizes in bytes   (default: 16 32 64 128 256 512 1024)
-    JOBS    parallel syntheses    (default: number of CPUs)
+    CACHE_SETS   set counts to combine, powers of two
+                 (default: 2 4 8 16 32 64 128 256 512 1024)
+    CACHE_LINES  line sizes in bytes, powers of two from 16 to 1024
+                 (default: 16 32 64 128 256 512 1024)
+    JOBS         parallel syntheses (default: number of CPUs)
 
 Results: cache_area/<cache>_<ways>w.csv, logs and reports in cache_area/<run>/.
 EOF
@@ -34,11 +36,40 @@ fi
 cache=${1:-data}
 ways=${2:-2}
 jobs=${JOBS:-$(nproc)}
-read -r -a set_counts <<< "${SETS:-2 4 8 16 32 64 128 256 512 1024}"
-read -r -a line_sizes <<< "${LINES:-16 32 64 128 256 512 1024}"
+# Not SETS/LINES: the shell sets LINES to the terminal height.
+read -r -a set_counts <<< "${CACHE_SETS:-2 4 8 16 32 64 128 256 512 1024}"
+read -r -a line_sizes <<< "${CACHE_LINES:-16 32 64 128 256 512 1024}"
 
 if [[ "$cache" != data && "$cache" != instruction ]]; then
     show_help >&2
+    exit 1
+fi
+
+# The caches split the address into offset, set and tag bits, so ways, sets and
+# line sizes must be powers of two (see rtl/cache/*_param_checks.svh). Lines are
+# limited to 1024 bytes by the memory command width in src/cache_area_top.sv.
+is_pow2() {
+    [[ "$1" =~ ^[0-9]+$ ]] && (( $1 > 0 && ($1 & ($1 - 1)) == 0 ))
+}
+
+invalid=0
+if ! is_pow2 "$ways"; then
+    echo "[ERROR][Cache area] Ways must be a power of two, got '$ways'" >&2
+    invalid=1
+fi
+for sets in "${set_counts[@]}"; do
+    if ! is_pow2 "$sets"; then
+        echo "[ERROR][Cache area] CACHE_SETS must be powers of two, got '$sets'" >&2
+        invalid=1
+    fi
+done
+for line in "${line_sizes[@]}"; do
+    if ! is_pow2 "$line" || (( line < 16 || line > 1024 )); then
+        echo "[ERROR][Cache area] CACHE_LINES must be powers of two from 16 to 1024 bytes, got '$line'" >&2
+        invalid=1
+    fi
+done
+if (( invalid )); then
     exit 1
 fi
 

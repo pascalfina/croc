@@ -21,7 +21,7 @@ firmware("cache_benchmark")
 				priority = 1,
 				entry_point = "benchmark",
 				stack_size = 0x400,
-				trusted_stack_frames = 3
+				trusted_stack_frames = 6
 			}
 		}, {expand = false})
 	end)

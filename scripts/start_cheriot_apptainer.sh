@@ -18,10 +18,15 @@ if [[ ! -f "${IMAGE}" ]]; then
     exit 1
 fi
 
+# Keep the compiler cache next to the repository instead of in the home
+# directory, whose quota parallel Verilator builds can fill up.
+mkdir -p "${ROOT_DIR}/.ccache"
+
 exec "${RUNTIME}" shell \
     --cleanenv \
     --env "PATH=/foss/tools/bin:/foss/tools/pulp/bin:/foss/tools/sak:/cheriot-tools/bin:/foss/tools/riscv-gnu-toolchain/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     --env 'PS1=Apptainer [\w]> ' \
+    --env "CCACHE_DIR=/fosic/designs/croc/.ccache" \
     --bind "${ROOT_DIR}:/fosic/designs/croc" \
     --pwd /fosic/designs/croc \
     "${IMAGE}"

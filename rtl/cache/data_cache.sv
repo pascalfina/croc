@@ -83,8 +83,10 @@ module data_cache #(
     // cache signals/memory
     `CACHE_TYPEDEF_META_T(cache_meta_t, TagBits)
 
-    cache_meta_t cache_meta_q [NumSets][NumWays];
-    cache_meta_t cache_meta_d [NumWays];
+    // The ways are packed so that the whole array can be reset with
+    // '{default: '0}, which both Verilator and yosys-slang accept.
+    cache_meta_t [NumWays-1:0] cache_meta_q [NumSets];
+    cache_meta_t [NumWays-1:0] cache_meta_d;
 
     logic [TagBits-1:0] addr_tag;
     logic [SetIndexWidth-1:0] set_index;
@@ -611,23 +613,17 @@ module data_cache #(
     end
 
     // cache meta data flip flops
+    // Whole-array reset and an indexed write instead of loops over all sets:
+    // yosys-slang elaborates the loops very slowly for large caches.
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
-            for (int unsigned s = 0; s < NumSets; s++) begin
-                for (int unsigned w = 0; w < NumWays; w++) begin
-                    cache_meta_q[s][w] <= '0;
-                    replace_way_q[s] <= '0;
-                end
-            end
+            cache_meta_q <= '{default: '0};
+            replace_way_q <= '{default: '0};
             selected_way_q <= 0;
             line_record_index_q <= 0;
         end else begin
-            for (int unsigned s = 0; s < NumSets; s++) begin
-                if (set_index == s) begin
-                    cache_meta_q[s] <= cache_meta_d;
-                    replace_way_q[s] <= replace_way_d;
-                end
-            end
+            cache_meta_q[set_index] <= cache_meta_d;
+            replace_way_q[set_index] <= replace_way_d;
             selected_way_q <= selected_way_d;
             line_record_index_q <= line_record_index_d;
         end
