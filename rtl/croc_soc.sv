@@ -9,7 +9,13 @@ module croc_soc import croc_pkg::*; #(
   parameter int unsigned GpioCount = 16,
   parameter int unsigned NumPhys   = 2,
   // See croc_domain; simulations may initialise less HyperRAM.
-  parameter int unsigned HyperramInitBytes = 4 * 1024 * 1024
+  parameter int unsigned HyperramInitBytes = 4 * 1024 * 1024,
+  parameter int unsigned DCacheWays      = 2,
+  parameter int unsigned DCacheSets      = 256,
+  parameter int unsigned DCacheLineBytes = 16,
+  parameter int unsigned ICacheWays      = 2,
+  parameter int unsigned ICacheSets      = 256,
+  parameter int unsigned ICacheLineBytes = 16
 ) (
   input  logic clk_i,
   input  logic rst_ni,
@@ -69,7 +75,13 @@ croc_domain #(
   .GpioCount       ( GpioCount       ),
   .NumExternalIrqs ( NumExternalIrqs ),
   .NumPhys        ( NumPhys         ),
-  .HyperramInitBytes ( HyperramInitBytes )
+  .HyperramInitBytes ( HyperramInitBytes ),
+  .DCacheWays        ( DCacheWays        ),
+  .DCacheSets        ( DCacheSets        ),
+  .DCacheLineBytes   ( DCacheLineBytes   ),
+  .ICacheWays        ( ICacheWays        ),
+  .ICacheSets        ( ICacheSets        ),
+  .ICacheLineBytes   ( ICacheLineBytes   )
 ) i_croc (
   .clk_i,
   .rst_ni ( synced_rst_n ),

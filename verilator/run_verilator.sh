@@ -26,6 +26,14 @@ fi
 
 VERILATOR_TRACE_ARGS="--trace-fst --trace-structs"
 
+# Parallel builds of different configurations need their own output directory
+# and log, extra arguments such as -G parameter overrides, and one shared file
+# list generated beforehand.
+VERILATOR_RTL_MDIR="${VERILATOR_RTL_MDIR:-obj_dir_rtl}"
+VERILATOR_RTL_ARGS="${VERILATOR_RTL_ARGS:-}"
+VERILATOR_RTL_LOG="${VERILATOR_RTL_LOG:-}"
+VERILATOR_SKIP_FLIST="${VERILATOR_SKIP_FLIST:-0}"
+
 ################
 # Setup
 ################
@@ -106,10 +114,11 @@ build_rtl_verilator() {
         --x-initial fast \
         -O3 \
         --top tb_croc_soc \
-        --Mdir obj_dir_rtl \
+        --Mdir ${VERILATOR_RTL_MDIR} \
+        ${VERILATOR_RTL_ARGS} \
         -f croc_rtl.f \
         -f technology_netlist_yosys.f 2>&1 | \
-        tee ${PROJ_NAME}_rtl_build.log"
+        tee ${VERILATOR_RTL_LOG:-${PROJ_NAME}_rtl_build.log}"
 }
 
 build_netlist_verilator() {
@@ -206,7 +215,7 @@ run_netlist_binary() {
 # Parse Arguments
 ####################
 
-RTL_FLIST_GENERATED=0
+RTL_FLIST_GENERATED=$VERILATOR_SKIP_FLIST
 NETLIST_FLIST_GENERATED=0
 
 # default action if no argument is given

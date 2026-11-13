@@ -16,7 +16,13 @@ module tb_croc_soc #(
   // probes up to 4 MiB).
   parameter int unsigned HyperramInitBytes = 256 * 1024,
   parameter time HyperramInitTimeout = 500ms,
-  parameter time HyperramInitPollInterval = 1ms
+  parameter time HyperramInitPollInterval = 1ms,
+  parameter int unsigned DCacheWays      = 2,
+  parameter int unsigned DCacheSets      = 256,
+  parameter int unsigned DCacheLineBytes = 16,
+  parameter int unsigned ICacheWays      = 2,
+  parameter int unsigned ICacheSets      = 256,
+  parameter int unsigned ICacheLineBytes = 16
 );
 
   import tb_croc_pkg::*;
@@ -101,7 +107,13 @@ module tb_croc_soc #(
   `else
   croc_soc #(
     .GpioCount         ( GpioCount         ),
-    .HyperramInitBytes ( HyperramInitBytes )
+    .HyperramInitBytes ( HyperramInitBytes ),
+    .DCacheWays        ( DCacheWays        ),
+    .DCacheSets        ( DCacheSets        ),
+    .DCacheLineBytes   ( DCacheLineBytes   ),
+    .ICacheWays        ( ICacheWays        ),
+    .ICacheSets        ( ICacheSets        ),
+    .ICacheLineBytes   ( ICacheLineBytes   )
   ) i_croc_soc (
   `endif
     .clk_i                  ( sys_clk     ),

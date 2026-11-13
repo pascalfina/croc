@@ -15,7 +15,13 @@ module croc_domain import croc_pkg::*; #(
   parameter int unsigned NumPhys   = 2,
   // Logical HyperRAM bytes zeroed (with valid ECC and clear tags) after reset.
   // Simulations may use less to shorten start-up.
-  parameter int unsigned HyperramInitBytes = 4 * 1024 * 1024
+  parameter int unsigned HyperramInitBytes = 4 * 1024 * 1024,
+  parameter int unsigned DCacheWays      = 2,
+  parameter int unsigned DCacheSets      = 256,
+  parameter int unsigned DCacheLineBytes = 16,
+  parameter int unsigned ICacheWays      = 2,
+  parameter int unsigned ICacheSets      = 256,
+  parameter int unsigned ICacheLineBytes = 16
 ) (
   input  logic      clk_i,
   input  logic      rst_ni,
@@ -576,10 +582,9 @@ obi_to_reg #(
     .reg_rsp_i(hyperbus_reg_rsp)
 );
 
-// data cache 
-//Todo replace hardcoded params with generic params for later param sweep
+// data cache
 
-  // Both caches currently use 16 logical bytes per line.
+  // Line transfers of up to 1024 logical bytes.
   `CACHE_TYPEDEF_MEM_ALL(
     mem,
     SbrObiCfg.AddrWidth,
@@ -600,11 +605,11 @@ obi_to_reg #(
 
 
   data_cache #(
-    .AddrWidth(32),            
-    .CpuDataWidth (32),       
-    .CacheDataBytes(8 * 1024),       
-    .LineDataBytes (16),      
-    .NumWays(2),              
+    .AddrWidth(32),
+    .CpuDataWidth (32),
+    .CacheDataBytes(DCacheWays * DCacheSets * DCacheLineBytes),
+    .LineDataBytes (DCacheLineBytes),
+    .NumWays(DCacheWays),
     .WritebackFifoDepth(2),  
     .obi_req_t(sbr_obi_req_t),
     .obi_rsp_t(sbr_obi_rsp_t),
@@ -642,11 +647,11 @@ obi_to_reg #(
 
 
   instruction_cache #(
-      .AddrWidth(32),            
-      .CpuDataWidth (32),       
-      .CacheDataBytes(8 * 1024),       
-      .LineDataBytes (16),      
-      .NumWays(2),               
+      .AddrWidth(32),
+      .CpuDataWidth (32),
+      .CacheDataBytes(ICacheWays * ICacheSets * ICacheLineBytes),
+      .LineDataBytes (ICacheLineBytes),
+      .NumWays(ICacheWays),
       .obi_req_t(sbr_obi_req_t),
       .obi_rsp_t(sbr_obi_rsp_t),
       .mem_req_t(mem_req_t),

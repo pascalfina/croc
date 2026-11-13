@@ -5,3 +5,4 @@ croc_netlist_yosys.f
 *.fst
 *.fst.hier
 *.log
+cache_perf
