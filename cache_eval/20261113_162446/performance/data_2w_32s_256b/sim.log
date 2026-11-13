@@ -1,0 +1,303 @@
+Running program: ../sw/bin/cheriot-rtos-bench/cache_benchmark.hex
+-Info: ../rtl/test/tb_croc_soc.sv:365: $dumpvar ignored, as Verilated without --trace
+ClkFrequency:         20MHz
+UartRealBaudRate:     625000
+@     12920ns | [JTAG] Initialization success
+@     12920ns | [JTAG] Writing 0x00000001 to 0x0300c010
+@     44370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@     61040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@     75560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@     96530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    111050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    129870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    146540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    161060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    182030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    196550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    215370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    232040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    246560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    267530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    282050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    300870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    317540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    332060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    353030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    367550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    386370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    403040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    417560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    438530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    453050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    471870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    488540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    503060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    524030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    538550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    557370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    574040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    588560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    609530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    624050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    642870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    659540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    674060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    695030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    709550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    728370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    745040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    759560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    780530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    795050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    813870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    830540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    845060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    866030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    880550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    899370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    916040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    930560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    951530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    966050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@    984870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1001540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1016060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1037030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1051550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1070370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1087040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1101560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1122530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1137050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1155870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1172540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1187060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1208030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1222550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1241370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1258040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1272560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1293530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1308050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1326870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1343540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1358060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1379030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1393550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1412370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1429040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1443560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1464530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1479050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1497870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1514540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1529060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1550030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1564550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1583370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1600040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1614560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1635530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1650050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1668870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1685540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1700060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1721030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1735550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1754370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1771040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1785560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1806530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1821050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1839870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1856540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1871060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1892030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1906550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1925370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1942040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1956560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1977530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   1992050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2010870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2027540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2042060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2063030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2077550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2096370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2113040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2127560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2148530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2163050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2181870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2198540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2213060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2234030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2248550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2267370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2284040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2298560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2319530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2334050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2352870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2369540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2384060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2405030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2419550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2438370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2455040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2469560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2490530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2505050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2523870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2540540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2555060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2576030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2590550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2609370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2626040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2640560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2661530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2676050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2694870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2711540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2726060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2747030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2761550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2780370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2797040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2811560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2832530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2847050ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2865870ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2882540ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2897060ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2918030ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2932550ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2951370ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2968040ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   2982560ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   3003530ns | [JTAG] Read 0x00000006 from 0x0300c010
+@   3018050ns | [JTAG] Read 0x00000000 from 0x0300c010
+@   3018050ns | [JTAG] Writing 0x00000001 to 0x0300c100
+@   3045200ns | [JTAG] Read 0x00000001 from 0x0300c100
+@   3045200ns | [JTAG] Read back correct data
+@   3045200ns | [JTAG] Writing 0x00000000 to 0x0300c448
+@   3072350ns | [JTAG] Read 0x00000000 from 0x0300c448
+@   3072350ns | [JTAG] Read back correct data
+@   3072350ns | [JTAG] Writing 0x00000000 to 0x0300c488
+@   3099500ns | [JTAG] Read 0x00000000 from 0x0300c488
+@   3099500ns | [JTAG] Read back correct data
+@   3099500ns | [JTAG] Writing 0x00000000 to 0x0300c4c8
+@   3126650ns | [JTAG] Read 0x00000000 from 0x0300c4c8
+@   3126650ns | [JTAG] Read back correct data
+@   3126650ns | [JTAG] Writing 0x00000000 to 0x0300c508
+@   3153800ns | [JTAG] Read 0x00000000 from 0x0300c508
+@   3153800ns | [JTAG] Read back correct data
+@   3153800ns | [JTAG] Writing 0x00000000 to 0x0300c548
+@   3180950ns | [JTAG] Read 0x00000000 from 0x0300c548
+@   3180950ns | [JTAG] Read back correct data
+@   3180950ns | [JTAG] Writing 0x00000000 to 0x0300c588
+@   3208100ns | [JTAG] Read 0x00000000 from 0x0300c588
+@   3208100ns | [JTAG] Read back correct data
+@   3208100ns | [JTAG] Writing 0x00000000 to 0x0300c5c8
+@   3235250ns | [JTAG] Read 0x00000000 from 0x0300c5c8
+@   3235250ns | [JTAG] Read back correct data
+@   3235250ns | [JTAG] Writing 0x80000000 to 0x0300c400
+@   3262400ns | [JTAG] Read 0x80000000 from 0x0300c400
+@   3262400ns | [JTAG] Read back correct data
+@   3262400ns | [JTAG] Writing 0x80800000 to 0x0300c404
+@   3289550ns | [JTAG] Read 0x80800000 from 0x0300c404
+@   3289550ns | [JTAG] Read back correct data
+@   3289550ns | [JTAG] Writing 0x00011800 to 0x0300c408
+@   3316700ns | [JTAG] Read 0x00011800 from 0x0300c408
+@   3316700ns | [JTAG] Read back correct data
+@   3316700ns | [JTAG] Writing 0x00000002 to 0x0300c00c
+@   3343850ns | [JTAG] Read 0x00000000 from 0x0300c010
+@   3343850ns | [HyperBus] Configuration applied
+@   3343850ns | [HyperRAM] Waiting for memory initialization
+@   3362670ns | [JTAG] Read 0x00000001 from 0x03000028
+@   4379340ns | [JTAG] Read 0x00000001 from 0x03000028
+@   5393860ns | [JTAG] Read 0x00000001 from 0x03000028
+@   6414830ns | [JTAG] Read 0x00000001 from 0x03000028
+@   7429350ns | [JTAG] Read 0x00000001 from 0x03000028
+@   8448170ns | [JTAG] Read 0x00000001 from 0x03000028
+@   9464840ns | [JTAG] Read 0x00000001 from 0x03000028
+@  10479360ns | [JTAG] Read 0x00000002 from 0x03000028
+@  10479360ns | [HyperRAM] Memory initialization complete
+@  10479360ns | [JTAG] Writing 0x12345678 to 0x80000000
+@  10506510ns | [JTAG] Read 0x12345678 from 0x80000000
+@  10506510ns | [JTAG] Read back correct data
+@  10506510ns | [JTAG] Loading binary from ../sw/bin/cheriot-rtos-bench/cache_benchmark.hex
+@  10506510ns | [JTAG] Writing to memory @80000000 
+@  11049490ns | [JTAG] Writing to memory @80000170 
+@  11398690ns | [JTAG] Writing to memory @80000258 
+@  13227030ns | [JTAG] Writing to memory @80000740 
+@  19476420ns | [JTAG] Writing to memory @80001800 
+@  31873020ns | [JTAG] Writing to memory @80003940 
+@  32164020ns | [JTAG] Writing to memory @80003a00 
+@  32501150ns | [JTAG] Writing to memory @80003ae0 
+@  32687820ns | [JTAG] Writing to memory @80003b58 
+@  32826210ns | [JTAG] Writing to memory @80003bb0 
+@  36051350ns | [JTAG] Writing to memory @80004450 
+@  36820020ns | [JTAG] Writing to memory @80004658 
+@  37913750ns | [JTAG] Writing to memory @80004940 
+@  40253820ns | [JTAG] Writing to memory @80004f80 
+@  42686150ns | [JTAG] Writing to memory @80005600 
+@  57876350ns | [JTAG] Writing to memory @80007ec0 
+@  58179420ns | [JTAG] Writing to memory @80007f88 
+@  58657090ns | [JTAG] Writing to memory @800080d0 
+@  60158220ns | [JTAG] Writing to memory @800084d0 
+@  61659350ns | [JTAG] Writing to memory @80008900 
+@  61945390ns | [JTAG] Writing to memory @800089c0 
+@  62027730ns | [JTAG] Writing to memory @800089f0 
+@  62071710ns | [JTAG] Writing to memory @80008a08 
+@  62090890ns | [JTAG] Writing to memory @80008a10 
+@  62124950ns | [JTAG] Writing to memory @80008a40 
+@  63853920ns | [JTAG] Writing to memory @80008edc 
+@  64487010ns | [JTAG] Writing to memory @80009088 
+@  64530330ns | [JTAG] Writing to memory @800090a0 
+@  78042650ns | [JTAG] Writing to memory @8000b4e0 
+@  78159050ns | [JTAG] Writing to memory @8000b528 
+@  78949350ns | [JTAG] Read 0x020005c8 from 0x8000b730
+@  78949810ns | [CORE] Waking core via CLINT msip
+@  78949810ns | [JTAG] Writing 0x00000001 to 0x02040000
+@  78992400ns | [CORE] Wait for end of code...
+@ 798731850ns | [UART] [35mCache benchmark[0m: BENCH init 1668145
+@ 798731850ns | [UART] raw: '{'h1b, 'h5b, 'h33, 'h35, 'h6d, 'h43, 'h61, 'h63, 'h68, 'h65, 'h20, 'h62, 'h65, 'h6e, 'h63, 'h68, 'h6d, 'h61, 'h72, 'h6b, 'h1b, 'h5b, 'h30, 'h6d, 'h3a, 'h20, 'h42, 'h45, 'h4e, 'h43, 'h48, 'h20, 'h69, 'h6e, 'h69, 'h74, 'h20, 'h31, 'h36, 'h36, 'h38, 'h31, 'h34, 'h35, 'ha}
+@ 799559050ns | [UART] [35mCache benchmark[0m: BENCH stream 1380520
+@ 799559050ns | [UART] raw: '{'h1b, 'h5b, 'h33, 'h35, 'h6d, 'h43, 'h61, 'h63, 'h68, 'h65, 'h20, 'h62, 'h65, 'h6e, 'h63, 'h68, 'h6d, 'h61, 'h72, 'h6b, 'h1b, 'h5b, 'h30, 'h6d, 'h3a, 'h20, 'h42, 'h45, 'h4e, 'h43, 'h48, 'h20, 'h73, 'h74, 'h72, 'h65, 'h61, 'h6d, 'h20, 'h31, 'h33, 'h38, 'h30, 'h35, 'h32, 'h30, 'ha}
+@ 800360650ns | [UART] [35mCache benchmark[0m: BENCH copy 1121350
+@ 800360650ns | [UART] raw: '{'h1b, 'h5b, 'h33, 'h35, 'h6d, 'h43, 'h61, 'h63, 'h68, 'h65, 'h20, 'h62, 'h65, 'h6e, 'h63, 'h68, 'h6d, 'h61, 'h72, 'h6b, 'h1b, 'h5b, 'h30, 'h6d, 'h3a, 'h20, 'h42, 'h45, 'h4e, 'h43, 'h48, 'h20, 'h63, 'h6f, 'h70, 'h79, 'h20, 'h31, 'h31, 'h32, 'h31, 'h33, 'h35, 'h30, 'ha}
+@ 801187850ns | [UART] [35mCache benchmark[0m: BENCH stride 3089081
+@ 801187850ns | [UART] raw: '{'h1b, 'h5b, 'h33, 'h35, 'h6d, 'h43, 'h61, 'h63, 'h68, 'h65, 'h20, 'h62, 'h65, 'h6e, 'h63, 'h68, 'h6d, 'h61, 'h72, 'h6b, 'h1b, 'h5b, 'h30, 'h6d, 'h3a, 'h20, 'h42, 'h45, 'h4e, 'h43, 'h48, 'h20, 'h73, 'h74, 'h72, 'h69, 'h64, 'h65, 'h20, 'h33, 'h30, 'h38, 'h39, 'h30, 'h38, 'h31, 'ha}
+@ 802024650ns | [UART] [35mCache benchmark[0m: BENCH random 2570687
+@ 802024650ns | [UART] raw: '{'h1b, 'h5b, 'h33, 'h35, 'h6d, 'h43, 'h61, 'h63, 'h68, 'h65, 'h20, 'h62, 'h65, 'h6e, 'h63, 'h68, 'h6d, 'h61, 'h72, 'h6b, 'h1b, 'h5b, 'h30, 'h6d, 'h3a, 'h20, 'h42, 'h45, 'h4e, 'h43, 'h48, 'h20, 'h72, 'h61, 'h6e, 'h64, 'h6f, 'h6d, 'h20, 'h32, 'h35, 'h37, 'h30, 'h36, 'h38, 'h37, 'ha}
+@ 802843850ns | [UART] [35mCache benchmark[0m: BENCH chase 1716229
+@ 802843850ns | [UART] raw: '{'h1b, 'h5b, 'h33, 'h35, 'h6d, 'h43, 'h61, 'h63, 'h68, 'h65, 'h20, 'h62, 'h65, 'h6e, 'h63, 'h68, 'h6d, 'h61, 'h72, 'h6b, 'h1b, 'h5b, 'h30, 'h6d, 'h3a, 'h20, 'h42, 'h45, 'h4e, 'h43, 'h48, 'h20, 'h63, 'h68, 'h61, 'h73, 'h65, 'h20, 'h31, 'h37, 'h31, 'h36, 'h32, 'h32, 'h39, 'ha}
+@ 803776650ns | [UART] [35mCache benchmark[0m: BENCH capabilities 1019666
+@ 803776650ns | [UART] raw: '{'h1b, 'h5b, 'h33, 'h35, 'h6d, 'h43, 'h61, 'h63, 'h68, 'h65, 'h20, 'h62, 'h65, 'h6e, 'h63, 'h68, 'h6d, 'h61, 'h72, 'h6b, 'h1b, 'h5b, 'h30, 'h6d, 'h3a, 'h20, 'h42, 'h45, 'h4e, 'h43, 'h48, 'h20, 'h63, 'h61, 'h70, 'h61, 'h62, 'h69, 'h6c, 'h69, 'h74, 'h69, 'h65, 'h73, 'h20, 'h31, 'h30, 'h31, 'h39, 'h36, 'h36, 'h36, 'ha}
+@ 804562250ns | [UART] [35mCache benchmark[0m: BENCH code 132288
+@ 804562250ns | [UART] raw: '{'h1b, 'h5b, 'h33, 'h35, 'h6d, 'h43, 'h61, 'h63, 'h68, 'h65, 'h20, 'h62, 'h65, 'h6e, 'h63, 'h68, 'h6d, 'h61, 'h72, 'h6b, 'h1b, 'h5b, 'h30, 'h6d, 'h3a, 'h20, 'h42, 'h45, 'h4e, 'h43, 'h48, 'h20, 'h63, 'h6f, 'h64, 'h65, 'h20, 'h31, 'h33, 'h32, 'h32, 'h38, 'h38, 'ha}
+@ 805389450ns | [UART] [35mCache benchmark[0m: BENCH total 12697966
+@ 805389450ns | [UART] raw: '{'h1b, 'h5b, 'h33, 'h35, 'h6d, 'h43, 'h61, 'h63, 'h68, 'h65, 'h20, 'h62, 'h65, 'h6e, 'h63, 'h68, 'h6d, 'h61, 'h72, 'h6b, 'h1b, 'h5b, 'h30, 'h6d, 'h3a, 'h20, 'h42, 'h45, 'h4e, 'h43, 'h48, 'h20, 'h74, 'h6f, 'h74, 'h61, 'h6c, 'h20, 'h31, 'h32, 'h36, 'h39, 'h37, 'h39, 'h36, 'h36, 'ha}
+@ 806304650ns | [UART] [35mCache benchmark[0m: BENCH checksum 0xc37b1338
+@ 806304650ns | [UART] raw: '{'h1b, 'h5b, 'h33, 'h35, 'h6d, 'h43, 'h61, 'h63, 'h68, 'h65, 'h20, 'h62, 'h65, 'h6e, 'h63, 'h68, 'h6d, 'h61, 'h72, 'h6b, 'h1b, 'h5b, 'h30, 'h6d, 'h3a, 'h20, 'h42, 'h45, 'h4e, 'h43, 'h48, 'h20, 'h63, 'h68, 'h65, 'h63, 'h6b, 'h73, 'h75, 'h6d, 'h20, 'h30, 'h78, 'h63, 'h33, 'h37, 'h62, 'h31, 'h33, 'h33, 'h38, 'ha}
+@ 806420410ns | [JTAG] Simulation finished: SUCCESS
+- ../rtl/test/croc_vip.sv:349: Verilog $finish
+[ECC-MON] Checked 2198355 instruction, 408692 data and 0 bitmap responses: 0 errors
+[CACHE-COV] tb_croc_soc.i_croc_soc.i_croc.i_data_cache: 372107 requests, 24755 capability pairs, 124 partial stores
+[CACHE-COV] tb_croc_soc.i_croc_soc.i_croc.i_data_cache: 339213 hits, 32894 misses (victim invalid 64, clean 13893, dirty 18937)
+[CACHE-COV] tb_croc_soc.i_croc_soc.i_croc.i_data_cache: 18937 dirty write-backs, 32894 refills, 0 partial-store misses, 4606 capability misses
+[CACHE-COV] tb_croc_soc.i_croc_soc.i_croc.i_data_cache: capability stores second half direct 13711 / delayed 0, loads direct 11044 / delayed 0
+[CACHE-COV] tb_croc_soc.i_croc_soc.i_croc.i_data_cache: 21 line commands waited for the arbiter (761 cycles)
+[CACHE-COV] tb_croc_soc.i_croc_soc.i_croc.i_instruction_cache: 2198327 fetches, 2197176 hits, 1151 misses (victim invalid 512, evicted 639), 1151 refills
+[CACHE-COV] tb_croc_soc.i_croc_soc.i_croc.i_instruction_cache: 35 line commands waited for the arbiter (5189 cycles)
+[CACHE-COV] tb_croc_soc.i_croc_soc.i_croc.i_cache_mem_arbiter.unnamedblk4: port 0: 51831 operations, 6 accepted while another port requested, 761 wait cycles
+[CACHE-COV] tb_croc_soc.i_croc_soc.i_croc.i_cache_mem_arbiter.unnamedblk4: port 1: 1151 operations, 16 accepted while another port requested, 5189 wait cycles
+[CACHE-COV] tb_croc_soc.i_croc_soc.i_croc.i_cache_mem_arbiter.unnamedblk4: port 2: 2930 operations, 0 accepted while another port requested, 0 wait cycles
+[CACHE-COV] tb_croc_soc.i_croc_soc.i_croc.i_cache_mem_arbiter.unnamedblk4: port 3: 384 operations, 0 accepted while another port requested, 0 wait cycles
+[CACHE-COV] tb_croc_soc.i_croc_soc.i_croc.i_cache_mem_arbiter: 164 handovers between different ports
+- S i m u l a t i o n   R e p o r t: Verilator 5.042 2025-11-02
+- Verilator: $finish at 806ms; walltime 1106.741 s; speed 736.147 us/s
+- Verilator: cpu 1095.461 s on 1 threads; alloced 229 MB

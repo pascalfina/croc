@@ -1,0 +1,79 @@
+Base: cache_eval/20261113_162446
+New:  cache_eval/20261113_175747
+
+data cache, 2 ways: 45 configurations in both
+  base code: area f48b74b; performance f48b74b + uncommitted data_cache.sv, instruction_cache.sv
+  new code:  area 248e53c; performance 5ecab4e + uncommitted data_cache.sv, data_cache_param_checks.svh, instruction_cache.sv, instruction_cache_param_checks.svh
+
+  Speedup (base cycles / new cycles)
+    total          min   1.076x  median   1.287x  max   1.422x  geomean 1.256x
+    init           min   1.346x  median   1.610x  max   1.679x  geomean 1.570x
+    stream         min   1.406x  median   1.595x  max   1.629x  geomean 1.562x
+    copy           min   1.349x  median   1.723x  max   1.832x  geomean 1.666x
+    stride         min   1.021x  median   1.061x  max   1.105x  geomean 1.060x
+    random         min   1.024x  median   1.184x  max   1.447x  geomean 1.185x
+    chase          min   1.019x  median   1.113x  max   1.589x  geomean 1.131x
+    capabilities   min   1.015x  median   1.158x  max   1.738x  geomean 1.303x
+    code           min   1.833x  median   1.853x  max   1.855x  geomean 1.851x
+  Area change (new vs base)
+    total          min   -0.05%  median   +3.00%  max  +13.33%
+    stdcell        min   -0.24%  median  +12.97%  max  +17.93%
+    sram           min   +0.00%  median   +0.00%  max   +0.00%
+  Area-time gain (base cycles * area / new cycles * area)
+    total          min   1.073x  median   1.208x  max   1.358x  geomean 1.206x
+
+  Fewest cycles per cache size
+       2 KiB  base 32s_32b      9,753,999 cycles  0.315 mm2   new 32s_32b      7,494,639 cycles  0.343 mm2
+       4 KiB  base 64s_32b      9,524,541 cycles  0.514 mm2   new 64s_32b      7,266,252 cycles  0.552 mm2
+       8 KiB  base 128s_32b     9,373,125 cycles  0.860 mm2   new 128s_32b     7,112,955 cycles  0.938 mm2
+      16 KiB  base 256s_32b     9,089,400 cycles  1.594 mm2   new 256s_32b     6,824,985 cycles  1.708 mm2
+      32 KiB  base 512s_32b     8,789,084 cycles  3.021 mm2   new 256s_64b     6,504,573 cycles  2.283 mm2
+      64 KiB  base 512s_64b     8,357,452 cycles  4.149 mm2   new 512s_64b     6,053,325 cycles  4.405 mm2
+     128 KiB  base 1024s_64b    7,788,131 cycles  8.079 mm2   new 1024s_64b    5,478,028 cycles  8.509 mm2
+
+       config  KiB  speedup  total area   stdcell  area-time
+      2s_512b    2   1.1170       0.42%     1.62%     1.1123
+      4s_256b    2   1.1758       0.42%     1.43%     1.1709
+      8s_128b    2   1.2434       2.93%     8.52%     1.2081
+      16s_64b    2   1.2880       3.21%     7.38%     1.2480
+      32s_32b    2   1.3015       8.75%    16.07%     1.1968
+      64s_16b    2   1.2774       8.57%    12.61%     1.1766
+     2s_1024b    4   1.0761       0.30%     1.68%     1.0729
+      4s_512b    4   1.1276      -0.05%    -0.24%     1.1282
+      8s_256b    4   1.1886       2.85%    11.38%     1.1557
+     16s_128b    4   1.2573       1.78%     5.45%     1.2352
+      32s_64b    4   1.3002       6.97%    16.38%     1.2154
+      64s_32b    4   1.3108       7.44%    13.08%     1.2200
+     128s_16b    4   1.2833      11.30%    15.95%     1.1530
+     4s_1024b    8   1.0824       0.31%     2.18%     1.0791
+      8s_512b    8   1.1368       1.03%     5.92%     1.1252
+     16s_256b    8   1.1989       1.29%     5.61%     1.1836
+     32s_128b    8   1.2686       4.25%    13.33%     1.2169
+      64s_64b    8   1.3095       5.92%    13.15%     1.2363
+     128s_32b    8   1.3178       9.15%    15.25%     1.2072
+     256s_16b    8   1.2869      10.72%    14.43%     1.1624
+     8s_1024b   16   1.0980       0.85%     8.53%     1.0887
+     16s_512b   16   1.1577       0.68%     4.91%     1.1498
+     32s_256b   16   1.2225       2.54%    12.97%     1.1922
+     64s_128b   16   1.2936       4.01%    13.49%     1.2437
+     128s_64b   16   1.3287       6.25%    14.28%     1.2506
+     256s_32b   16   1.3318       7.12%    11.92%     1.2432
+     512s_16b   16   1.2948      13.33%    17.93%     1.1425
+    16s_1024b   32   1.1236       0.40%     5.29%     1.1192
+     32s_512b   32   1.1915       1.58%    14.65%     1.1729
+     64s_256b   32   1.2569       2.59%    14.95%     1.2251
+    128s_128b   32   1.3273       4.18%    15.14%     1.2740
+     256s_64b   32   1.3543       5.55%    13.12%     1.2830
+     512s_32b   32   1.3493       7.65%    13.03%     1.2534
+    1024s_16b   32   1.3095       9.41%    12.75%     1.1968
+    32s_1024b   64   1.1557       0.79%    13.97%     1.1467
+     64s_512b   64   1.2319       1.17%    12.58%     1.2176
+    128s_256b   64   1.2944       2.19%    13.98%     1.2666
+    256s_128b   64   1.3628       3.00%    11.46%     1.3231
+     512s_64b   64   1.3806       6.18%    15.15%     1.3003
+    1024s_32b   64   1.3645       7.23%    12.58%     1.2726
+    64s_1024b  128   1.2112       0.59%    12.30%     1.2041
+    128s_512b  128   1.2895       1.16%    14.01%     1.2748
+    256s_256b  128   1.3444       1.87%    12.94%     1.3197
+    512s_128b  128   1.4064       3.56%    14.42%     1.3581
+    1024s_64b  128   1.4217       5.32%    13.60%     1.3498

@@ -89,4 +89,12 @@
 scripts/publish_cheriot_image.sh
 .containers/croc-cheriot.sif
 .ccache/
+/cache_eval/latest
+/cache_eval/*/area/*/*
+!/cache_eval/*/area/*/reports/
+/cache_eval/*/area/*/reports/*
+!/cache_eval/*/area/*/reports/*_area.rpt
+!/cache_eval/*/area/*/reports/*_area_logic.rpt
+/cache_eval/*/performance/*/*
+!/cache_eval/*/performance/*/sim.log
 infineon-s27kl0641-s27ks0641-verilog-simulationmodels-en.zip

@@ -1,0 +1,10 @@
+date:   2026-11-13 16:24:46
+cache:  data, 2 ways
+sets:   2 4 8 16 32 64 128 256 512 1024
+lines:  16 32 64 128 256 512 1024
+commit: f48b74b
+uncommitted changes:
+     M rtl/cache/data_cache.sv
+     M rtl/cache/instruction_cache.sv
+note:   1024s_32b rerun at 17:35 after its build failed on a full home quota
+

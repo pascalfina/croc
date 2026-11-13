@@ -25,11 +25,12 @@ Environment variables:
     VERILATOR_JOBS  compiler jobs per build (default: 1, as JOBS builds run at once)
     BENCH_HEX    prebuilt benchmark image; built with make if unset
     SIM_TIMEOUT  seconds per simulation (default: 21600)
+    RESULT_DIR   result directory (default: a new cache_perf/<YYYYmmdd_HHMMSS>/,
+                 cache_perf/latest points to the newest one)
 
-Every call writes to its own directory cache_perf/<YYYYmmdd_HHMMSS>/, so older
-results stay as reference; cache_perf/latest points to the newest one.
-Results: cache_perf/<timestamp>/<cache>_<ways>w.csv, logs in
-cache_perf/<timestamp>/<config>/.
+Results: <RESULT_DIR>/<cache>_<ways>w.csv, logs in <RESULT_DIR>/<config>/.
+Rows of configurations that a call does not run stay in the CSV; each call
+appends its code state to <cache>_<ways>w_info.txt.
 EOF
 }
 
@@ -112,27 +113,35 @@ fi
 # The benchmark's working set ends at 0x8006_0000.
 init_bytes=$(( 0x60000 ))
 
-# Each call gets a new directory, so that runs of older code stay for comparison.
-run_dir="cache_perf/$(date +%Y%m%d_%H%M%S)"
-mkdir -p "$run_dir"
-ln -sfn "$(basename "$run_dir")" cache_perf/latest
+# Without RESULT_DIR each call gets a new directory, so that runs of older code
+# stay for comparison.
+if [[ -n "${RESULT_DIR:-}" ]]; then
+    result_dir=$RESULT_DIR
+    mkdir -p "$result_dir"
+else
+    result_dir="cache_perf/$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$result_dir"
+    ln -sfn "$(basename "$result_dir")" cache_perf/latest
+fi
+shown_dir=$(realpath -m --relative-to=.. "$result_dir")
 {
     echo "date:   $(date '+%Y-%m-%d %H:%M:%S')"
-    echo "cache:  $cache, $ways ways"
     echo "sets:   ${set_counts[*]}"
     echo "lines:  ${line_sizes[*]}"
     echo "commit: $(git -C .. rev-parse --short HEAD 2>/dev/null || echo unknown)"
     echo "uncommitted changes:"
     git -C .. status --short --untracked-files=no 2>/dev/null | sed 's/^/    /'
-} > "$run_dir/run_info.txt"
-echo "[INFO][Cache perf] Results go to verilator/$run_dir"
+    echo
+} >> "$result_dir/${cache}_${ways}w_info.txt"
+echo "[INFO][Cache perf] Results go to $shown_dir"
 
 simulate() {
     local sets=$1
     local line=$2
     local name=$3
-    local dir="$run_dir/$name"
+    local dir="$result_dir/$name"
 
+    rm -rf -- "$dir"
     mkdir -p "$dir"
 
     VERILATOR_SKIP_FLIST=1 \
@@ -171,15 +180,15 @@ bench_value() {
 }
 
 phases=(init stream copy stride random chase capabilities code)
-csv="$run_dir/${cache}_${ways}w.csv"
+csv="$result_dir/${cache}_${ways}w.csv"
 status=0
 reference=""
-echo "sets,line_bytes,cache_bytes,total_cycles,$(IFS=,; echo "${phases[*]}"),checksum,status" > "$csv"
+rows=()
 printf '\n%6s %10s %11s %14s %12s %8s\n' sets line_bytes cache_bytes total_cycles checksum status
 for run in "${runs[@]}"; do
     read -r sets line <<< "$run"
     name="${cache}_${ways}w_${sets}s_${line}b"
-    log="$run_dir/$name/sim.log"
+    log="$result_dir/$name/sim.log"
     bytes=$((ways * sets * line))
 
     total=$(bench_value "$log" total)
@@ -200,13 +209,26 @@ for run in "${runs[@]}"; do
     else
         result=failed
         status=1
-        echo "[ERROR][Cache perf] $name failed, see verilator/$run_dir/$name/" >&2
+        echo "[ERROR][Cache perf] $name failed, see $shown_dir/$name/" >&2
     fi
 
-    echo "$sets,$line,$bytes,${total:-},$(IFS=,; echo "${cycles[*]}"),${checksum:-},$result" >> "$csv"
+    rows+=("$sets,$line,$bytes,${total:-},$(IFS=,; echo "${cycles[*]}"),${checksum:-},$result")
     printf '%6s %10s %11s %14s %12s %8s\n' "$sets" "$line" "$bytes" "${total:-n/a}" "${checksum:-n/a}" "$result"
 done
+
+# Keeps the rows of earlier calls for configurations this call did not run.
+{
+    echo "sets,line_bytes,cache_bytes,total_cycles,$(IFS=,; echo "${phases[*]}"),checksum,status"
+    {
+        printf '%s\n' "${rows[@]}"
+        if [[ -f "$csv" ]]; then
+            printf '%s\n' "${rows[@]}" | awk -F, 'NR == FNR { ran[$1 "," $2] = 1; next }
+                FNR > 1 { gsub(/[ \r]/, ""); if (!(($1 "," $2) in ran)) print }' - "$csv"
+        fi
+    } | sort -t, -k1,1n -k2,2n
+} > "$csv.new"
+mv -- "$csv.new" "$csv"
 echo
-echo "[INFO][Cache perf] Results written to verilator/$csv"
+echo "[INFO][Cache perf] Results written to $shown_dir/$(basename "$csv")"
 
 exit "$status"

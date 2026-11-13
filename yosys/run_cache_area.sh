@@ -23,8 +23,11 @@ Environment variables:
     CACHE_LINES  line sizes in bytes, powers of two from 16 to 1024
                  (default: 16 32 64 128 256 512 1024)
     JOBS         parallel syntheses (default: number of CPUs)
+    RESULT_DIR   result directory (default: cache_area)
 
-Results: cache_area/<cache>_<ways>w.csv, logs and reports in cache_area/<run>/.
+Results: <RESULT_DIR>/<cache>_<ways>w.csv, logs and reports in
+<RESULT_DIR>/<config>/. Rows of configurations that a call does not run stay
+in the CSV; each call appends its code state to <cache>_<ways>w_info.txt.
 EOF
 }
 
@@ -36,6 +39,7 @@ fi
 cache=${1:-data}
 ways=${2:-2}
 jobs=${JOBS:-$(nproc)}
+result_dir=${RESULT_DIR:-cache_area}
 # Not SETS/LINES: the shell sets LINES to the terminal height.
 read -r -a set_counts <<< "${CACHE_SETS:-2 4 8 16 32 64 128 256 512 1024}"
 read -r -a line_sizes <<< "${CACHE_LINES:-16 32 64 128 256 512 1024}"
@@ -90,11 +94,24 @@ fi
 
 ./run_synthesis.sh --flist
 
+mkdir -p "$result_dir"
+shown_dir=$(realpath -m --relative-to=.. "$result_dir")
+{
+    echo "date:   $(date '+%Y-%m-%d %H:%M:%S')"
+    echo "sets:   ${set_counts[*]}"
+    echo "lines:  ${line_sizes[*]}"
+    echo "commit: $(git -C .. rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    echo "uncommitted changes:"
+    git -C .. status --short --untracked-files=no 2>/dev/null | sed 's/^/    /'
+    echo
+} >> "$result_dir/${cache}_${ways}w_info.txt"
+echo "[INFO][Cache area] Results go to $shown_dir"
+
 synthesize() {
     local sets=$1
     local line=$2
     local name=$3
-    local dir="cache_area/$name"
+    local dir="$result_dir/$name"
 
     rm -rf -- "$dir"
     mkdir -p "$dir"
@@ -133,29 +150,42 @@ for run in "${runs[@]}"; do
 done
 wait || true
 
-csv="cache_area/${cache}_${ways}w.csv"
+csv="$result_dir/${cache}_${ways}w.csv"
 status=0
-echo "sets,line_bytes,cache_bytes,records,total_um2,stdcell_um2,sram_um2" > "$csv"
+rows=()
 printf '\n%6s %10s %11s %8s %14s %14s %14s\n' \
     sets line_bytes cache_bytes records total_um2 stdcell_um2 sram_um2
 for run in "${runs[@]}"; do
     read -r sets line <<< "$run"
     name="${cache}_${ways}w_${sets}s_${line}b"
-    total=$(chip_area "cache_area/$name/reports/${name}_area.rpt")
-    stdcell=$(chip_area "cache_area/$name/reports/${name}_area_logic.rpt")
+    total=$(chip_area "$result_dir/$name/reports/${name}_area.rpt")
+    stdcell=$(chip_area "$result_dir/$name/reports/${name}_area_logic.rpt")
     sram=$(awk -v t="$total" -v s="$stdcell" \
         'BEGIN { if (t + 0 > 0 && s + 0 > 0) printf "%.1f", t - s; else print "n/a" }')
     if [[ "$total" == n/a ]]; then
-        echo "[ERROR][Cache area] $name failed, see yosys/cache_area/$name/yosys.log" >&2
+        echo "[ERROR][Cache area] $name failed, see $shown_dir/$name/yosys.log" >&2
         status=1
     fi
     bytes=$((ways * sets * line))
     records=$((bytes / 8))
-    echo "$sets,$line,$bytes,$records,$total,$stdcell,$sram" >> "$csv"
+    rows+=("$sets,$line,$bytes,$records,$total,$stdcell,$sram")
     printf '%6s %10s %11s %8s %14s %14s %14s\n' \
         "$sets" "$line" "$bytes" "$records" "$total" "$stdcell" "$sram"
 done
+
+# Keeps the rows of earlier calls for configurations this call did not run.
+{
+    echo "sets,line_bytes,cache_bytes,records,total_um2,stdcell_um2,sram_um2"
+    {
+        printf '%s\n' "${rows[@]}"
+        if [[ -f "$csv" ]]; then
+            printf '%s\n' "${rows[@]}" | awk -F, 'NR == FNR { ran[$1 "," $2] = 1; next }
+                FNR > 1 { gsub(/[ \r]/, ""); if (!(($1 "," $2) in ran)) print }' - "$csv"
+        fi
+    } | sort -t, -k1,1n -k2,2n
+} > "$csv.new"
+mv -- "$csv.new" "$csv"
 echo
-echo "[INFO][Cache area] Results written to yosys/$csv"
+echo "[INFO][Cache area] Results written to $shown_dir/$(basename "$csv")"
 
 exit "$status"

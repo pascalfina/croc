@@ -267,3 +267,21 @@ This is deliberately only a diagnostic aid, not a proof of safety. The
 linker report describes possible imports, not the exact runtime call order.
 Dynamic callbacks, error paths and configuration-dependent calls can require
 additional frames, so the reserve and a manual review remain necessary.
+
+## Caches
+
+### Refill bandwidth
+The data cache sweep `cache_eval/20261113_175747` (2 ways, 45
+configurations) fits within ±2 % to a fixed cost per refill plus a cost per
+line byte for refills and write-backs. Write-backs take about 0.31 cycles per
+data byte, the peak rate of the two HyperBus PHYs at DDR (4 bytes per cycle,
+10-byte records for 8 data bytes). Refills take about 0.62 cycles per data
+byte, half of that rate. The cache and `cache_mem_arbiter` accept one record
+or 32-bit host word per cycle during a refill, so the limit is probably in the
+HyperBus read path, for example the PHY stopping CK while `RxOutstandingLimit`
+(6) read words have not yet left the RX CDC FIFO.
+
+**TODO:** confirm the half rate in the waveform of a single refill (expected
+about 2.5 cycles per record and a continuous `hyper_ck_o`) and fix the read
+path. The fit estimates 12 % fewer cycles for `1024s_64b` and up to 36 % for
+1024-byte lines.

@@ -1,0 +1,6 @@
+date:   2026-11-13 15:02, reconstructed from the file times; sets 1024 synthesized again from 15:59 to 16:06
+sets:   2 4 8 16 32 64 128 256 512 1024
+lines:  16 32 64 128 256 512 1024
+commit: f48b74b
+uncommitted changes: not recorded
+

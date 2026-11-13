@@ -1,0 +1,11 @@
+date:   2026-11-13 17:57:47
+cache:  data, 2 ways
+sets:   2 4 8 16 32 64 128 256 512 1024
+lines:  16 32 64 128 256 512 1024
+commit: 5ecab4e
+uncommitted changes:
+     M rtl/cache/data_cache.sv
+     M rtl/cache/data_cache_param_checks.svh
+     M rtl/cache/instruction_cache.sv
+     M rtl/cache/instruction_cache_param_checks.svh
+
