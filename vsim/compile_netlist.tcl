@@ -389,6 +389,7 @@ if {[catch { vlog -incr -sv \
     "+incdir+$ROOT/rtl/idma/include" \
     "+incdir+$ROOT/rtl/obi/include" \
     "$ROOT/ihp13/tc_clk.sv" \
+    "$ROOT/ihp13/tc_sram_ihp13_pkg.sv" \
     "$ROOT/ihp13/tc_sram_impl.sv" \
 }]} {return 1}
 

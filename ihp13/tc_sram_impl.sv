@@ -19,6 +19,202 @@ module tc_sram_blackbox #(
 ) ();
 endmodule
 
+`define TC_SRAM_IHP13_CUT(cut) \
+  cut i_cut ( \
+    .A_CLK       ( clk_i   ), \
+    .A_DLY       ( dly_i   ), \
+    .A_ADDR      ( addr_i  ), \
+    .A_BM        ( bm_i    ), \
+    .A_MEN       ( req_i   ), \
+    .A_WEN       ( we_i    ), \
+    .A_REN       ( ~we_i   ), \
+    .A_DIN       ( wdata_i ), \
+    .A_DOUT      ( rdata_o ), \
+    .A_BIST_CLK  ( 1'b0    ), \
+    .A_BIST_ADDR ( '0      ), \
+    .A_BIST_DIN  ( '0      ), \
+    .A_BIST_BM   ( '0      ), \
+    .A_BIST_MEN  ( 1'b0    ), \
+    .A_BIST_WEN  ( 1'b0    ), \
+    .A_BIST_REN  ( 1'b0    ), \
+    .A_BIST_EN   ( 1'b0    )  \
+  );
+
+module tc_sram_ihp13_macro #(
+  parameter int unsigned Width     = 32'd64,
+  parameter int unsigned Words     = 32'd64,
+  // DEPENDENT PARAMETERS, DO NOT OVERWRITE!
+  parameter int unsigned AddrWidth = $clog2(Words)
+) (
+  input  logic                 clk_i,
+  input  logic                 dly_i,
+  input  logic                 req_i,
+  input  logic                 we_i,
+  input  logic [AddrWidth-1:0] addr_i,
+  input  logic [Width-1:0]     wdata_i,
+  input  logic [Width-1:0]     bm_i,
+  output logic [Width-1:0]     rdata_o
+);
+
+  if      (Width == 64 && Words ==   64) begin : gen_64x64   `TC_SRAM_IHP13_CUT(RM_IHPSG13_1P_64x64_c2_bm_bist)   end
+  else if (Width == 64 && Words ==  256) begin : gen_256x64  `TC_SRAM_IHP13_CUT(RM_IHPSG13_1P_256x64_c2_bm_bist)  end
+  else if (Width == 64 && Words ==  512) begin : gen_512x64  `TC_SRAM_IHP13_CUT(RM_IHPSG13_1P_512x64_c2_bm_bist)  end
+  else if (Width == 64 && Words == 1024) begin : gen_1024x64 `TC_SRAM_IHP13_CUT(RM_IHPSG13_1P_1024x64_c2_bm_bist) end
+  else if (Width == 64 && Words == 2048) begin : gen_2048x64 `TC_SRAM_IHP13_CUT(RM_IHPSG13_1P_2048x64_c2_bm_bist) end
+  else if (Width == 48 && Words ==  256) begin : gen_256x48  `TC_SRAM_IHP13_CUT(RM_IHPSG13_1P_256x48_c2_bm_bist)  end
+  else if (Width == 32 && Words ==  512) begin : gen_512x32  `TC_SRAM_IHP13_CUT(RM_IHPSG13_1P_512x32_c2_bm_bist)  end
+  else begin : gen_invalid
+    $error("tc_sram_ihp13_macro: no IHP macro with %0d words of %0d bits", Words, Width);
+  end
+
+endmodule
+
+`undef TC_SRAM_IHP13_CUT
+
+module tc_sram_ihp13_column #(
+  parameter int unsigned Records   = 32'd256,
+  parameter int unsigned Bits      = 32'd64,
+  parameter int unsigned Pack      = 32'd1,
+  // DEPENDENT PARAMETERS, DO NOT OVERWRITE!
+  parameter int unsigned AddrWidth = $clog2(Records)
+) (
+  input  logic                 clk_i,
+  input  logic                 rst_ni,
+  input  logic                 dly_i,
+  input  logic                 req_i,
+  input  logic                 we_i,
+  input  logic [AddrWidth-1:0] addr_i,
+  input  logic [Bits-1:0]      wdata_i,
+  input  logic [Bits-1:0]      bm_i,
+  output logic [Bits-1:0]      rdata_o
+);
+
+  import tc_sram_ihp13_pkg::*;
+
+  localparam int unsigned Width     = Bits * Pack;
+  localparam int unsigned Words     = Records / Pack;
+  localparam int unsigned NumTiles  = num_tiles(Width, Words);
+  localparam int unsigned SlotWidth = (Pack > 1) ? $clog2(Pack) : 1;
+  localparam int unsigned TileWidth = (NumTiles > 1) ? $clog2(NumTiles) : 1;
+
+  logic [SlotWidth-1:0] slot, slot_q;
+  logic [TileWidth-1:0] tile, tile_q;
+  logic [NumTiles-1:0]  tile_hit;
+  logic [AddrWidth-1:0] word;
+  logic [Width-1:0]     macro_wdata, macro_bm;
+  logic [Width-1:0]     macro_rdata [NumTiles];
+
+  always_comb begin
+    slot = '0;
+    for (int unsigned s = 1; s < Pack; s++) begin
+      if (addr_i >= s * Words) slot = SlotWidth'(s);
+    end
+  end
+
+  always_comb begin
+    tile = '0;
+    for (int unsigned t = 1; t < NumTiles; t++) begin
+      if (tile_hit[t]) tile = TileWidth'(t);
+    end
+  end
+
+  assign tile_hit[0] = 1'b1;
+  assign word        = addr_i - slot * Words;
+  assign macro_wdata = {Pack{wdata_i}};
+  assign macro_bm    = Width'(bm_i) << (Bits * slot);
+  assign rdata_o     = macro_rdata[tile_q][Bits*slot_q +: Bits];
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      slot_q <= '0;
+      tile_q <= '0;
+    end else if (req_i & ~we_i) begin
+      slot_q <= slot;
+      tile_q <= tile;
+    end
+  end
+
+  for (genvar t = 0; t < NumTiles; t++) begin : gen_tiles
+    localparam int unsigned TileBase  = tile_base(Width, Words, t);
+    localparam int unsigned TileWords = macro_words(Width, Words - TileBase);
+
+    if (t > 0) begin : gen_hit
+      assign tile_hit[t] = word >= TileBase;
+    end
+
+    tc_sram_ihp13_macro #(
+      .Width ( Width     ),
+      .Words ( TileWords )
+    ) i_macro (
+      .clk_i,
+      .dly_i,
+      .req_i   ( req_i & (tile == t) & (~we_i | (|bm_i)) ),
+      .we_i,
+      .addr_i  ( word[$clog2(TileWords)-1:0]             ),
+      .wdata_i ( macro_wdata                             ),
+      .bm_i    ( macro_bm                                ),
+      .rdata_o ( macro_rdata[t]                          )
+    );
+  end
+
+endmodule
+
+module tc_sram_ihp13_x80 #(
+  parameter int unsigned Records   = 32'd256,
+  // DEPENDENT PARAMETERS, DO NOT OVERWRITE!
+  parameter int unsigned AddrWidth = $clog2(Records)
+) (
+  input  logic                 clk_i,
+  input  logic                 rst_ni,
+  input  logic                 dly_i,
+  input  logic                 req_i,
+  input  logic                 we_i,
+  input  logic [AddrWidth-1:0] addr_i,
+  input  logic [79:0]          wdata_i,
+  input  logic [79:0]          bm_i,
+  output logic [79:0]          rdata_o
+);
+
+  import tc_sram_ihp13_pkg::*;
+
+  localparam int unsigned Layout = best_layout(Records);
+  localparam int unsigned LoBits = LayoutLoBits[Layout];
+  localparam int unsigned HiPack = LayoutHiPack[Layout];
+
+  tc_sram_ihp13_column #(
+    .Records ( Records ),
+    .Bits    ( LoBits  ),
+    .Pack    ( 1       )
+  ) i_lo (
+    .clk_i,
+    .rst_ni,
+    .dly_i,
+    .req_i,
+    .we_i,
+    .addr_i,
+    .wdata_i ( wdata_i[LoBits-1:0] ),
+    .bm_i    ( bm_i[LoBits-1:0]    ),
+    .rdata_o ( rdata_o[LoBits-1:0] )
+  );
+
+  tc_sram_ihp13_column #(
+    .Records ( Records     ),
+    .Bits    ( 80 - LoBits ),
+    .Pack    ( HiPack      )
+  ) i_hi (
+    .clk_i,
+    .rst_ni,
+    .dly_i,
+    .req_i,
+    .we_i,
+    .addr_i,
+    .wdata_i ( wdata_i[79:LoBits] ),
+    .bm_i    ( bm_i[79:LoBits]    ),
+    .rdata_o ( rdata_o[79:LoBits] )
+  );
+
+endmodule
+
 module tc_sram_impl #(
   parameter int unsigned NumWords     = 32'd1024,
   parameter int unsigned DataWidth    = 32'd128,
@@ -456,6 +652,55 @@ module tc_sram_impl #(
       end
 
 
+
+  end else if (DataWidth == 80 && NumWords % tc_sram_ihp13_pkg::SegmentUnit == 0 &&
+               NumWords <= tc_sram_ihp13_pkg::SegmentUnit * tc_sram_ihp13_pkg::MaxUnits && P1L1)
+      begin : gen_Nx80xBx1
+    localparam int unsigned NumSegments  = tc_sram_ihp13_pkg::num_segments(NumWords);
+    localparam int unsigned SegmentWidth = (NumSegments > 1) ? $clog2(NumSegments) : 1;
+
+    logic [SegmentWidth-1:0] segment, segment_q;
+    logic [NumSegments-1:0]  segment_hit;
+    logic [79:0]             segment_rdata [NumSegments];
+
+    always_comb begin
+      segment = '0;
+      for (int unsigned s = 1; s < NumSegments; s++) begin
+        if (segment_hit[s]) segment = SegmentWidth'(s);
+      end
+    end
+
+    assign segment_hit[0] = 1'b1;
+    assign rdata_o[0]     = segment_rdata[segment_q];
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+      if (!rst_ni)                  segment_q <= '0;
+      else if (req_i[0] & ~we_i[0]) segment_q <= segment;
+    end
+
+    for (genvar s = 0; s < NumSegments; s++) begin : gen_segments
+      localparam int unsigned Base     = tc_sram_ihp13_pkg::segment_base(NumWords, s);
+      localparam int unsigned Records  = tc_sram_ihp13_pkg::segment_records(NumWords, s);
+      localparam int unsigned RecAddrW = $clog2(Records);
+
+      if (s > 0) begin : gen_hit
+        assign segment_hit[s] = addr_i[0] >= Base;
+      end
+
+      tc_sram_ihp13_x80 #(
+        .Records ( Records )
+      ) i_segment (
+        .clk_i,
+        .rst_ni,
+        .dly_i   ( impl_i                        ),
+        .req_i   ( req_i[0] & (segment == s)     ),
+        .we_i    ( we_i[0]                       ),
+        .addr_i  ( RecAddrW'(addr_i[0] - Base)   ),
+        .wdata_i ( wdata_i[0]                    ),
+        .bm_i    ( bm[0]                         ),
+        .rdata_o ( segment_rdata[s]              )
+      );
+    end
 
   end else begin : gen_blackbox
 

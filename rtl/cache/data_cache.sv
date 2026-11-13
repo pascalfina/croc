@@ -663,23 +663,47 @@ module data_cache #(
         .ready_i      (wb_fifo_out_ready)
     );
 
-    // sram physcial mmemory for cache 
+    // sram physical memory for cache: at most one way is accessed per cycle,
+    // so all ways share one SRAM and the way selects its address range
 
-    for (genvar way = 0; way < NumWays; ++way) begin : gen_sram_ways
-        cache_data_sram #(
-            .NumWords(SramWordsPerWay),
-            .DataWidth(RecordBits),
-            .AddrWidth(SramAddrWidth)
-        ) i_cache_data_sram (
-            .clk_i(clk_i),
-            .rst_ni(rst_ni),
-            .req_i(sram_req[way]),
-            .we_i(sram_we),
-            .addr_i(sram_word_addr),
-            .wdata_i(sram_wdata),
-            .be_i(sram_mask),
-            .rdata_o(sram_rdata[way])
-        );
+    localparam int unsigned SramWords = NumWays * SramWordsPerWay;
+    localparam int unsigned SramWayAddrWidth = $clog2(SramWords);
+
+    logic [WayIndexWidth-1:0]    sram_way;
+    logic [SramWayAddrWidth-1:0] sram_addr;
+    logic [RecordBits-1:0]       sram_rdata_shared;
+
+    always_comb begin
+        sram_way = '0;
+        for (int way = 0; way < NumWays; ++way) begin
+            if (sram_req[way]) sram_way = WayIndexWidth'(way);
+        end
+    end
+
+    assign sram_addr = SramWayAddrWidth'(sram_way * SramWordsPerWay + sram_word_addr);
+
+    tc_sram_impl #(
+        .NumWords(SramWords),
+        .DataWidth(RecordBits),
+        .ByteWidth(8),
+        .NumPorts(1),
+        .Latency(1)
+    ) i_data_sram (
+        .clk_i(clk_i),
+        .rst_ni(rst_ni),
+        .impl_i('0),
+        .impl_o(),
+        .req_i(|sram_req),
+        .we_i(sram_we),
+        .addr_i(sram_addr),
+        .wdata_i(sram_wdata),
+        .be_i(sram_mask),
+        .rdata_o(sram_rdata_shared)
+    );
+
+    // the fsm only reads the way it accessed, so every way sees the shared data
+    for (genvar way = 0; way < NumWays; ++way) begin : gen_sram_rdata
+        assign sram_rdata[way] = sram_rdata_shared;
     end
     `include "data_cache_param_checks.svh"
 

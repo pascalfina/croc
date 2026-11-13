@@ -26,6 +26,7 @@ if {$pdk_name eq "sg13cmos5l"} {
         "$ROOT/technology/verilog/RM_IHPSG13_1P_1024x64_c2_bm_bist.v" \
         "$ROOT/technology/verilog/RM_IHPSG13_1P_2048x64_c2_bm_bist.v" \
         "$ROOT/technology/verilog/RM_IHPSG13_1P_256x48_c2_bm_bist.v" \
+        "$ROOT/ihp13/tc_sram_ihp13_pkg.sv" \
         "$ROOT/ihp13/tc_sram_impl.sv" \
         "$ROOT/ihp13/tc_clk.sv" \
     }]} {return 1}
@@ -43,6 +44,7 @@ if {$pdk_name eq "sg13cmos5l"} {
         "$ROOT/technology/verilog/RM_IHPSG13_1P_1024x64_c2_bm_bist.v" \
         "$ROOT/technology/verilog/RM_IHPSG13_1P_2048x64_c2_bm_bist.v" \
         "$ROOT/technology/verilog/RM_IHPSG13_1P_256x48_c2_bm_bist.v" \
+        "$ROOT/ihp13/tc_sram_ihp13_pkg.sv" \
         "$ROOT/ihp13/tc_sram_impl.sv" \
         "$ROOT/ihp13/tc_clk.sv" \
     }]} {return 1}

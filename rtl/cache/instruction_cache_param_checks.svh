@@ -18,8 +18,8 @@
         $error("instruction_cache: AddrWidth must leave at least one cache address-tag bit.");
     end
 
-    if (SramWordsPerWay == 0 || SramWordsPerWay % 256 != 0) begin : gen_invalid_sram_depth
-        $error("instruction_cache: each way must contain a positive multiple of 256 SRAM records.");
+    if (SramWords == 0 || SramWords % 256 != 0) begin : gen_invalid_sram_depth
+        $error("instruction_cache: all ways together must hold a positive multiple of 256 SRAM records.");
     end
 
     if (CpuDataWidth != 32 || $bits(obi_req_i.a.addr) != AddrWidth ||

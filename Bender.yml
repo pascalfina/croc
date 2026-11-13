@@ -33,6 +33,7 @@ sources:
   - target: ihp13
     files:
       - ihp13/tc_clk.sv
+      - ihp13/tc_sram_ihp13_pkg.sv
       - ihp13/tc_sram_impl.sv
 
   # HyperBus PHY delay line; simulations use the package's behavioural model.
@@ -65,7 +66,6 @@ sources:
       - rtl/cheriot/tag_sram_crtl.sv
       - rtl/cheriot/revc_bitmap_memory.sv
       - rtl/obi/obi_to_reg.sv
-      - rtl/cache/cache_data_sram.sv
       - rtl/cache/data_cache.sv
       - rtl/cache/instruction_cache.sv
       - rtl/cache/cache_mem_arbiter.sv
