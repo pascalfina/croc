@@ -7,6 +7,17 @@ package tc_sram_ihp13_pkg;
   localparam int unsigned LayoutLoBits [NumLayouts] = '{64, 64, 64, 48};
   localparam int unsigned LayoutHiPack [NumLayouts] = '{ 4,  2,  3,  1};
 
+  localparam int unsigned Area64x64   = 50489;
+  localparam int unsigned Area256x64  = 93181;
+  localparam int unsigned Area512x64  = 150102;
+  localparam int unsigned Area1024x64 = 263946;
+  localparam int unsigned Area2048x64 = 491634;
+  localparam int unsigned Area256x48  = 70850;
+  localparam int unsigned Area512x32  = 79720;
+  localparam int unsigned NoFit       = 32'h7fff_ffff;
+
+  typedef logic [MaxUnits-1:0][$clog2(MaxUnits+1)-1:0] segment_plan_t;
+
   function automatic int unsigned macro_words(int unsigned width, int unsigned words);
     if (width == 48)    return 256;
     if (width == 32)    return 512;
@@ -15,16 +26,6 @@ package tc_sram_ihp13_pkg;
     if (words >=  512)  return 512;
     if (words >=  256)  return 256;
     return 64;
-  endfunction
-
-  function automatic int unsigned macro_area(int unsigned width, int unsigned words);
-    if (width == 48)    return 70850;
-    if (width == 32)    return 79720;
-    if (words == 2048)  return 491634;
-    if (words == 1024)  return 263946;
-    if (words ==  512)  return 150102;
-    if (words ==  256)  return 93181;
-    return 50489;
   endfunction
 
   function automatic int unsigned tile_base(int unsigned width, int unsigned words, int unsigned tile);
@@ -43,13 +44,16 @@ package tc_sram_ihp13_pkg;
 
   function automatic int unsigned column_area(int unsigned records, int unsigned bits,
                                               int unsigned pack);
-    int unsigned width = bits * pack;
     int unsigned words = records / pack;
-    if (records % pack != 0 || words % macro_words(width, 0) != 0) return 32'h7fff_ffff;
-    column_area = 0;
-    for (int unsigned base = 0; base < words; base += macro_words(width, words - base)) begin
-      column_area += macro_area(width, macro_words(width, words - base));
-    end
+    if (records % pack != 0) return NoFit;
+    case (bits * pack)
+      48:      return (words % 256 != 0) ? NoFit : words / 256 * Area256x48;
+      32:      return (words % 512 != 0) ? NoFit : words / 512 * Area512x32;
+      default: return (words %  64 != 0) ? NoFit :
+                      words / 2048 * Area2048x64 + words % 2048 / 1024 * Area1024x64 +
+                      words % 1024 / 512 * Area512x64 + words % 512 / 256 * Area256x64 +
+                      words % 256 / 64 * Area64x64;
+    endcase
   endfunction
 
   function automatic int unsigned layout_area(int unsigned records, int unsigned layout);
@@ -58,43 +62,51 @@ package tc_sram_ihp13_pkg;
   endfunction
 
   function automatic int unsigned best_layout(int unsigned records);
+    int unsigned best_area = '1;
     best_layout = 0;
-    for (int unsigned l = 1; l < NumLayouts; l++) begin
-      if (layout_area(records, l) < layout_area(records, best_layout)) best_layout = l;
+    for (int unsigned l = 0; l < NumLayouts; l++) begin
+      int unsigned area = layout_area(records, l);
+      if (area < best_area) begin
+        best_area   = area;
+        best_layout = l;
+      end
     end
   endfunction
 
-  function automatic int unsigned segment_records(int unsigned records, int unsigned segment);
+  function automatic segment_plan_t segment_plan(int unsigned records);
+    int unsigned units = records / SegmentUnit;
+    int unsigned area  [MaxUnits+1];
     int unsigned cost  [MaxUnits+1];
     int unsigned first [MaxUnits+1];
-    int unsigned units = records / SegmentUnit;
-    cost[0]  = 0;
-    first[0] = 0;
+    for (int unsigned u = 1; u <= units; u++) begin
+      area[u] = layout_area(u * SegmentUnit, best_layout(u * SegmentUnit));
+    end
+    cost[0] = 0;
     for (int unsigned u = 1; u <= units; u++) begin
       cost[u] = '1;
       for (int unsigned k = u; k >= 1; k--) begin
-        int unsigned area = layout_area(k * SegmentUnit, best_layout(k * SegmentUnit)) + cost[u - k];
-        if (area < cost[u]) begin
-          cost[u]  = area;
+        if (area[k] + cost[u - k] < cost[u]) begin
+          cost[u]  = area[k] + cost[u - k];
           first[u] = k;
         end
       end
     end
-    for (int unsigned s = 0; s < segment; s++) begin
-      units -= first[units];
+    segment_plan = '0;
+    for (int unsigned s = 0; units > 0; s++) begin
+      segment_plan[s] = first[units];
+      units          -= first[units];
     end
-    return first[units] * SegmentUnit;
   endfunction
 
-  function automatic int unsigned num_segments(int unsigned records);
+  function automatic int unsigned num_segments(segment_plan_t plan);
     num_segments = 0;
-    while (segment_records(records, num_segments) != 0) num_segments++;
+    while (num_segments < MaxUnits && plan[num_segments] != 0) num_segments++;
   endfunction
 
-  function automatic int unsigned segment_base(int unsigned records, int unsigned segment);
+  function automatic int unsigned segment_base(segment_plan_t plan, int unsigned segment);
     segment_base = 0;
     for (int unsigned s = 0; s < segment; s++) begin
-      segment_base += segment_records(records, s);
+      segment_base += plan[s] * SegmentUnit;
     end
   endfunction
 

@@ -8,14 +8,12 @@
 # Preparation for the synthesis flow
 # A common setup to provide some functionality and define variables
 
-# set global variables
-set sv_flist   "src/croc.flist"
-set out_dir    out
-set tmp_dir    tmp
-set rep_dir    reports
-
 # global variables imported from environment variables (if set)
 # define with scheme: <local-var> { <ENVVAR>  <fallback> }
+set sv_flist   [expr {[info exists ::env(SV_FLIST)]   ? $::env(SV_FLIST)   : "src/croc.flist"}]
+set out_dir    [expr {[info exists ::env(OUT_DIR)]    ? $::env(OUT_DIR)    : "out"}]
+set tmp_dir    [expr {[info exists ::env(TMP_DIR)]    ? $::env(TMP_DIR)    : "tmp"}]
+set rep_dir    [expr {[info exists ::env(REP_DIR)]    ? $::env(REP_DIR)    : "reports"}]
 set proj_name  [expr {[info exists ::env(PROJ_NAME)]  ? $::env(PROJ_NAME)  : "croc"}]
 set top_design [expr {[info exists ::env(TOP_DESIGN)] ? $::env(TOP_DESIGN) : "croc_chip"}]
 

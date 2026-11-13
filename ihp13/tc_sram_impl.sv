@@ -656,7 +656,8 @@ module tc_sram_impl #(
   end else if (DataWidth == 80 && NumWords % tc_sram_ihp13_pkg::SegmentUnit == 0 &&
                NumWords <= tc_sram_ihp13_pkg::SegmentUnit * tc_sram_ihp13_pkg::MaxUnits && P1L1)
       begin : gen_Nx80xBx1
-    localparam int unsigned NumSegments  = tc_sram_ihp13_pkg::num_segments(NumWords);
+    localparam tc_sram_ihp13_pkg::segment_plan_t Plan = tc_sram_ihp13_pkg::segment_plan(NumWords);
+    localparam int unsigned NumSegments  = tc_sram_ihp13_pkg::num_segments(Plan);
     localparam int unsigned SegmentWidth = (NumSegments > 1) ? $clog2(NumSegments) : 1;
 
     logic [SegmentWidth-1:0] segment, segment_q;
@@ -679,8 +680,8 @@ module tc_sram_impl #(
     end
 
     for (genvar s = 0; s < NumSegments; s++) begin : gen_segments
-      localparam int unsigned Base     = tc_sram_ihp13_pkg::segment_base(NumWords, s);
-      localparam int unsigned Records  = tc_sram_ihp13_pkg::segment_records(NumWords, s);
+      localparam int unsigned Base     = tc_sram_ihp13_pkg::segment_base(Plan, s);
+      localparam int unsigned Records  = Plan[s] * tc_sram_ihp13_pkg::SegmentUnit;
       localparam int unsigned RecAddrW = $clog2(Records);
 
       if (s > 0) begin : gen_hit

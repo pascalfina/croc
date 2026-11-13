@@ -304,6 +304,7 @@
 ../rtl/riscv-dbg/dmi_jtag.sv
 ../rtl/riscv-dbg/dm_obi_top.sv
 ../ihp13/tc_clk.sv
+../ihp13/tc_sram_ihp13_pkg.sv
 ../ihp13/tc_sram_impl.sv
 ../ihp13/configurable_delay.sv
 ../rtl/croc_pkg.sv
@@ -324,7 +325,6 @@
 ../rtl/cheriot/tag_sram_crtl.sv
 ../rtl/cheriot/revc_bitmap_memory.sv
 ../rtl/obi/obi_to_reg.sv
-../rtl/cache/cache_data_sram.sv
 ../rtl/cache/data_cache.sv
 ../rtl/cache/instruction_cache.sv
 ../rtl/cache/cache_mem_arbiter.sv
