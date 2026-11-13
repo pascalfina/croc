@@ -49,7 +49,6 @@ module instruction_cache #(
     {  
         IDLE,
         CACHE_LOOKUP,
-        ACCESS_SRAM,
         SEND_REFILL_CMD, 
         WAIT_REFILL_DATA, 
         WAIT_REFILL_DONE
@@ -70,8 +69,6 @@ module instruction_cache #(
     // cache signals/memory 
     `CACHE_TYPEDEF_META_T(cache_meta_t, TagBits)
 
-    // The ways are packed so that the whole array can be reset with
-    // '{default: '0}, which both Verilator and yosys-slang accept.
     cache_meta_t [NumWays-1:0] cache_meta_q [NumSets];
     cache_meta_t [NumWays-1:0] cache_meta_d;
      
@@ -85,10 +82,12 @@ module instruction_cache #(
 
     logic hit_found;
     logic all_valid;
+    logic read_valid_q, read_valid_d;
 
 
     // obi signals 
     logic [AddrWidth-1:0]       obi_req_addr_q, obi_req_addr_d;
+    logic [AddrWidth-1:0]       lookup_addr;
     logic [ObiIdWidth-1:0]      obi_aid_q, obi_aid_d;
     logic [$clog2(RecordsPerLine)-1:0] line_record_index_q, line_record_index_d;
 
@@ -97,14 +96,16 @@ module instruction_cache #(
     cap_word_t read_word;
 
 
+    assign lookup_addr = (state_q == IDLE) ? obi_req_i.a.addr : obi_req_addr_q;
+
     if (NumSets > 1) begin : gen_set_index
-        assign set_index = obi_req_addr_q[OffsetBits +: SetBits];
+        assign set_index = lookup_addr[OffsetBits +: SetBits];
     end else begin : gen_single_set
         assign set_index = '0;
     end
 
-    assign addr_tag = obi_req_addr_q[AddrWidth-1 : OffsetBits+SetBits];
-    assign block_offset = obi_req_addr_q[OffsetBits-1 : 0];
+    assign addr_tag = lookup_addr[AddrWidth-1 : OffsetBits+SetBits];
+    assign block_offset = lookup_addr[OffsetBits-1 : 0];
     //assign sram_word_addr = set_index * RecordsPerLine + (block_offset / RecordDataBytes);
 
 
@@ -133,6 +134,7 @@ module instruction_cache #(
 
         hit_found           = 0;
         all_valid           = 0;
+        read_valid_d        = 0;
 
         // sram signals
         sram_req            = '0;
@@ -146,10 +148,29 @@ module instruction_cache #(
             IDLE: begin
                 obi_rsp_o.gnt = 1'b1; //cache ready to receive requests
 
+                if (read_valid_q) begin
+                    obi_rsp_o.r.rdata = read_word.data;
+                    obi_rsp_o.r.rid = obi_aid_q;
+                    obi_rsp_o.r.r_optional.ecc = read_word.ecc ^
+                        ({EccBits{read_word.cap_tag}} & ibex_mem_ecc_pkg::MemEccTagSyndrome);
+                    obi_rsp_o.r.r_optional.cap_tag = 1'b0;
+                    obi_rsp_o.rvalid = 1;
+                end
+
                 if (obi_req_i.req && obi_rsp_o.gnt) begin // get new request
                     obi_req_addr_d = obi_req_i.a.addr;
                     obi_aid_d = obi_req_i.a.aid;
                     state_d = CACHE_LOOKUP;
+
+                    for (int way=0; way<NumWays; ++way) begin
+                        if (cache_meta_q[set_index][way].addr_tag == addr_tag
+                            && cache_meta_q[set_index][way].valid) begin
+                            selected_way_d = WayIndexWidth'(way);
+                            sram_req[way] = 1'b1;
+                            read_valid_d = 1;
+                            state_d = IDLE;
+                        end
+                    end
                 end
             end
 
@@ -164,7 +185,8 @@ module instruction_cache #(
 
                         sram_req[way] = 1'b1;
                         sram_we       = 1'b0;
-                        state_d       = ACCESS_SRAM; 
+                        read_valid_d  = 1;
+                        state_d       = IDLE;
                     end
                 end
                 if(!hit_found) begin // cache miss
@@ -235,16 +257,6 @@ module instruction_cache #(
                 end  
             end
 
-            ACCESS_SRAM: begin
-                obi_rsp_o.r.rdata = read_word.data;
-                obi_rsp_o.r.rid = obi_aid_q;
-                obi_rsp_o.r.r_optional.ecc = read_word.ecc ^
-                    ({EccBits{read_word.cap_tag}} & ibex_mem_ecc_pkg::MemEccTagSyndrome);
-                obi_rsp_o.r.r_optional.cap_tag = 1'b0;
-                obi_rsp_o.rvalid = 1;
-                state_d = IDLE;
-            end
-
             default: begin
                 state_d = IDLE;
             end
@@ -268,17 +280,17 @@ module instruction_cache #(
         if (!rst_ni) begin
             obi_req_addr_q <= 0;
             obi_aid_q <= 0;
+            read_valid_q <= 0;
         end
         else begin
             obi_req_addr_q <= obi_req_addr_d;
             obi_aid_q <= obi_aid_d;
+            read_valid_q <= read_valid_d;
         end
         
     end
 
     // cache meta data flip flops
-    // Whole-array reset and an indexed write instead of loops over all sets:
-    // yosys-slang elaborates the loops very slowly for large caches.
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
             cache_meta_q <= '{default: '0};

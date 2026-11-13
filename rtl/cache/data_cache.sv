@@ -83,8 +83,6 @@ module data_cache #(
     // cache signals/memory
     `CACHE_TYPEDEF_META_T(cache_meta_t, TagBits)
 
-    // The ways are packed so that the whole array can be reset with
-    // '{default: '0}, which both Verilator and yosys-slang accept.
     cache_meta_t [NumWays-1:0] cache_meta_q [NumSets];
     cache_meta_t [NumWays-1:0] cache_meta_d;
 
@@ -100,6 +98,7 @@ module data_cache #(
     // obi singals 
     logic [CpuDataWidth/8-1:0]  obi_req_be_q, obi_req_be_d;
     logic [AddrWidth-1:0]       obi_req_addr_q, obi_req_addr_d;
+    logic [AddrWidth-1:0]       lookup_addr;
     logic                       obi_req_write_q, obi_req_write_d;
     logic                       obi_req_wtag_q, obi_req_wtag_d;
     logic                       obi_is_cap_access_q, obi_is_cap_access_d;
@@ -117,6 +116,7 @@ module data_cache #(
     // extra flags 
     logic cap_flag_q, cap_flag_d;
     logic cap_flag_read_valid_q, cap_flag_read_valid_d;
+    logic read_valid_q, read_valid_d;
     logic hit_found;
     logic all_valid;
 
@@ -125,14 +125,16 @@ module data_cache #(
     cap_word_t merged_word; //for halfword
 
   
+    assign lookup_addr = (state_q == IDLE) ? obi_req_i.a.addr : obi_req_addr_q;
+
     if (NumSets > 1) begin : gen_set_index
-        assign set_index = obi_req_addr_q[OffsetBits +: SetBits];
+        assign set_index = lookup_addr[OffsetBits +: SetBits];
     end else begin : gen_single_set
         assign set_index = '0;
     end
 
-    assign addr_tag = obi_req_addr_q[AddrWidth-1 : OffsetBits+SetBits];
-    assign block_offset = obi_req_addr_q[OffsetBits-1 : 0];
+    assign addr_tag = lookup_addr[AddrWidth-1 : OffsetBits+SetBits];
+    assign block_offset = lookup_addr[OffsetBits-1 : 0];
     //assign sram_word_addr = set_index * RecordsPerLine + (block_offset / RecordDataBytes);
 
 
@@ -168,6 +170,7 @@ module data_cache #(
         line_record_index_d = line_record_index_q;
         cap_flag_d              = cap_flag_q;
         cap_flag_read_valid_d   = cap_flag_read_valid_q;
+        read_valid_d            = 0;
 
         hit_found           = 0;
         all_valid           = 0;
@@ -202,6 +205,14 @@ module data_cache #(
                     cap_flag_d = 1'b0;
                 end
 
+                if (read_valid_q) begin
+                    obi_rsp_o.r.rdata = read_word.data;
+                    obi_rsp_o.r.rid = obi_aid_q;
+                    obi_rsp_o.r.r_optional.ecc = read_word.ecc;
+                    obi_rsp_o.r.r_optional.cap_tag = read_word.cap_tag;
+                    obi_rsp_o.rvalid = 1;
+                end
+
                 if (obi_req_i.req && obi_rsp_o.gnt) begin // get new request
 
                     obi_req_be_d = obi_req_i.a.be;
@@ -218,6 +229,25 @@ module data_cache #(
                     end
     
                     state_d = CACHE_LOOKUP;
+
+                    if (!obi_req_i.a.we) begin
+                        for (int way=0; way<NumWays; ++way) begin
+                            if (cache_meta_q[set_index][way].addr_tag == addr_tag
+                                && cache_meta_q[set_index][way].valid) begin
+                                selected_way_d = WayIndexWidth'(way);
+                                sram_req[way] = 1'b1;
+
+                                if (obi_req_i.a.a_optional.is_cap_access) begin
+                                    cap_flag_read_valid_d = 1;
+                                    state_d = ACCESS_SRAM;
+                                end
+                                else begin
+                                    read_valid_d = 1;
+                                    state_d = IDLE;
+                                end
+                            end
+                        end
+                    end
                 end
             end
 
@@ -598,6 +628,7 @@ module data_cache #(
             obi_aid_q <= 0;
             cap_flag_q <= 0;
             cap_flag_read_valid_q <= 0;
+            read_valid_q <= 0;
         end
         else begin
             obi_req_be_q <= obi_req_be_d;
@@ -608,13 +639,12 @@ module data_cache #(
             obi_aid_q <= obi_aid_d;
             cap_flag_q <= cap_flag_d;
             cap_flag_read_valid_q <= cap_flag_read_valid_d;
+            read_valid_q <= read_valid_d;
         end
         
     end
 
     // cache meta data flip flops
-    // Whole-array reset and an indexed write instead of loops over all sets:
-    // yosys-slang elaborates the loops very slowly for large caches.
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
             cache_meta_q <= '{default: '0};

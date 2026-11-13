@@ -141,6 +141,7 @@
                 end else if (obi_req_i.a.we && obi_req_i.a.be != '1) begin
                     cov_partial_stores++;
                 end
+                if (state_d != CACHE_LOOKUP) cov_hits++;
             end
 
             if (state_q == CACHE_LOOKUP && cov_prev_state_q == IDLE) begin

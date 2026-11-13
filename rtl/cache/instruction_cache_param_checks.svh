@@ -112,6 +112,7 @@
     always @(posedge clk_i) begin
         if (rst_ni) begin
             if (state_q == IDLE && obi_req_i.req && obi_rsp_o.gnt) cov_fetches++;
+            if (state_q == IDLE && obi_req_i.req && obi_rsp_o.gnt && state_d != CACHE_LOOKUP) cov_hits++;
 
             if (state_q == CACHE_LOOKUP && cov_prev_state_q == IDLE) begin
                 if (hit_found) begin
