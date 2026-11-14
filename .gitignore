@@ -89,6 +89,8 @@
 scripts/publish_cheriot_image.sh
 .containers/croc-cheriot.sif
 .ccache/
+.venv/
+__pycache__/
 /cache_eval/latest
 /cache_eval/*/area/*/*
 !/cache_eval/*/area/*/reports/

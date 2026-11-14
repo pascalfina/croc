@@ -3,13 +3,15 @@
 
 Joins the area and performance results of both evaluations per cache, ways,
 sets and line size. The differences go to
-cache_eval/comparisons/<base>_vs_<new>/comparison.csv and a summary to
-report.txt next to it; a comparison of the same two evaluations is replaced.
+cache_eval/comparisons/<base>_vs_<new>/comparison.csv, a summary to
+report.txt and the plots of scripts/cache_eval_plots.py to plots/ next to it;
+a comparison of the same two evaluations is replaced.
 """
 
 import argparse
 import csv
 import math
+import os
 import statistics
 import sys
 from pathlib import Path
@@ -17,11 +19,25 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 
 EVAL_ROOT = Path(__file__).resolve().parent.parent / "cache_eval"
+VENV = Path(__file__).resolve().parent.parent / ".venv"
 PHASES = ["init", "stream", "copy", "stride", "random", "chase", "capabilities", "code"]
 AREAS = ["total_um2", "stdcell_um2", "sram_um2"]
 
 Key = Tuple[str, int, int, int]
 Row = Dict[str, str]
+
+
+def use_plot_python() -> None:
+    """Run again under .venv when this Python has no matplotlib for the plots."""
+
+    try:
+        import matplotlib  # noqa: F401
+        return
+    except ImportError:
+        pass
+    python = VENV / "bin" / "python"
+    if python.is_file() and Path(sys.prefix).resolve() != VENV.resolve():
+        os.execv(str(python), [str(python)] + sys.argv)
 
 
 def resolve_eval(name: str) -> Path:
@@ -257,6 +273,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    use_plot_python()
     args = parse_args()
     base_dir, new_dir = resolve_eval(args.base), resolve_eval(args.new)
     if base_dir == new_dir:
@@ -278,6 +295,13 @@ def main() -> int:
     (out_dir / "report.txt").write_text(text)
 
     print(text)
+    try:
+        from cache_eval_plots import plot_comparison
+        plots = plot_comparison(base_dir, new_dir, base, new, out_dir / "plots")
+        print(f"[INFO][Cache compare] {len(plots)} plots in cache_eval/comparisons/{out_dir.name}/plots/")
+    except ImportError:
+        print("[WARNING][Cache compare] No plots: matplotlib is missing, run scripts/setup_plot_venv.sh",
+              file=sys.stderr)
     print(f"[INFO][Cache compare] Results in cache_eval/comparisons/{out_dir.name}/")
     return 0
 

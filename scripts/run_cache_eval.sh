@@ -28,7 +28,7 @@ Options:
 
 CACHE_SETS, CACHE_LINES and JOBS are passed on to both sweeps.
 
-Results in cache_eval/<eval>/:
+Results in cache_eval/<eval>/ (plots/ needs matplotlib, see scripts/setup_plot_venv.sh):
     area/<cache>_<ways>w.csv          area, syntheses in area/<config>/
     performance/<cache>_<ways>w.csv   cycles, simulations in performance/<config>/
     summary.csv                       both joined per configuration
@@ -154,5 +154,9 @@ summary_rows() {
 } > "$eval_dir/summary.csv"
 
 echo "[INFO][Cache eval] $(( $(wc -l < "$eval_dir/summary.csv") - 1 )) configurations in $shown_dir/summary.csv"
+
+if ! scripts/cache_eval_plots.py "$eval_dir"; then
+    echo "[WARNING][Cache eval] No plots, see the message above" >&2
+fi
 
 exit "$status"
