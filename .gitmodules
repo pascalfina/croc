@@ -11,3 +11,11 @@
 	path = rtl/vendor/hyperbus
 	url = git@github.com:pascalfina/hyperbus.git
 	branch = hyperbus-pr-43
+[submodule "ibex"]
+	path = ibex
+	url = git@github.com:pascalfina/ibex.git
+	branch = croc
+[submodule "cheriot-rtos"]
+	path = cheriot-rtos
+	url = git@github.com:pascalfina/cheriot-rtos.git
+	branch = croc
