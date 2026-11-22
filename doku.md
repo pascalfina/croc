@@ -285,3 +285,17 @@ HyperBus read path, for example the PHY stopping CK while `RxOutstandingLimit`
 about 2.5 cycles per record and a continuous `hyper_ck_o`) and fix the read
 path. The fit estimates 12 % fewer cycles for `1024s_64b` and up to 36 % for
 1024-byte lines.
+
+### Instruction fetch on cache hits
+The code phase of the cache benchmark takes 71.7k cycles (17.4 per hash step)
+with the instruction cache, but only 55.8k cycles (13.6 per step) on
+`cheriot/base`, where code runs from single-cycle SRAM
+(`cache_eval/bounds/cheriot-base_20261122_125558`). The phase almost only hits
+in the instruction cache, whose hit path should match the SRAM timing, so about
+4 cycles per step are lost in the cache. Each step contains two jumps to
+misaligned targets.
+
+**TODO:** compare a waveform of the code phase on both branches, likely around
+jumps (new fetch address while a response is pending), and fix the hit path.
+If every taken branch is affected, all benchmark loops lose cycles, not only
+the code phase.

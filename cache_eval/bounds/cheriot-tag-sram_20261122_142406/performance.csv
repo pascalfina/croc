@@ -1,0 +1,2 @@
+total_cycles, init    , stream  , copy    , stride , random , chase  , capabilities, code   , checksum  , status
+    66825726, 17039747, 17302278, 11763934, 5342166, 7504986, 3092766,      3482013, 1297836, 0xc37b1338, ok

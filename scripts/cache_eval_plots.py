@@ -4,7 +4,9 @@
 For one evaluation, writes plots/<sweep>_performance.png (cycles per phase),
 plots/<sweep>_area.png (standard cells and SRAM) and
 plots/<sweep>_area_vs_cycles.png into its directory. compare_cache_eval.py
-calls plot_comparison() for two evaluations. Needs matplotlib, which the
+calls plot_comparison() for two evaluations. The area-against-cycles plots
+also show the best and worst case from cache_eval/bounds/, measured with
+scripts/run_cache_bound.sh on other branches. Needs matplotlib, which the
 container provides and scripts/setup_plot_venv.sh installs into .venv.
 """
 
@@ -13,7 +15,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
-from compare_cache_eval import (PHASES, Key, Row, load_eval, number,
+from compare_cache_eval import (EVAL_ROOT, PHASES, Key, Row, load_eval, number, read_csv,
                                 resolve_eval, use_plot_python)
 
 
@@ -29,7 +31,32 @@ ACCENT = SERIES[0]
 DPI = 150
 NAMING = "s = number of sets, b = data bytes per line, without ECC and tag bits"
 
+# Results of scripts/run_cache_bound.sh in cache_eval/bounds/<name>_<timestamp>/.
+BOUNDS = (
+    ("cheriot-base", "best case: all memory in on-chip SRAM", SERIES[2]),
+    ("cheriot-tag-sram", "worst case: no caches, tags in on-chip SRAM", SERIES[1]),
+)
+
 Groups = List[Tuple[int, float, float]]
+Bound = Tuple[str, float, str]
+
+
+def load_bounds() -> List[Bound]:
+    """Return the latest successful run of each bound as (label, cycles, color)."""
+
+    bounds = []
+    for name, label, color in BOUNDS:
+        for csv_path in sorted((EVAL_ROOT / "bounds").glob(f"{name}_*/performance.csv"), reverse=True):
+            row = read_csv(csv_path)[0]
+            if row.get("status") == "ok":
+                bounds.append((label, float(row["total_cycles"]), color))
+                break
+    return bounds
+
+
+def draw_bounds(ax, bounds: List[Bound]) -> None:
+    for label, cycles, color in bounds:
+        ax.axhline(cycles / 1e6, color=color, linewidth=2, linestyle="--", zorder=1, label=f"{label} ({cycles / 1e6:.2f} M)")
 
 
 def pyplot():
@@ -224,8 +251,9 @@ def plot_area_vs_cycles(plt, rows: Dict[Key, Row], sweep: Tuple[str, int], path:
     ax.scatter([p[0] for p in points], [p[1] for p in points], s=40, color=MUTED,
                edgecolors=SURFACE, linewidths=1.5, zorder=2, label="configuration")
     draw_front(ax, points, ACCENT, "Pareto front", names=True)
+    draw_bounds(ax, load_bounds())
     scatter_axes(ax)
-    ax.legend(loc="upper right")
+    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0))
     title(ax, "Area vs. cycles", sweep)
     save(plt, fig, path)
 
@@ -266,8 +294,9 @@ def plot_comparison_scatter(plt, base: Dict[Key, Row], new: Dict[Key, Row], keys
                    edgecolors=SURFACE, linewidths=1.5, zorder=2, label=label)
     draw_front(ax, points_base, MUTED, "base Pareto front", names=False)
     draw_front(ax, points_new, ACCENT, "new Pareto front", names=True)
+    draw_bounds(ax, load_bounds())
     scatter_axes(ax)
-    ax.legend(loc="upper right")
+    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0))
     title(ax, "Area vs. cycles", sweep)
     save(plt, fig, path)
     return True
