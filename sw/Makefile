@@ -236,7 +236,7 @@ $(BINDIR)/%.hex: $(BINDIR)/%.elf
 # Phonies
 .PHONY: all clean compile cheriot cheriot-inline cheriot-tag-sram cheriot-rtos \
 	cheriot-rtos-check cheriot-rtos-build cheriot-rtos-tests \
-	$(CHERIOT_RTOS_TESTS_BUILD_TARGETS) cheriot-rtos-hello
+	$(CHERIOT_RTOS_TESTS_BUILD_TARGETS) cheriot-rtos-hello cache-benchmark
 
 clean:
 	# Remove every generated artifact from the legacy, CHERIoT, and RTOS builds.
@@ -273,6 +273,13 @@ cheriot-rtos-check: cheriot-rtos
 
 # Backwards-compatible alias for the original single Hello World target.
 cheriot-rtos-hello: cheriot-rtos
+
+# The cache benchmark, built as on cheriot/tag-hyperram so that both run the
+# same image. Output: bin/cheriot-rtos-bench/cache_benchmark.hex.
+cache-benchmark:
+	$(MAKE) cheriot-rtos \
+		CHERIOT_RTOS_PROJECTS=cheriot-rtos/cache_benchmark \
+		CHERIOT_RTOS_BINDIR=bin/cheriot-rtos-bench
 
 cheriot-rtos-build:
 	@set -e; \
