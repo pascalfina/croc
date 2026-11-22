@@ -33,8 +33,8 @@ NAMING = "s = number of sets, b = data bytes per line, without ECC and tag bits"
 
 # Results of scripts/run_cache_bound.sh in cache_eval/bounds/<name>_<timestamp>/.
 BOUNDS = (
-    ("cheriot-base", "best case: all memory in on-chip SRAM", SERIES[2]),
-    ("cheriot-tag-sram", "worst case: no caches, tags in on-chip SRAM", SERIES[1]),
+    ("cheriot-base", "best case: all in on-chip SRAM", SERIES[2]),
+    ("cheriot-tag-sram", "worst case: no caches", SERIES[1]),
 )
 
 Groups = List[Tuple[int, float, float]]
@@ -130,7 +130,10 @@ def log_axis(ax, axis: str = "y") -> None:
     target = getattr(ax, f"{axis}axis")
     target.set_major_locator(LogLocator(subs=subs))
     target.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+    target.set_minor_locator(LogLocator(subs=range(2, 10)))
     target.set_minor_formatter(NullFormatter())
+    # Faint lines at every multiple keep values readable between the labels.
+    ax.grid(True, axis=axis, which="minor", color=GRID, linewidth=0.4)
 
 
 def title(ax, text: str, sweep: Tuple[str, int], above_sizes: bool = False) -> None:
@@ -177,7 +180,7 @@ def plot_performance(plt, rows: Dict[Key, Row], sweep: Tuple[str, int], path: Pa
     config_axis(ax, positions, groups)
     ax.set_ylabel("cycles [M]")
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[::-1], labels[::-1], loc="upper left", bbox_to_anchor=(1.01, 1.0), title="phase")
+    ax.legend(handles[::-1], labels[::-1], loc="upper right", ncol=2, title="phase")
     ax.set_xlabel(f"configuration ({NAMING})")
     title(ax, "Cycles per phase", sweep, above_sizes=True)
     save(plt, fig, path)
@@ -204,7 +207,7 @@ def plot_area(plt, rows: Dict[Key, Row], sweep: Tuple[str, int], path: Path) -> 
     config_axis(ax, positions, groups)
     ax.set_ylabel("area [mm²]")
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[::-1], labels[::-1], loc="upper left", bbox_to_anchor=(1.01, 1.0))
+    ax.legend(handles[::-1], labels[::-1], loc="upper left")
     ax.set_xlabel(f"configuration ({NAMING})")
     title(ax, "Area", sweep, above_sizes=True)
     save(plt, fig, path)
@@ -253,7 +256,7 @@ def plot_area_vs_cycles(plt, rows: Dict[Key, Row], sweep: Tuple[str, int], path:
     draw_front(ax, points, ACCENT, "Pareto front", names=True)
     draw_bounds(ax, load_bounds())
     scatter_axes(ax)
-    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0))
+    ax.legend(loc="upper right", bbox_to_anchor=(1.0, 0.93))
     title(ax, "Area vs. cycles", sweep)
     save(plt, fig, path)
 
@@ -296,7 +299,7 @@ def plot_comparison_scatter(plt, base: Dict[Key, Row], new: Dict[Key, Row], keys
     draw_front(ax, points_new, ACCENT, "new Pareto front", names=True)
     draw_bounds(ax, load_bounds())
     scatter_axes(ax)
-    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0))
+    ax.legend(loc="upper right", bbox_to_anchor=(1.0, 0.93))
     title(ax, "Area vs. cycles", sweep)
     save(plt, fig, path)
     return True

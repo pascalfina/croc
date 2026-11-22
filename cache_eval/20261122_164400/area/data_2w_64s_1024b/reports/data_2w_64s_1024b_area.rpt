@@ -1,0 +1,176 @@
+
+53. Printing statistics.
+
+=== cache_area_top ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+    11957        - wires
+    11957        - wire bits
+     3205        - public wires
+     3205        - public wire bits
+      354        - ports
+      354        - port bits
+    11681 2.68E+05 cells
+        3        -   $scopeinfo
+       35  444.528   sg13g2_a21o_1
+      618 5.61E+03   sg13g2_a21oi_1
+        1   14.515   sg13g2_a21oi_2
+      179  2.6E+03   sg13g2_a221oi_1
+      285 3.09E+03   sg13g2_a22oi_1
+      185  1678.32   sg13g2_and2_1
+        9  114.307   sg13g2_and3_1
+       10  145.152   sg13g2_and4_1
+     1006  7.3E+03   sg13g2_buf_1
+        3   136.08   sg13g2_buf_16
+      104  943.488   sg13g2_buf_2
+       35  508.032   sg13g2_buf_4
+       41  967.075   sg13g2_buf_8
+     2671 1.31E+05   sg13g2_dfrbpq_1
+      149  811.037   sg13g2_inv_1
+        3   21.773   sg13g2_inv_2
+        2   21.773   sg13g2_inv_4
+        1   18.144   sg13g2_inv_8
+     2859 5.19E+04   sg13g2_mux2_1
+     1040 3.96E+04   sg13g2_mux4_1
+      500   3628.8   sg13g2_nand2_1
+       64  580.608   sg13g2_nand2b_1
+      165  1496.88   sg13g2_nand3_1
+        4   50.803   sg13g2_nand3b_1
+       57  620.525   sg13g2_nand4_1
+      686 4.98E+03   sg13g2_nor2_1
+        1   10.886   sg13g2_nor2_2
+      147 1.33E+03   sg13g2_nor2b_1
+      184 1.67E+03   sg13g2_nor3_1
+        1    16.33   sg13g2_nor3_2
+       44  479.002   sg13g2_nor4_1
+        3   65.318   sg13g2_nor4_2
+      414 3.76E+03   sg13g2_o21ai_1
+       23  208.656   sg13g2_or2_1
+        7   88.906   sg13g2_or3_1
+       13  188.698   sg13g2_or4_1
+        1    7.258   sg13g2_tielo
+      104 1.51E+03   sg13g2_xnor2_1
+       24  348.365   sg13g2_xor2_1
+        1        - submodules
+        1        -   tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram
+
+   Area for cell type $scopeinfo is unknown!
+
+   Chip area for module '\cache_area_top': 267809.182200
+     of which used for sequential elements: 130849.084800 (48.86%)
+
+=== tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+     1173        - wires
+     1173        - wire bits
+      920        - public wires
+      920        - public wire bits
+      190        - ports
+      190        - port bits
+      446 4.93E+06 cells
+       13        -   $scopeinfo
+       10 4.92E+06   RM_IHPSG13_1P_2048x64_c2_bm_bist
+        1   12.701   sg13g2_a21o_1
+        1    9.072   sg13g2_a21oi_1
+       48  435.456   sg13g2_and2_1
+       16  203.213   sg13g2_and3_1
+        1   14.515   sg13g2_and4_1
+       27  195.955   sg13g2_buf_1
+       12   544.32   sg13g2_buf_16
+       16  145.152   sg13g2_buf_2
+        2    29.03   sg13g2_buf_4
+        5  117.936   sg13g2_buf_8
+        6  293.933   sg13g2_dfrbpq_1
+       13   70.762   sg13g2_inv_1
+       85  1542.24   sg13g2_mux2_1
+      160  6.1E+03   sg13g2_mux4_1
+        4    29.03   sg13g2_nand2_1
+        3   27.216   sg13g2_nand2b_1
+        1   10.886   sg13g2_nand4_1
+        4    29.03   sg13g2_nor2_1
+        3   27.216   sg13g2_nor2b_1
+        9   81.648   sg13g2_nor3_1
+        3   32.659   sg13g2_nor4_1
+        2   18.144   sg13g2_o21ai_1
+        1    7.258   sg13g2_tielo
+
+   Area for cell type $scopeinfo is unknown!
+
+   Chip area for module '\tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram': 4926309.916800
+     of which used for sequential elements: 293.932800 (0.01%)
+
+=== design hierarchy ===
+
+        +----------Count including submodules.
+        |        +-Area including submodules.
+        |        | 
+    12127 5.19E+06 cache_area_top
+      446 4.93E+06 tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram
+
+        +----------Count including submodules.
+        |        +-Area including submodules.
+        |        | 
+    13130        - wires
+    13130        - wire bits
+     4125        - public wires
+     4125        - public wire bits
+      544        - ports
+      544        - port bits
+        -        - memories
+        -        - memory bits
+        -        - processes
+    12127 5.19E+06 cells
+       16        -   $scopeinfo
+       10 4.92E+06   RM_IHPSG13_1P_2048x64_c2_bm_bist
+       36  457.229   sg13g2_a21o_1
+      619 5.62E+03   sg13g2_a21oi_1
+        1   14.515   sg13g2_a21oi_2
+      179  2.6E+03   sg13g2_a221oi_1
+      285 3.09E+03   sg13g2_a22oi_1
+      233 2.11E+03   sg13g2_and2_1
+       25   317.52   sg13g2_and3_1
+       11  159.667   sg13g2_and4_1
+     1033  7.5E+03   sg13g2_buf_1
+       15    680.4   sg13g2_buf_16
+      120  1088.64   sg13g2_buf_2
+       37  537.062   sg13g2_buf_4
+       46 1.09E+03   sg13g2_buf_8
+     2677 1.31E+05   sg13g2_dfrbpq_1
+      162  881.798   sg13g2_inv_1
+        3   21.773   sg13g2_inv_2
+        2   21.773   sg13g2_inv_4
+        1   18.144   sg13g2_inv_8
+     2944 5.34E+04   sg13g2_mux2_1
+     1200 4.57E+04   sg13g2_mux4_1
+      504  3657.83   sg13g2_nand2_1
+       67  607.824   sg13g2_nand2b_1
+      165  1496.88   sg13g2_nand3_1
+        4   50.803   sg13g2_nand3b_1
+       58  631.411   sg13g2_nand4_1
+      690 5.01E+03   sg13g2_nor2_1
+        1   10.886   sg13g2_nor2_2
+      150   1360.8   sg13g2_nor2b_1
+      193 1.75E+03   sg13g2_nor3_1
+        1    16.33   sg13g2_nor3_2
+       47  511.661   sg13g2_nor4_1
+        3   65.318   sg13g2_nor4_2
+      416 3.77E+03   sg13g2_o21ai_1
+       23  208.656   sg13g2_or2_1
+        7   88.906   sg13g2_or3_1
+       13  188.698   sg13g2_or4_1
+        2   14.515   sg13g2_tielo
+      104 1.51E+03   sg13g2_xnor2_1
+       24  348.365   sg13g2_xor2_1
+        1 4.93E+06 submodules
+        1 4.93E+06   tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram
+
+   Area for cell type $scopeinfo is unknown!
+
+   Chip area for top module '\cache_area_top': 5194119.099000
+     of which used for sequential elements: 131143.017600 (2.52%)
+

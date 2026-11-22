@@ -271,31 +271,56 @@ additional frames, so the reserve and a manual review remain necessary.
 ## Caches
 
 ### Refill bandwidth
-The data cache sweep `cache_eval/20261113_175747` (2 ways, 45
-configurations) fits within ±2 % to a fixed cost per refill plus a cost per
-line byte for refills and write-backs. Write-backs take about 0.31 cycles per
-data byte, the peak rate of the two HyperBus PHYs at DDR (4 bytes per cycle,
-10-byte records for 8 data bytes). Refills take about 0.62 cycles per data
-byte, half of that rate. The cache and `cache_mem_arbiter` accept one record
-or 32-bit host word per cycle during a refill, so the limit is probably in the
-HyperBus read path, for example the PHY stopping CK while `RxOutstandingLimit`
-(6) read words have not yet left the RX CDC FIFO.
+The data cache sweep `cache_eval/20261113_175747` (2 ways, 45 configurations)
+fits within ±2 % to a fixed cost per refill plus a cost per line byte. Write-backs
+took about 0.31 cycles per data byte, the peak rate of the two HyperBus PHYs at
+DDR (4 bytes per cycle, 10-byte records for 8 data bytes). Refills took about
+0.62 cycles per data byte, half of that rate.
 
-**TODO:** confirm the half rate in the waveform of a single refill (expected
-about 2.5 cycles per record and a continuous `hyper_ck_o`) and fix the read
-path. The fit estimates 12 % fewer cycles for `1024s_64b` and up to 36 % for
-1024-byte lines.
+The cause was `hyperbus_read_adapter.sv` in the HyperBus midend. With two PHYs,
+one PHY word already is a complete 32-bit host beat. After emitting a beat in
+`EmitHost`, the adapter accepted the next word but always went to
+`CollectPhy`, which found the beat already complete, accepted nothing, emitted
+nothing and returned to `EmitHost`. Every beat therefore took two cycles, and
+`rx_ready_o` low in `CollectPhy` made the PHY stop CK every other cycle. Writes
+do not pass this adapter and reached the full rate.
+
+The fix (hyperbus `d4b09bc`) adds the transition `EmitHost` to `EmitHost`:
+`enough_data_following` checks, with the host address after the current beat,
+whether the word accepted in the same cycle already completes the following
+beat. If so, the adapter emits it in the next cycle instead of passing through
+`CollectPhy`. Otherwise it collects as before, so a single PHY, which needs two
+16-bit words per beat, behaves as before.
+
+Results (`cache_eval/comparisons/20261113_175747_vs_20261122_164400`): all 45
+configurations need fewer cycles, from 4.9 % (`1024s_16b`) to 35.3 %
+(`2s_1024b`), median 18.1 %; for example `32s_32b` 8.9 %, `16s_64b` 13.8 % and
+`1024s_64b` 10.2 % (5.48 M to 4.92 M cycles). The gain grows with the line size,
+so the fastest configuration per cache size moves to longer lines (4 KiB:
+`32s_64b`, 8 KiB: `64s_64b`, 16 KiB: `128s_64b`). The cache area is unchanged,
+the benchmark checksum is `0xc37b1338` in all configurations and
+`test_cache_stress` passes. The measured gains are about 2 percentage points
+below the cost model; whether reads now reach the full 4 bytes per cycle has not
+been checked in a waveform.
 
 ### Instruction fetch on cache hits
-The code phase of the cache benchmark takes 71.7k cycles (17.4 per hash step)
-with the instruction cache, but only 55.8k cycles (13.6 per step) on
-`cheriot/base`, where code runs from single-cycle SRAM
-(`cache_eval/bounds/cheriot-base_20261122_125558`). The phase almost only hits
-in the instruction cache, whose hit path should match the SRAM timing, so about
-4 cycles per step are lost in the cache. Each step contains two jumps to
-misaligned targets.
+The code phase of the cache benchmark takes 71.7k cycles with the instruction
+cache, but only 55.8k cycles on `cheriot/base`, where code runs from
+single-cycle SRAM (`cache_eval/bounds/cheriot-base_20261122_125558`). The phase
+touches about 400 16-byte lines (eight 768-byte code blocks and the outlined
+hash steps), which fit into the 8 KiB instruction cache without conflicts, so
+only the first round misses. About 400 refills at about 44 cycles each explain
+the 15.9k cycles of difference; the hit path itself matches the SRAM timing.
 
-**TODO:** compare a waveform of the code phase on both branches, likely around
-jumps (new fetch address while a response is pending), and fix the hit path.
-If every taken branch is affected, all benchmark loops lose cycles, not only
-the code phase.
+The miss path still repeats work: a miss detected in `IDLE` is compared again
+in `CACHE_LOOKUP`, and after a refill the cache returns to `CACHE_LOOKUP` and
+reads the line again from the SRAM before it responds. An instruction cache
+miss costs about 44 cycles: about 34 fixed (command, HyperRAM latency, arbiter,
+states) and about 10 for the two records at the former half refill rate (about 5 since
+the read adapter fix above). Going
+from `IDLE` straight to `SEND_REFILL_CMD` and answering from the refill would
+save about 3 cycles per miss, answering as soon as the record with the
+requested word arrives up to about 5, and the read adapter fix saves about 5. With
+1158 misses per benchmark run, all misses together cost about 51k cycles, below
+1 % of the best configuration, so none of these is worth doing for this
+benchmark.

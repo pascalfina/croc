@@ -1,0 +1,10 @@
+date:   2026-11-13 19:50:18
+sets:   2 4 8 16 32 64 128 256 512 1024
+lines:  16 32 64 128 256 512 1024
+commit: 248e53c
+uncommitted changes:
+     M .gitignore
+     M doku.md
+     M verilator/run_cache_perf.sh
+     M yosys/run_cache_area.sh
+
