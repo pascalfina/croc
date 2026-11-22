@@ -324,3 +324,60 @@ requested word arrives up to about 5, and the read adapter fix saves about 5. Wi
 1158 misses per benchmark run, all misses together cost about 51k cycles, below
 1 % of the best configuration, so none of these is worth doing for this
 benchmark.
+
+### HyperRAM latency
+After the read adapter fix, a refill costs about 31 fixed cycles plus 0.32
+cycles per line byte (fit over `cache_eval/20261122_164400`, ±0.8 %). Most of
+the fixed part is HyperRAM latency: the model starts with `Config_reg_0 =
+0x8F1F`, an initial latency of 6 clocks with fixed latency, so the device always
+waits twice, 12 clocks, before the first data. The controller keeps its reset
+values `t_latency_access = 6` and `t_read_write_recovery = 6`, and neither
+`hyperram_init` nor the software changes them. These values target the maximum
+HyperBus frequency.
+
+With variable latency, the device doubles the latency only when an access
+collides with an internal refresh, which saves about 6 clocks per access at any
+frequency. A lower initial latency is allowed at lower clocks; for example, the
+S27KS0641 needs about 4 clocks up to about 100 MHz (check the exact limits in
+the datasheet). With variable latency and 4 clocks, the cost model estimates
+about 8 cycles less per refill and write-back, about 15 % fewer cycles for
+`32s_32b` and 9 % for `1024s_64b`; the recovery time between accesses (tRWR,
+about 40 ns) could shrink as well.
+
+**Low-priority TODO:** once the target HyperBus frequency is known, write CR0
+(variable latency, initial latency for that frequency) and `t_latency_access`
+at startup, preferably as a parameter of `hyperram_init`, and check with
+`test_cache_stress` that the controller detects the doubled latency on refresh
+collisions through RWDS.
+
+### Data cache miss path
+Both remaining candidates shorten the time the core waits on a data cache miss.
+The core waits for every request, also for stores: Ibex does not continue until
+the OBI response arrives, and the write-allocate cache sends it only after the
+line is in the cache. Estimates below come from the cost model of
+`cache_eval/20261122_164400` with a fixed write-back cost of about 20 cycles
+(from the per-phase comparison of `init` and `stream`); they assume that the
+next miss does not find the HyperBus still busy.
+
+**TODO (early restart):** answer the core as soon as the record with the
+requested word arrives, instead of after the whole line and the
+`WAIT_REFILL_DONE` and `CACHE_LOOKUP` states. Estimated 8 % fewer cycles for
+`32s_32b` and `1024s_64b` and 11 % for `16s_64b`, with almost no area: a
+comparison of the record index and a path from the refill to the response. The
+estimate is optimistic, because a following access to the same line still
+waits until its record has arrived. Do this first and measure it.
+
+**TODO (write-back off the critical path):** a miss on a dirty victim today
+writes the victim back and only then refills, and the core waits for both.
+Copying the victim into a line buffer (one record per cycle from the SRAM),
+refilling, answering and writing the buffer back afterwards removes the
+write-back from the wait. Estimated 17 % fewer cycles for `32s_32b`, 16 % for
+`16s_64b` and 14 % for `1024s_64b`. The cache must serve hits while the
+write-back runs, otherwise the core waits at its next access, and a read of the
+victim must be served from the buffer until it is written. A variant buffers
+the new line instead and forwards the requested word directly, which includes
+early restart but needs the single-port SRAM in the background for both lines.
+The line buffer could grow out of the write-back FIFO (2 × 81 bits today) and
+costs about 70 µm² per bit: about +7 % area for `32s_32b` (320 bits), +18 % for
+`16s_64b` (640 bits) and below 1 % for the largest caches, so it pays off
+mainly for short lines and large caches.
