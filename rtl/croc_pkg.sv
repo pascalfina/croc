@@ -53,7 +53,8 @@ package croc_pkg;
   localparam int unsigned NumSramBanks      = 32'd2;
   /// Number of 32-bit words per SRAM bank, determines the depth of each SRAM bank
   //localparam int unsigned SramBankNumWords  = 512;
-  localparam int unsigned SramBankNumWords  = 16384;
+
+  localparam int unsigned SramBankNumWords  = 65536;
 
 
   //////////////////////
@@ -91,8 +92,10 @@ package croc_pkg;
   localparam addr_map_rule_t [5:0] CrocAddrMap = '{
     '{ idx: XbarPeriph,  start_addr: 32'h0000_0000, end_addr: 32'h1000_0000 },
     '{ idx: XbarUser,    start_addr: 32'h2000_0000, end_addr: 32'h8000_0000 },
-    '{ idx: XbarBank0,   start_addr: 32'h1000_0000, end_addr: 32'h1001_0000 },
-    '{ idx: XbarBank0+1, start_addr: 32'h1001_0000, end_addr: 32'h1002_0000 },
+    // Bank 0 keeps code and heap below the revocation bitmap; each bank starts
+    // at BootAddr + i * SramBankNumWords * 4 (see croc_domain.sv).
+    '{ idx: XbarBank0,   start_addr: 32'h1000_0000, end_addr: 32'h1002_0000 },
+    '{ idx: XbarBank0+1, start_addr: 32'h1004_0000, end_addr: 32'h1008_0000 },
     '{ idx: XbarRevBitmap,start_addr: 32'h1002_0000,end_addr:   32'h1002_0400 },
     '{ idx: XbarHyperbus,  start_addr: 32'h8000_0000, end_addr: 32'h9000_0000 }
   };

@@ -457,6 +457,47 @@ module tc_sram_impl #(
 
 
 
+  end else if (NumWords == 65536 && DataWidth == 32 && P1L1) begin : gen_65536x32xBx1
+
+      // Four 16384x32 blocks; the two upper address bits select one of them.
+      logic [1:0] block_sel;
+      logic [1:0] block_q;
+      logic [31:0] block_rdata [0:3];
+
+      assign block_sel = addr_i[0][15:14];
+
+      for (genvar i = 0; i < 4; i++) begin : gen_blocks
+        tc_sram_impl #(
+          .NumWords  ( 16384     ),
+          .DataWidth ( 32        ),
+          .ByteWidth ( ByteWidth ),
+          .NumPorts  ( 1         ),
+          .Latency   ( 1         ),
+          .impl_in_t ( impl_in_t )
+        ) i_block (
+          .clk_i,
+          .rst_ni,
+          .impl_i,
+          .impl_o  (),
+          .req_i   ( req_i[0] && (block_sel == 2'(i)) ),
+          .we_i    ( we_i[0]           ),
+          .addr_i  ( addr_i[0][13:0]   ),
+          .wdata_i ( wdata_i[0]        ),
+          .be_i    ( be_i[0]           ),
+          .rdata_o ( block_rdata[i]    )
+        );
+      end
+
+      always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (!rst_ni) begin
+          block_q <= '0;
+        end else if (req_i[0]) begin
+          block_q <= block_sel;
+        end
+      end
+
+      assign rdata_o[0] = block_rdata[block_q];
+
   end else begin : gen_blackbox
 
   `ifndef SYNTHESIS
