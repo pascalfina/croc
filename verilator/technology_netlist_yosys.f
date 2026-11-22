@@ -11,6 +11,8 @@
 # Delay gate with a real delay for the HyperBus delay lines; must precede the
 # PDK cell library, since Verilator keeps the first definition of a module.
 ../ihp13/ez130_dly1x2_sim.sv
+# Nonblocking models of all sequential cells; the PDK UDPs race in Verilator.
+../ihp13/ez130_seq_sim.sv
 # The standard cell model is always the Verilator-compatible copy of the public
 # mirror: the vendor model (linked by the cockpit) breaks in Verilator.
 ../ihp13/pdk/verilog/ez130_8t.v
