@@ -2,6 +2,8 @@
 
 # all
 /.bender/
+/ci-results/
+/report-inputs/
 *.20[0-9]*-[0-9]*-[0-9]*-[0-9]*:[0-9]*:[0-9]*
 *.log
 *.log[0-9]
@@ -11,11 +13,12 @@
 /tmp
 /calibre
 /docs
+__pycache__/
+*.pyc
 /technology
 /.setPDK.csh
 # public PDK mirror
 /ihp13/pdk/gds/*.gds
-!/ihp13/pdk/gds/bondpad_70x70.gds
 !/ihp13/pdk/gds/bondpad5l_70x70.gds
 # dfii
 /dfii/
@@ -100,3 +103,5 @@ __pycache__/
 /cache_eval/*/performance/*/*
 !/cache_eval/*/performance/*/sim.log
 infineon-s27kl0641-s27ks0641-verilog-simulationmodels-en.zip
+# internal CI checkout of croc-nonfree
+/nonfree

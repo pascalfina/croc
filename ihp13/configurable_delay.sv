@@ -18,9 +18,9 @@ module configurable_delay #(
 
   for (genvar k = 1; k < NUM_STEPS; k++) begin : gen_delay_chain
     (* keep *)(* dont_touch = "true" *)
-    sg13g2_dlygate4sd1_1 i_delay (
+    DLY1X2 i_delay (
       .A ( node[NUM_STEPS-2+k] ),
-      .X ( node[NUM_STEPS-1+k] )
+      .Y ( node[NUM_STEPS-1+k] )
     );
   end
 

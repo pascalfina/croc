@@ -10,9 +10,10 @@
 # technology view is initialized by ../env.sh.
 # Delay gate with a real delay for the HyperBus delay lines; must precede the
 # PDK cell library, since Verilator keeps the first definition of a module.
-../ihp13/sg13g2_dlygate4sd1_1_sim.sv
-../technology/verilog/sg13g2_udp.v
-../technology/verilog/sg13g2_stdcell.v
+../ihp13/ez130_dly1x2_sim.sv
+# The standard cell model is always the Verilator-compatible copy of the public
+# mirror: the vendor model (linked by the cockpit) breaks in Verilator.
+../ihp13/pdk/verilog/ez130_8t.v
 ../technology/verilog/RM_IHPSG13_1P_core_behavioral_bm_bist.v
 ../technology/verilog/RM_IHPSG13_1P_64x64_c2_bm_bist.v
 ../technology/verilog/RM_IHPSG13_1P_256x48_c2_bm_bist.v

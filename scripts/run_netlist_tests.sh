@@ -130,7 +130,6 @@ if [[ "$build" == yes || ( "$build" == auto && ( ! -x "$SIM" || "$NETLIST" -nt "
         status_pid=$!
     fi
     build_start=$SECONDS
-    export CROC_PDK=sg13cmos5l
     (cd "$VERILATOR_DIR" && ./run_verilator.sh --no-trace --build-netlist)
     build_rc=$?
     stop_status

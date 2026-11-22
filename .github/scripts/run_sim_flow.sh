@@ -189,8 +189,6 @@ if [[ "$run_tests" == true ]]; then
 fi
 
 if [[ "$mode" == "netlist" ]]; then
-    export CROC_PDK=sg13cmos5l
-
     if [[ "$build_simulator" == true ]]; then
         default_netlist="yosys/out/croc_yosys_debug.v"
         if [[ ! -f "$default_netlist" ]]; then

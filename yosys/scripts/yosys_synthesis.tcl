@@ -18,15 +18,14 @@ source scripts/yosys_common.tcl
 set abc_script [processAbcScript scripts/abc-opt.script]
 
 # read liberty files and prepare some variables
-set pdk_name [expr {[info exists ::env(CROC_PDK)] ? $::env(CROC_PDK) : "sg13cmos5l"}]
-source scripts/init_tech_${pdk_name}.tcl
+source scripts/init_tech.tcl
 
 yosys plugin -i slang.so
 # default from yosys_common.tcl: top_design=croc_chip; sv_flist=./croc.flist
 yosys read_slang --top $top_design -f $sv_flist \
         --cmd-rename +define,+define \
-        --compat-mode --keep-hierarchy \
-        --allow-use-before-declare --ignore-unknown-modules
+        --keep-hierarchy \
+        --allow-use-before-declare
 
 # preserve hierarchy of selected modules/instances
 # 't' means type as in select all instances of this type/module
@@ -104,8 +103,8 @@ yosys techmap
 yosys opt -fast
 yosys clean -purge
 
-# Map the active-low latch from Ibex clock gating to the SG13G2 latch cell.
-yosys techmap -map scripts/sg13g2_latch_map.v
+# Map the active-low latch from Ibex clock gating to the EZ130 latch cell.
+yosys techmap -map scripts/ez130_latch_map.v
 
 
 # -----------------------------------------------------------------------------
