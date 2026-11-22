@@ -27,7 +27,7 @@ AXIS = "#c3c2b7"
 SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
 ACCENT = SERIES[0]
 DPI = 150
-NAMING = "s = number of sets, b = line size in bytes"
+NAMING = "s = number of sets, b = data bytes per line, without ECC and tag bits"
 
 Groups = List[Tuple[int, float, float]]
 
