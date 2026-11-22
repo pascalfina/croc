@@ -77,6 +77,7 @@ CHERIOT_RTOS_BINDIR        ?= bin/cheriot-rtos
 CHERIOT_RTOS_BUILD_ROOT    ?= $(CURDIR)/build/cheriot-rtos
 CHERIOT_RTOS_LEGACY_PROJECT ?= cheriot-rtos
 CHERIOT_RTOS_BOARD         ?= $(CURDIR)/../cheriot-rtos/sdk/boards/croc.json
+CHERIOT_RTOS_HEX_FLAGS     ?= --set-section-flags '*_globals=alloc,load,contents'
 CHERIOT_RTOS_ANALYZER     ?= $(CURDIR)/../scripts/analyze_trusted_stack.py
 CHERIOT_RTOS_STACK_RESERVE ?= 1
 # The trusted-stack check is enabled by default. The build fails when the
@@ -222,7 +223,7 @@ $(BINDIR)/%.hex: $(BINDIR)/%.elf
 # Phonies
 .PHONY: all clean compile cheriot cheriot-inline cheriot-rtos \
 	cheriot-rtos-check cheriot-rtos-build cheriot-rtos-tests \
-	$(CHERIOT_RTOS_TESTS_BUILD_TARGETS) cheriot-rtos-hello
+	$(CHERIOT_RTOS_TESTS_BUILD_TARGETS) cheriot-rtos-hello cache-benchmark
 
 clean:
 	# Remove every generated artifact from the legacy, CHERIoT, and RTOS builds.
@@ -257,6 +258,14 @@ cheriot-rtos-check: cheriot-rtos
 
 # Backwards-compatible alias for the original single Hello World target.
 cheriot-rtos-hello: cheriot-rtos
+
+# The cache benchmark keeps its working set in SRAM bank 1, which only its own
+# board description maps. Output: bin/cheriot-rtos-bench/cache_benchmark.hex.
+cache-benchmark:
+	$(MAKE) cheriot-rtos \
+		CHERIOT_RTOS_PROJECTS=cheriot-rtos/cache_benchmark \
+		CHERIOT_RTOS_BINDIR=bin/cheriot-rtos-bench \
+		CHERIOT_RTOS_BOARD=$(CURDIR)/cheriot-rtos/cache_benchmark/croc_sram.json
 
 cheriot-rtos-build:
 	@set -e; \
@@ -302,7 +311,7 @@ $(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).elf: cheriot-rtos-test-
 
 $(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).hex: $(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).elf
 	mkdir -p "$(CHERIOT_RTOS_BINDIR)"
-	$(CHERIOT_OBJCOPY) -O verilog $$< $$@
+	$(CHERIOT_OBJCOPY) $(CHERIOT_RTOS_HEX_FLAGS) -O verilog $$< $$@
 
 $(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).dump: $(CHERIOT_RTOS_BINDIR)/$(CHERIOT_RTOS_TESTS_PREFIX)-$(1).elf
 	mkdir -p "$(CHERIOT_RTOS_BINDIR)"
@@ -318,7 +327,7 @@ $(CHERIOT_RTOS_BINDIR)/%.elf: cheriot-rtos-build
 
 $(CHERIOT_RTOS_BINDIR)/%.hex: $(CHERIOT_RTOS_BINDIR)/%.elf
 	mkdir -p $(dir $@)
-	$(CHERIOT_OBJCOPY) -O verilog $< $@
+	$(CHERIOT_OBJCOPY) $(CHERIOT_RTOS_HEX_FLAGS) -O verilog $< $@
 
 $(CHERIOT_RTOS_BINDIR)/%.dump: $(CHERIOT_RTOS_BINDIR)/%.elf
 	mkdir -p $(dir $@)
