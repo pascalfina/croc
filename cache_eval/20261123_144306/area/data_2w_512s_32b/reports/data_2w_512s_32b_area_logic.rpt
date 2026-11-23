@@ -1,0 +1,303 @@
+54. Printing statistics.
+
+=== cache_area_top ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+    73210        - wires
+    73210        - wire bits
+    21822        - public wires
+    21822        - public wire bits
+      354        - ports
+      354        - port bits
+    72939 1.28E+06 cells
+        3        -   $scopeinfo
+      260  1834.56   AND2X1
+       72  609.638   AND3BX1
+        8   67.738   AND3X2
+        4   39.514   AND4X1
+       59  582.826   AND4X2
+        8   79.027   AO211X1
+      106  1047.11   AO211X2
+       40  395.136   AO21X2
+        3   38.102   AO22X1
+       62   787.45   AO22X2
+        1    11.29   AO31X1
+       17  191.923   AO31X2
+      173 1.71E+03   AOAI211X1
+        1    9.878   AOAI211X2
+      676 5.72E+03   AOI211X1
+        7    59.27   AOI211X2
+       26  220.147   AOI21BX1
+      285  2010.96   AOI21X1
+        4   28.224   AOI21X2
+      492 4.86E+03   AOI221X1
+        2   22.579   AOI221X3
+      471 4.65E+03   AOI22X1
+        5   49.392   AOI22X1P5
+        7   69.149   AOI22X2
+       52  440.294   AOI2B1X1
+       51  719.712   AOI2B2BX1
+        2   28.224   AOI2B2BX2
+       44  496.742   AOI2B2X1
+       33  419.126   AOI2BB2X1
+      186 1.57E+03   AOI31X1
+       45  508.032   BUFX12
+        6   33.869   BUFX2
+     7853 4.43E+04   BUFX3
+       64  451.584   BUFX6
+    21290 6.01E+05   DFFRQX3
+      139   588.47   INVX1
+        8   33.869   INVX2
+        6   25.402   INVX3
+        1    9.878   MIN3X1
+    21733 2.76E+05   MUX2X1
+       61 1.72E+03   MUX4X1
+       35   987.84   MUX4X1P5
+        1   28.224   MUX4X2
+     8166  2.3E+05   MUX4X3
+     5228  5.9E+04   MUXI2X1
+       21  237.082   MUXI2X2
+       61  430.416   NAND2BX1
+        3   21.168   NAND2BX1P5
+       48  338.688   NAND2BX2
+      596 3.36E+03   NAND2X1
+       18  101.606   NAND2X1P5
+       20  112.896   NAND2X2
+        4   39.514   NAND3BX1
+      292 2.06E+03   NAND3X1
+       31  218.736   NAND3X2
+       14  158.054   NAND4BX1
+        1    11.29   NAND4BX2
+       75   740.88   NAND4X2
+       61  430.416   NOR2BX1
+        5    35.28   NOR2BX2
+      600  3386.88   NOR2X1
+      478  2.7E+03   NOR2X2
+        1    5.645   NOR2X3
+       14  118.541   NOR3BX1
+      272 1.92E+03   NOR3X1
+        7   49.392   NOR3X2
+        2   25.402   NOR4BBX1
+       13  146.765   NOR4BX1
+        5   56.448   NOR4BX2
+       58  572.947   NOR4X1
+        5   49.392   NOR4X2
+        3   29.635   OA211X1
+       58  572.947   OA211X2
+       42  355.622   OA21X2
+      315 2.67E+03   OAI211X1
+        9   76.205   OAI211X2
+      304 2.15E+03   OAI21X1
+        5    35.28   OAI21X2
+      369 4.17E+03   OAI221X1
+       11  124.186   OAI221X2
+      654 6.46E+03   OAI22X1
+       36  355.622   OAI22X2
+        6   84.672   OAI2B2BX1
+        1   14.112   OAI2B2BX1P5
+        2   28.224   OAI2B2BX2
+       33  419.126   OAI2BB2X2
+      111  1.1E+03   OAI31X1
+        5   49.392   OAI31X2
+      194  1916.41   OAOI211X1
+        5   49.392   OAOI211X2
+       42  296.352   OR2X2
+       49  414.893   OR3BX1
+        8   67.738   OR3X2
+       54  533.434   OR4X1
+        2   19.757   OR4X2
+        1    4.234   TIELO
+      100   987.84   XNOR2X1
+       19   187.69   XOR2X1
+        1        - submodules
+        1        -   tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram
+
+   Area for cell type $scopeinfo is unknown!
+   Area for cell type \RM_IHPSG13_1P_1024x64_c2_bm_bist is unknown!
+   Area for cell type \RM_IHPSG13_1P_2048x64_c2_bm_bist is unknown!
+
+   Chip area for module '\cache_area_top': 1284398.035200
+     of which used for sequential elements: 600888.960000 (46.78%)
+
+=== tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      494        - wires
+      494        - wire bits
+      453        - public wires
+      453        - public wire bits
+      188        - ports
+      188        - port bits
+      203 2.25E+03 cells
+        6        -   $scopeinfo
+        1    7.056   AND2X1
+       32   270.95   AND3BX1
+       16  135.475   AND3X2
+        6   67.738   BUFX12
+        1   15.523   BUFX16
+        1   22.579   BUFX24
+       22  124.186   BUFX3
+        1    7.056   BUFX6
+        3   84.672   DFFRQX3
+        3   12.701   INVX1
+       67  850.954   MUX2X1
+        9  254.016   MUX4X1
+        7  197.568   MUX4X3
+        1    7.056   NAND2BX1
+        1    5.645   NAND2X1
+        1    7.056   NOR2BX1
+        1    5.645   NOR2X1
+       16  135.475   NOR3BX1
+        1    9.878   OAI31X2
+        1    8.467   OR3BX1
+        1    8.467   OR3X2
+        1    9.878   OR4X1
+        1        -   RM_IHPSG13_1P_1024x64_c2_bm_bist
+        2        -   RM_IHPSG13_1P_2048x64_c2_bm_bist
+        1    4.234   TIELO
+
+   Area for cell type $scopeinfo is unknown!
+   Area for cell type \RM_IHPSG13_1P_1024x64_c2_bm_bist is unknown!
+   Area for cell type \RM_IHPSG13_1P_2048x64_c2_bm_bist is unknown!
+
+   Chip area for module '\tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram': 2252.275200
+     of which used for sequential elements: 84.672000 (3.76%)
+
+=== design hierarchy ===
+
+        +----------Count including submodules.
+        |        +-Area including submodules.
+        |        | 
+    73142 1.29E+06 cache_area_top
+      203 2.25E+03 tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram
+
+        +----------Count including submodules.
+        |        +-Area including submodules.
+        |        | 
+    73704        - wires
+    73704        - wire bits
+    22275        - public wires
+    22275        - public wire bits
+      542        - ports
+      542        - port bits
+        -        - memories
+        -        - memory bits
+        -        - processes
+    73142 1.29E+06 cells
+        9        -   $scopeinfo
+      261 1.84E+03   AND2X1
+      104  880.589   AND3BX1
+       24  203.213   AND3X2
+        4   39.514   AND4X1
+       59  582.826   AND4X2
+        8   79.027   AO211X1
+      106  1047.11   AO211X2
+       40  395.136   AO21X2
+        3   38.102   AO22X1
+       62   787.45   AO22X2
+        1    11.29   AO31X1
+       17  191.923   AO31X2
+      173 1.71E+03   AOAI211X1
+        1    9.878   AOAI211X2
+      676 5.72E+03   AOI211X1
+        7    59.27   AOI211X2
+       26  220.147   AOI21BX1
+      285  2010.96   AOI21X1
+        4   28.224   AOI21X2
+      492 4.86E+03   AOI221X1
+        2   22.579   AOI221X3
+      471 4.65E+03   AOI22X1
+        5   49.392   AOI22X1P5
+        7   69.149   AOI22X2
+       52  440.294   AOI2B1X1
+       51  719.712   AOI2B2BX1
+        2   28.224   AOI2B2BX2
+       44  496.742   AOI2B2X1
+       33  419.126   AOI2BB2X1
+      186 1.57E+03   AOI31X1
+       51   575.77   BUFX12
+        1   15.523   BUFX16
+        6   33.869   BUFX2
+        1   22.579   BUFX24
+     7875  44452.8   BUFX3
+       65   458.64   BUFX6
+    21293 6.01E+05   DFFRQX3
+      142  601.171   INVX1
+        8   33.869   INVX2
+        6   25.402   INVX3
+        1    9.878   MIN3X1
+    21800 2.77E+05   MUX2X1
+       70  1975.68   MUX4X1
+       35   987.84   MUX4X1P5
+        1   28.224   MUX4X2
+     8173 2.31E+05   MUX4X3
+     5228  5.9E+04   MUXI2X1
+       21  237.082   MUXI2X2
+       62  437.472   NAND2BX1
+        3   21.168   NAND2BX1P5
+       48  338.688   NAND2BX2
+      597 3.37E+03   NAND2X1
+       18  101.606   NAND2X1P5
+       20  112.896   NAND2X2
+        4   39.514   NAND3BX1
+      292 2.06E+03   NAND3X1
+       31  218.736   NAND3X2
+       14  158.054   NAND4BX1
+        1    11.29   NAND4BX2
+       75   740.88   NAND4X2
+       62  437.472   NOR2BX1
+        5    35.28   NOR2BX2
+      601 3.39E+03   NOR2X1
+      478  2.7E+03   NOR2X2
+        1    5.645   NOR2X3
+       30  254.016   NOR3BX1
+      272 1.92E+03   NOR3X1
+        7   49.392   NOR3X2
+        2   25.402   NOR4BBX1
+       13  146.765   NOR4BX1
+        5   56.448   NOR4BX2
+       58  572.947   NOR4X1
+        5   49.392   NOR4X2
+        3   29.635   OA211X1
+       58  572.947   OA211X2
+       42  355.622   OA21X2
+      315 2.67E+03   OAI211X1
+        9   76.205   OAI211X2
+      304 2.15E+03   OAI21X1
+        5    35.28   OAI21X2
+      369 4.17E+03   OAI221X1
+       11  124.186   OAI221X2
+      654 6.46E+03   OAI22X1
+       36  355.622   OAI22X2
+        6   84.672   OAI2B2BX1
+        1   14.112   OAI2B2BX1P5
+        2   28.224   OAI2B2BX2
+       33  419.126   OAI2BB2X2
+      111  1.1E+03   OAI31X1
+        6    59.27   OAI31X2
+      194  1916.41   OAOI211X1
+        5   49.392   OAOI211X2
+       42  296.352   OR2X2
+       50   423.36   OR3BX1
+        9   76.205   OR3X2
+       55  543.312   OR4X1
+        2   19.757   OR4X2
+        1        -   RM_IHPSG13_1P_1024x64_c2_bm_bist
+        2        -   RM_IHPSG13_1P_2048x64_c2_bm_bist
+        2    8.467   TIELO
+      100   987.84   XNOR2X1
+       19   187.69   XOR2X1
+        1 2.25E+03 submodules
+        1 2.25E+03   tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram
+
+   Area for cell type $scopeinfo is unknown!
+   Area for cell type \RM_IHPSG13_1P_1024x64_c2_bm_bist is unknown!
+   Area for cell type \RM_IHPSG13_1P_2048x64_c2_bm_bist is unknown!
+
+   Chip area for top module '\cache_area_top': 1286650.310400
+     of which used for sequential elements: 600973.632000 (46.71%)
+
