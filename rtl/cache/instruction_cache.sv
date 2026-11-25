@@ -291,15 +291,37 @@ module instruction_cache #(
     end
 
     // cache meta data flip flops
+    for (genvar s = 0; s < NumSets; s++) begin : gen_meta
+        logic meta_clk;
+        cache_meta_t [NumWays-1:0] meta_q;
+        logic [WayIndexWidth-1:0] replace_q;
+
+        tc_clk_gating i_meta_cg (
+            .clk_i,
+            .en_i      ( set_index == s ),
+            .test_en_i ( 1'b0           ),
+            .clk_o     ( meta_clk       )
+        );
+
+        always_ff @(posedge meta_clk or negedge rst_ni) begin
+            if (!rst_ni) begin
+                meta_q    <= '0;
+                replace_q <= '0;
+            end else begin
+                meta_q    <= cache_meta_d;
+                replace_q <= replace_way_d;
+            end
+        end
+
+        assign cache_meta_q[s]  = meta_q;
+        assign replace_way_q[s] = replace_q;
+    end
+
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
-            cache_meta_q <= '{default: '0};
-            replace_way_q <= '{default: '0};
             selected_way_q <= 0;
             line_record_index_q <= 0;
         end else begin
-            cache_meta_q[set_index] <= cache_meta_d;
-            replace_way_q[set_index] <= replace_way_d;
             selected_way_q <= selected_way_d;
             line_record_index_q <= line_record_index_d;
         end
