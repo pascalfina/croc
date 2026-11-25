@@ -1,0 +1,7 @@
+date:   2026-11-25 17:17:14
+sets:   2 4 8 16 32 64 128 256 512 1024
+lines:  16 32 64 128 256 512 1024
+commit: 4a82647
+uncommitted changes:
+    M  rtl/cache/data_cache.sv
+

@@ -1,0 +1,567 @@
+54. Printing statistics.
+
+=== cache_area_top ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+     4525        - wires
+     4525        - wire bits
+     1660        - public wires
+     1660        - public wire bits
+      354        - ports
+      354        - port bits
+     4236 6.46E+04 cells
+        3        -   $scopeinfo
+       58  409.248   AND2X1
+       51  431.827   AND3BX1
+        1    8.467   AND3X1
+        7    59.27   AND3X2
+        5   49.392   AND4X1
+        1    9.878   AND4X2
+        1    9.878   AO211X2
+        7   69.149   AO21X2
+       25   317.52   AO22X2
+        9   88.906   AOAI211X1
+        3   29.635   AOAI211X2
+      101  855.187   AOI211X1
+        1    8.467   AOI211X2
+        1    8.467   AOI21BX1
+       32  225.792   AOI21X1
+        3   21.168   AOI21X2
+      116 1.15E+03   AOI221X1
+        1    11.29   AOI221X3
+       16  158.054   AOI22X1
+       14  118.541   AOI2B1X1
+       66  558.835   AOI31X1
+        2    11.29   BUFX1
+        2   22.579   BUFX12
+      347 1.96E+03   BUFX3
+        3   21.168   BUFX6
+     1052 2.97E+04   DFFRQX3
+       73  309.053   INVX1
+        3   12.701   INVX2
+        2    8.467   INVX3
+      287  3645.13   MUX2X1
+       48 1.35E+03   MUX4X1
+       18  508.032   MUX4X1P5
+        2   56.448   MUX4X2
+      263 7.42E+03   MUX4X3
+      666 7.52E+03   MUXI2X1
+       34  383.846   MUXI2X2
+       15   105.84   NAND2BX1
+        1    7.056   NAND2BX1P5
+        1    7.056   NAND2BX3
+      105  592.704   NAND2X1
+        2    11.29   NAND2X2
+        1    5.645   NAND2X3
+        1    9.878   NAND3BX1
+       43  303.408   NAND3X1
+        1    7.056   NAND3X2
+        5   49.392   NAND4X2
+       13   91.728   NOR2BX1
+      263 1.48E+03   NOR2X1
+        1    5.645   NOR2X2
+        1    8.467   NOR3BX1
+       15   105.84   NOR3X1
+        1    7.056   NOR3X2
+        2   19.757   NOR4X1
+        1    9.878   NOR4X2
+       33  325.987   OA211X2
+        5   42.336   OA21X2
+       11   93.139   OAI211X1
+       25    176.4   OAI21X1
+        1    7.056   OAI21X2
+        7   79.027   OAI221X1
+        1    11.29   OAI221X2
+       89  879.178   OAI22X1
+        1    9.878   OAI22X2
+        1   14.112   OAI2B2BX1
+        4   50.803   OAI2BB2X2
+        1    9.878   OAI31X1
+       93  918.691   OAOI211X1
+        1    9.878   OAOI211X2
+        3   21.168   OR2X2
+        1    8.467   OR3BX1
+        1    8.467   OR3X2
+        2   19.757   OR4X1
+        1    4.234   TIELO
+      124 1.22E+03   XNOR2X1
+       35  345.744   XOR2X1
+       17        - submodules
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[0].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[10].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[11].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[12].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[13].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[14].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[15].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[1].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[2].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[3].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[4].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[5].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[6].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[7].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[8].i_meta_cg
+        1        -   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[9].i_meta_cg
+        1        -   tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram
+
+   Area for cell type $scopeinfo is unknown!
+   Area for cell type \RM_IHPSG13_1P_256x48_c2_bm_bist is unknown!
+   Area for cell type \RM_IHPSG13_1P_512x32_c2_bm_bist is unknown!
+
+   Chip area for module '\cache_area_top': 64613.203200
+     of which used for sequential elements: 29691.648000 (45.95%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[0].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[0].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[10].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[10].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[11].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[11].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[12].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[12].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[13].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[13].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[14].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[14].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[15].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[15].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[1].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[1].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[2].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[2].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[3].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[3].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[4].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[4].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[5].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[5].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[6].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[6].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[7].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[7].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[8].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[8].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[9].i_meta_cg ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   25.402 cells
+        1   25.402   CGTSX2
+
+   Chip area for module '\tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[9].i_meta_cg': 25.401600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      303        - wires
+      303        - wire bits
+      288        - public wires
+      288        - public wire bits
+      185        - ports
+      185        - port bits
+       79  815.674 cells
+        6        -   $scopeinfo
+        2   16.934   AOI211X1
+        1    8.467   AOI31X1
+        1    11.29   BUFX12
+        2   45.158   BUFX24
+        3   21.168   BUFX6
+        1   28.224   DFFRQX3
+        6   25.402   INVX1
+       49  622.339   MUX2X1
+        1    7.056   NAND2BX1
+        2   14.112   NOR3X1
+        1    11.29   NOR4BX1
+        2        -   RM_IHPSG13_1P_256x48_c2_bm_bist
+        1        -   RM_IHPSG13_1P_512x32_c2_bm_bist
+        1    4.234   TIELO
+
+   Area for cell type $scopeinfo is unknown!
+   Area for cell type \RM_IHPSG13_1P_256x48_c2_bm_bist is unknown!
+   Area for cell type \RM_IHPSG13_1P_512x32_c2_bm_bist is unknown!
+
+   Chip area for module '\tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram': 815.673600
+     of which used for sequential elements: 28.224000 (3.46%)
+
+=== design hierarchy ===
+
+        +----------Count including submodules.
+        |        +-Area including submodules.
+        |        | 
+     4331 6.58E+04 cache_area_top
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[0].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[10].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[11].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[12].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[13].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[14].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[15].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[1].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[2].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[3].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[4].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[5].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[6].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[7].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[8].i_meta_cg
+        1   25.402 tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[9].i_meta_cg
+       79  815.674 tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram
+
+        +----------Count including submodules.
+        |        +-Area including submodules.
+        |        | 
+     4892        - wires
+     4892        - wire bits
+     2012        - public wires
+     2012        - public wire bits
+      603        - ports
+      603        - port bits
+        -        - memories
+        -        - memory bits
+        -        - processes
+     4331 6.58E+04 cells
+        9        -   $scopeinfo
+       58  409.248   AND2X1
+       51  431.827   AND3BX1
+        1    8.467   AND3X1
+        7    59.27   AND3X2
+        5   49.392   AND4X1
+        1    9.878   AND4X2
+        1    9.878   AO211X2
+        7   69.149   AO21X2
+       25   317.52   AO22X2
+        9   88.906   AOAI211X1
+        3   29.635   AOAI211X2
+      103  872.122   AOI211X1
+        1    8.467   AOI211X2
+        1    8.467   AOI21BX1
+       32  225.792   AOI21X1
+        3   21.168   AOI21X2
+      116 1.15E+03   AOI221X1
+        1    11.29   AOI221X3
+       16  158.054   AOI22X1
+       14  118.541   AOI2B1X1
+       67  567.302   AOI31X1
+        2    11.29   BUFX1
+        3   33.869   BUFX12
+        2   45.158   BUFX24
+      347 1.96E+03   BUFX3
+        6   42.336   BUFX6
+       16  406.426   CGTSX2
+     1053 2.97E+04   DFFRQX3
+       79  334.454   INVX1
+        3   12.701   INVX2
+        2    8.467   INVX3
+      336 4.27E+03   MUX2X1
+       48 1.35E+03   MUX4X1
+       18  508.032   MUX4X1P5
+        2   56.448   MUX4X2
+      263 7.42E+03   MUX4X3
+      666 7.52E+03   MUXI2X1
+       34  383.846   MUXI2X2
+       16  112.896   NAND2BX1
+        1    7.056   NAND2BX1P5
+        1    7.056   NAND2BX3
+      105  592.704   NAND2X1
+        2    11.29   NAND2X2
+        1    5.645   NAND2X3
+        1    9.878   NAND3BX1
+       43  303.408   NAND3X1
+        1    7.056   NAND3X2
+        5   49.392   NAND4X2
+       13   91.728   NOR2BX1
+      263 1.48E+03   NOR2X1
+        1    5.645   NOR2X2
+        1    8.467   NOR3BX1
+       17  119.952   NOR3X1
+        1    7.056   NOR3X2
+        1    11.29   NOR4BX1
+        2   19.757   NOR4X1
+        1    9.878   NOR4X2
+       33  325.987   OA211X2
+        5   42.336   OA21X2
+       11   93.139   OAI211X1
+       25    176.4   OAI21X1
+        1    7.056   OAI21X2
+        7   79.027   OAI221X1
+        1    11.29   OAI221X2
+       89  879.178   OAI22X1
+        1    9.878   OAI22X2
+        1   14.112   OAI2B2BX1
+        4   50.803   OAI2BB2X2
+        1    9.878   OAI31X1
+       93  918.691   OAOI211X1
+        1    9.878   OAOI211X2
+        3   21.168   OR2X2
+        1    8.467   OR3BX1
+        1    8.467   OR3X2
+        2   19.757   OR4X1
+        2        -   RM_IHPSG13_1P_256x48_c2_bm_bist
+        1        -   RM_IHPSG13_1P_512x32_c2_bm_bist
+        2    8.467   TIELO
+      124 1.22E+03   XNOR2X1
+       35  345.744   XOR2X1
+       17 1.22E+03 submodules
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[0].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[10].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[11].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[12].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[13].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[14].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[15].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[1].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[2].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[3].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[4].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[5].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[6].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[7].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[8].i_meta_cg
+        1   25.402   tc_clk_gating$cache_area_top.gen_data_cache.i_cache.gen_meta[9].i_meta_cg
+        1  815.674   tc_sram_impl$cache_area_top.gen_data_cache.i_cache.i_data_sram
+
+   Area for cell type $scopeinfo is unknown!
+   Area for cell type \RM_IHPSG13_1P_256x48_c2_bm_bist is unknown!
+   Area for cell type \RM_IHPSG13_1P_512x32_c2_bm_bist is unknown!
+
+   Chip area for top module '\cache_area_top': 65835.302400
+     of which used for sequential elements: 29719.872000 (45.14%)
+
